@@ -25,19 +25,31 @@
 - **样式方案**: Tailwind CSS
 - **图表库**: Recharts 或 Tremor
 - **状态管理**: Zustand
-- **HTTP 客户端**: Fetch API / SWR
+- **类型安全**: tRPC (前后端类型共享)
 
 ### 后端
 - **运行时**: Node.js 20+
-- **框架**: Express.js (或 Fastify)
-- **数据库**: MongoDB + Mongoose ODM
-- **定时任务**: node-cron
+- **API 层**: tRPC (类型安全的 API)
+- **ORM**: Prisma (数据库操作)
+- **数据库**: PostgreSQL (推荐) 或 Supabase (可选)
+- **定时任务**: Vercel Cron / Supabase Edge Functions / node-cron
 - **AI 集成**: Claude API / OpenAI API
 
 ### 基础设施
 - **包管理**: pnpm
-- **容器化**: Docker + Docker Compose
-- **反向代理**: Nginx (生产环境)
+- **部署**: Vercel (推荐) / Railway / Docker + Docker Compose
+- **反向代理**: Nginx (生产环境，如需自定义域名)
+
+### 为什么这样选？（AI vibe-coding 友好）
+
+| 原方案 | 新方案 | 理由 |
+|--------|--------|------|
+| Express.js + REST API | tRPC | 前后端类型自动共享，AI 生成代码无类型错位 |
+| MongoDB + Mongoose | Prisma + PostgreSQL | Schema 即类型定义，迁移命令清晰，AI 生成准确度高 |
+| node-cron (自管) | 平台级 Cron | 无需担心多容器重复执行，开箱即用 |
+| Docker + Nginx | Vercel / Railway | 专注代码，infra 交给平台 |
+
+> **核心原则**：减少样板代码，降低 AI 生成出错的可能性。tRPC + Prisma 的组合让 AI 可以一次生成前后端连通的代码。
 
 ---
 
@@ -104,23 +116,25 @@ feat., ft., / (斜杠格式), - (横杠格式), 全角空格
 - 视频详情API: 正常工作，可获取播放量、点赞、投币、收藏等数据
 
 #### 采集字段
-```
-- bv_id: B站视频BV号
-- title: 视频标题
-- author: UP主名称
-- publish_time: 发布时间 (Unix timestamp)
-- description: 视频描述
-- statistics: {
-    play_count: 播放量,
-    likes: 点赞数,
-    coins: 投币数,
-    favorites: 收藏数,
-    shares: 分享数,
-    comments: 评论数
-  }
-- duration: 视频时长
-- tags: 标签数组
-- pic_url: 封面图URL
+```typescript
+interface Song {
+  bvId: string;           // B站视频BV号
+  title: string;          // 视频标题
+  author: string;         // UP主名称
+  publishTime: Date;     // 发布时间
+  description: string;    // 视频描述
+  statistics: {
+    playCount: number;    // 播放量
+    likes: number;        // 点赞数
+    coins: number;        // 投币数
+    favorites: number;    // 收藏数
+    shares: number;       // 分享数
+    comments: number;     // 评论数
+  };
+  duration: number;        // 视频时长（秒）
+  tags: string[];         // 标签数组
+  picUrl: string;         // 封面图URL
+}
 ```
 
 #### 采集策略
@@ -190,39 +204,45 @@ T = 评论数, Wt = 0.05
 
 ### 3.5 论坛模块
 
-#### 帖子结构
-```
-- id: ObjectId
-- title: string (2-100字符)
-- content: string (富文本，10-10000字符)
-- author: {
-    id: ObjectId,
-    name: string,
-    avatar: string
-  }
-- type: 'review' | 'recommend' | 'discussion' | 'question'
-- related_songs: [bvId] (关联歌曲，可选)
-- tags: [string]
-- stats: {
-    views: number,
-    likes: number,
-    replies: number
-  }
-- created_at: Date
-- updated_at: Date
-- is_pinned: boolean
-- is_deleted: boolean
+#### 帖子结构 (tRPC 类型)
+```typescript
+const postSchema = z.object({
+  id: z.string(),
+  title: z.string().min(2).max(100),
+  content: z.string().min(10).max(10000),
+  author: z.object({
+    id: z.string(),
+    name: z.string(),
+    avatar: z.string().nullable(),
+  }),
+  type: z.enum(['review', 'recommend', 'discussion', 'question']),
+  relatedSongs: z.array(z.string()).optional(),
+  tags: z.array(z.string()),
+  stats: z.object({
+    views: z.number(),
+    likes: z.number(),
+    replies: z.number(),
+  }),
+  isPinned: z.boolean(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
 ```
 
-#### 回复结构
-```
-- id: ObjectId
-- post_id: ObjectId
-- author: { id, name, avatar }
-- content: string (1-5000字符)
-- likes: number
-- created_at: Date
-- is_deleted: boolean
+#### 回复结构 (tRPC 类型)
+```typescript
+const replySchema = z.object({
+  id: z.string(),
+  postId: z.string(),
+  author: z.object({
+    id: z.string(),
+    name: z.string(),
+    avatar: z.string().nullable(),
+  }),
+  content: z.string().min(1).max(5000),
+  likes: z.number(),
+  createdAt: z.date(),
+});
 ```
 
 #### 功能
@@ -238,78 +258,176 @@ T = 评论数, Wt = 0.05
 - **注册用户**: 可发帖、回帖、点赞
 - **管理员**: 可置顶/删除帖子、管理歌曲数据
 
-#### 用户字段
-```
-- id: ObjectId
-- username: string (3-20字符，唯一)
-- email: string (唯一)
-- password_hash: string
-- avatar: string (默认头像)
-- role: 'user' | 'admin'
-- created_at: Date
-- last_login: Date
-```
+#### 用户字段 (Prisma Schema)
+```prisma
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  email        String   @unique
+  passwordHash String
+  avatar       String?
+  role         String   @default("user") // 'user' | 'admin'
+  createdAt    DateTime @default(now())
+  lastLogin    DateTime?
 
----
-
-## 4. 数据库设计 (MongoDB)
-
-### 集合列表
-1. `songs` - 歌曲数据
-2. `songs_daily_stats` - 歌曲每日统计数据（用于历史追踪）
-3. `rankings` - 排行榜快照
-4. `posts` - 论坛帖子
-5. `replies` - 回帖
-6. `users` - 用户
-7. `ai_reports` - AI 分析报告缓存
-8. `settings` - 系统设置
-
-### 索引设计
-```javascript
-// songs 集合
-{ bv_id: 1 }                    // 唯一索引
-{ publish_time: 1 }
-{ "statistics.play_count": -1 }
-{ score: -1 }
-
-// posts 集合
-{ created_at: -1 }
-{ type: 1, created_at: -1 }
-{ author_id: 1 }
-
-// replies 集合
-{ post_id: 1, created_at: 1 }
+  posts   Post[]
+  replies Reply[]
+}
 ```
 
 ---
 
-## 5. API 设计
+## 4. 数据库设计 (PostgreSQL + Prisma)
 
-### 公开 API (无需认证)
+### 表列表
+1. `Song` - 歌曲数据
+2. `SongDailyStats` - 歌曲每日统计数据（用于历史追踪）
+3. `Ranking` - 排行榜快照
+4. `Post` - 论坛帖子
+5. `Reply` - 回帖
+6. `User` - 用户
+7. `AiReport` - AI 分析报告缓存
+8. `Setting` - 系统设置
+
+### Prisma Schema 示例
+```prisma
+model Song {
+  id          String   @id @default(cuid())
+  bvId        String   @unique
+  title       String
+  author      String
+  description String?
+  duration    Int?
+  picUrl      String?
+  tags        String[]
+  publishTime DateTime
+  score       Float    @default(0)
+  statistics  Json     // { playCount, likes, coins, favorites, shares, comments }
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  dailyStats  SongDailyStats[]
+  rankings     Ranking[]
+
+  @@index([publishTime])
+  @@index([score])
+}
+
+model Post {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  type      String   // 'review' | 'recommend' | 'discussion' | 'question'
+  tags      String[]
+  relatedSongs String[]
+  views     Int      @default(0)
+  likes     Int      @default(0)
+  isPinned  Boolean  @default(false)
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  replies   Reply[]
+
+  @@index([type, createdAt])
+  @@index([authorId])
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  email        String   @unique
+  passwordHash String
+  avatar       String?
+  role         String   @default("user") // 'user' | 'admin'
+  createdAt    DateTime @default(now())
+  lastLogin    DateTime?
+
+  posts   Post[]
+  replies Reply[]
+}
 ```
-GET  /api/songs/latest          - 获取最新歌曲 (分页)
+
+### 索引设计 (Prisma)
+```prisma
+@@index([publishTime])
+@@index([score])
+@@index([type, createdAt])
+@@index([authorId])
+```
+
+---
+
+## 5. API 设计 (tRPC)
+
+> 使用 tRPC 实现类型安全的 API，前后端共享类型，无需手写 API 文档。
+
+### 路由结构
+```typescript
+// 公开路由 (publicProcedure)
+router({
+  songs: {
+    getLatest: publicProcedure.input(paginationSchema).query(...),
+    getByBvId: publicProcedure.input(z.string()).query(...),
+  },
+  rankings: {
+    get: publicProcedure.input(rankingPeriodSchema).query(...),
+  },
+  posts: {
+    getLatest: publicProcedure.input(postFilterSchema).query(...),
+    getById: publicProcedure.input(z.string()).query(...),
+  },
+  analytics: {
+    getOverview: publicProcedure.query(...),
+  },
+})
+
+// 需认证路由 (protectedProcedure)
+router({
+  posts: {
+    create: protectedProcedure.input(createPostSchema).mutation(...),
+    update: protectedProcedure.input(updatePostSchema).mutation(...),
+    delete: protectedProcedure.input(z.string()).mutation(...),
+    reply: protectedProcedure.input(replySchema).mutation(...),
+    like: protectedProcedure.input(z.string()).mutation(...),
+  },
+  replies: {
+    like: protectedProcedure.input(z.string()).mutation(...),
+  },
+})
+
+// 管理员路由 (adminProcedure)
+router({
+  crawl: {
+    trigger: adminProcedure.mutation(...),
+  },
+  songs: {
+    delete: adminProcedure.input(z.string()).mutation(...),
+  },
+  posts: {
+    pin: adminProcedure.input(z.string()).mutation(...),
+  },
+})
+```
+
+### 前端调用示例
+```typescript
+// 前后端类型自动共享，IDE 自动补全
+const latestSongs = await trpc.songs.getLatest.query({ page: 1, limit: 20 });
+const song = await trpc.songs.getByBvId.query('BV1xx411c7XZ');
+```
+
+### 公开 REST API (兼容 SEO)
+如需为 SEO 提供公开端点，可额外暴露 REST API：
+```
+GET  /api/songs/latest          - 获取最新歌曲
 GET  /api/songs/:bvId           - 获取歌曲详情
-GET  /api/rankings              - 获取排行榜 (query: period=day|week|month|all)
-GET  /api/posts                 - 获取帖子列表 (分页、筛选)
+GET  /api/rankings              - 获取排行榜
+GET  /api/posts                 - 获取帖子列表
 GET  /api/posts/:id             - 获取帖子详情
 GET  /api/analytics/overview    - 获取数据概览
-```
-
-### 需认证 API
-```
-POST /api/posts                 - 创建帖子
-PUT  /api/posts/:id             - 编辑帖子
-DELETE /api/posts/:id           - 删除帖子
-POST /api/posts/:id/reply       - 回复帖子
-POST /api/posts/:id/like        - 点赞帖子
-POST /api/replies/:id/like      - 点赞回复
-```
-
-### 管理员 API
-```
-POST /api/admin/crawl/trigger   - 手动触发采集
-DELETE /api/admin/songs/:bvId   - 删除歌曲记录
-PUT /api/admin/posts/:id/pin    - 置顶帖子
 ```
 
 ---
@@ -339,32 +457,44 @@ PUT /api/admin/posts/:id/pin    - 置顶帖子
 
 ```
 vocaloid-hub/
-├── backend/                    # 后端项目
-│   ├── src/
-│   │   ├── config/            # 配置文件
-│   │   ├── controllers/       # 控制器
-│   │   ├── models/            # Mongoose 模型
-│   │   ├── routes/            # 路由
+├── prisma/                     # Prisma Schema 和迁移
+│   └── schema.prisma
+├── src/
+│   ├── server/                  # 服务端代码
+│   │   ├── trpc/              # tRPC 路由
+│   │   │   ├── routers/       # 各模块路由
+│   │   │   │   ├── songs.ts
+│   │   │   │   ├── posts.ts
+│   │   │   │   ├── users.ts
+│   │   │   │   ├── rankings.ts
+│   │   │   │   └── analytics.ts
+│   │   │   ├── context.ts     # tRPC 上下文
+│   │   │   └── trpc.ts        # tRPC 初始化
 │   │   ├── services/          # 业务逻辑
 │   │   │   ├── bilibili/      # B站API服务
 │   │   │   ├── crawler/       # 采集服务
 │   │   │   ├── ranking/       # 排行榜服务
 │   │   │   └── ai/            # AI服务
-│   │   ├── middlewares/       # 中间件
-│   │   ├── utils/             # 工具函数
-│   │   └── app.js             # 入口文件
-│   ├── scripts/               # 脚本
-│   └── package.json
-├── frontend/                   # 前端项目 (Next.js)
-│   ├── app/                   # 页面
-│   ├── components/            # 组件
+│   │   └── jobs/              # 定时任务
+│   ├── components/             # React 组件 (shadcn/ui)
+│   ├── app/                   # Next.js App Router 页面
+│   │   ├── page.tsx           # 首页
+│   │   ├── ranking/           # 排行榜
+│   │   ├── song/[bvId]/       # 歌曲详情
+│   │   ├── forum/             # 论坛
+│   │   └── api/               # REST API (可选，SEO用)
 │   ├── lib/                   # 工具函数
-│   ├── stores/                # 状态管理
-│   └── package.json
+│   │   ├── prisma.ts         # Prisma 客户端
+│   │   └── trpc.ts           # tRPC 客户端 (前端用)
+│   └── stores/                # Zustand stores
+├── scripts/                    # 脚本
 ├── docker/                    # Docker 配置
 ├── docs/                      # 文档
+├── package.json
 └── README.md
 ```
+
+> **说明**: 使用 tRPC 后，后端服务与前端代码放在同一仓库，通过 monorepo 结构组织。部署到 Vercel 时，API 和前端自动统一。
 
 ---
 
@@ -385,10 +515,11 @@ vocaloid-hub/
 - 需要更多标签覆盖更多角色
 
 ### Phase 1: 基础架构搭建
-- [ ] 初始化前后端项目
-- [ ] 配置 MongoDB 连接
-- [ ] 实现基础数据模型
-- [ ] 配置 Docker 环境
+- [ ] 初始化 Next.js 项目 (包含 tRPC + Prisma)
+- [ ] 配置 PostgreSQL 数据库连接
+- [ ] 编写 Prisma Schema，生成类型
+- [ ] 实现基础 tRPC 路由
+- [ ] 配置 Vercel 或 Docker 环境
 
 ### Phase 2: 数据采集
 - [ ] 实现 B站 API 采集服务
@@ -438,6 +569,20 @@ vocaloid-hub/
 
 ## 10. 参考资料
 
+### 核心框架
+- [Next.js 14](https://nextjs.org/)
+- [tRPC](https://trpc.io/) - 类型安全 API
+- [Prisma](https://prisma.io/) - 数据库 ORM
+- [shadcn/ui](https://ui.shadcn.com/)
+
+### 数据库
+- [PostgreSQL](https://www.postgresql.org/)
+- [Supabase](https://supabase.com/) - 可选 Postgres即服务
+
+### 部署
+- [Vercel](https://vercel.com/)
+- [Railway](https://railway.app/)
+- [Docker](https://www.docker.com/)
+
+### B站 API
 - [Bilibili API 文档](https://github.com/SocialSisterYi/bilibiliAPI_Plus)
-- [shadcn/ui 组件库](https://ui.shadcn.com/)
-- [MongoDB 最佳实践](https://www.mongodb.com/docs/manual/core/schema-design/)
