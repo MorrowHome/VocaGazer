@@ -96,6 +96,8 @@ function SongCard({ song }: { song: any }) {
 export default function HomePage() {
   const { data: pageData, isLoading } = trpc.analytics.getHomepage.useQuery();
   const stats = pageData?.stats;
+  const latestSong = pageData?.latestSong;
+  const weeklyHotSong = pageData?.weeklyHotSong;
   const dailyRanking = pageData?.dailyRanking ?? [];
   const weeklyRanking = pageData?.weeklyRanking ?? [];
   const latestSongs = pageData?.latestSongs ?? [];
@@ -168,19 +170,39 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ─── 统计栏 ─── */}
+        {/* ─── 顶部概览卡片：4列 ─── */}
         <section>
           {isLoading ? (
-            <div className="grid grid-cols-3 gap-4">
-              {[...Array(3)].map((_, i) => (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[...Array(4)].map((_, i) => (
                 <div key={i} className="h-28 rounded-2xl bg-white/5 animate-pulse" />
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-3 gap-4">
-              <StatCard label="歌曲总数" value={formatCount(stats?.totalSongs ?? 0)} emoji="🎵" />
-              <StatCard label="今日新曲" value={formatCount(stats?.todaySongs ?? 0)} emoji="✨" />
-              <StatCard label="总播放量" value={formatCount(stats?.totalPlayCount ?? 0)} emoji="▶" />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {/* ① 本日新曲数 */}
+              <StatCard label="本日新曲" value={formatCount(stats?.todaySongs ?? 0)} emoji="✨" />
+
+              {/* ② 最新歌曲卡片 */}
+              {latestSong ? (
+                <a href={`/song/${latestSong.bvId}`} className="group">
+                  <MiniSongCard song={latestSong} label="最新投稿" />
+                </a>
+              ) : (
+                <StatCard label="最新投稿" value="暂无" emoji="🎵" />
+              )}
+
+              {/* ③ 本周最热歌曲卡片 */}
+              {weeklyHotSong ? (
+                <a href={`/song/${weeklyHotSong.bvId}`} className="group">
+                  <MiniSongCard song={weeklyHotSong} label="本周最热" />
+                </a>
+              ) : (
+                <StatCard label="本周最热" value="暂无" emoji="🔥" />
+              )}
+
+              {/* ④ 本周歌曲数 */}
+              <StatCard label="本周新曲" value={formatCount(stats?.weekSongs ?? 0)} emoji="📅" />
             </div>
           )}
         </section>
@@ -300,6 +322,42 @@ export default function HomePage() {
         </section>
       </div>
     </main>
+  );
+}
+
+// ─── 顶部小歌曲卡片（封面 + 标题 + UP主 + 播放量）───
+
+function MiniSongCard({ song, label }: { song: any; label: string }) {
+  const stats = parseStats(song.statistics);
+  const img = coverImgProps(song.picUrl);
+  return (
+    <div className="relative h-full">
+      <div className="rgb-card !p-3 !rounded-xl h-full flex flex-col justify-between group-hover:translate-y-[-2px] transition-all cursor-pointer">
+        <div className="flex items-start gap-2.5">
+          {/* 封面 */}
+          <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-white/5 ring-1 ring-white/10">
+            {img.src ? (
+              <img {...img} alt="" className="w-full h-full object-cover" loading="lazy" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray-700 text-lg">♪</div>
+            )}
+          </div>
+          {/* 文字 */}
+          <div className="min-w-0 flex-1">
+            <p className="text-xs text-gray-400 tracking-wider mb-0.5">{label}</p>
+            <p className="text-sm font-bold text-white truncate group-hover:text-vocaloid-cyan transition-colors">
+              {song.title}
+            </p>
+            <p className="text-[11px] text-gray-500 truncate mt-0.5">{song.author}</p>
+          </div>
+        </div>
+        {/* 播放量 */}
+        <div className="flex items-center gap-1.5 mt-2 text-[11px] text-gray-500">
+          <span>▶</span>
+          <span>{formatCount(stats.playCount ?? 0)} 播放</span>
+        </div>
+      </div>
+    </div>
   );
 }
 

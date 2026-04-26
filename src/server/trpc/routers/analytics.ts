@@ -14,41 +14,28 @@ export const analyticsRouter = router({
     const weekAgo = new Date(now);
     weekAgo.setDate(weekAgo.getDate() - 7);
 
-    const [
-      totalSongs,
-      todaySongs,
-      latestSongs,
-      dailyRanking,
-      weeklyRanking,
-      topSongs,
-    ] = await Promise.all([
-      ctx.prisma.song.count(),
-      ctx.prisma.song.count({
-        where: { publishTime: { gte: todayStart } },
-      }),
-      // 最新发布
-      ctx.prisma.song.findMany({
-        orderBy: { publishTime: 'desc' },
-        take: 20,
-      }),
-      // 日榜：今天发布的歌曲按评分排序
-      ctx.prisma.song.findMany({
-        where: { publishTime: { gte: todayStart } },
-        orderBy: { score: 'desc' },
-        take: 10,
-      }),
-      // 周榜：7天内发布的歌曲按评分排序
-      ctx.prisma.song.findMany({
-        where: { publishTime: { gte: weekAgo } },
-        orderBy: { score: 'desc' },
-        take: 10,
-      }),
-      // 热门总榜
-      ctx.prisma.song.findMany({
-        orderBy: { score: 'desc' },
-        take: 10,
-      }),
-    ]);
+    const [totalSongs, todaySongs, weekSongs, latestSongs, dailyRanking, weeklyRanking, topSongs] =
+      await Promise.all([
+        ctx.prisma.song.count(),
+        ctx.prisma.song.count({ where: { publishTime: { gte: todayStart } } }),
+        ctx.prisma.song.count({ where: { publishTime: { gte: weekAgo } } }),
+        ctx.prisma.song.findMany({ orderBy: { publishTime: 'desc' }, take: 20 }),
+        // 日榜：今日发布的歌曲按评分排序
+        ctx.prisma.song.findMany({
+          where: { publishTime: { gte: todayStart } },
+          orderBy: { score: 'desc' },
+          take: 10,
+        }),
+        ctx.prisma.song.findMany({
+          where: { publishTime: { gte: weekAgo } },
+          orderBy: { score: 'desc' },
+          take: 10,
+        }),
+        ctx.prisma.song.findMany({ orderBy: { score: 'desc' }, take: 10 }),
+      ]);
+
+    const latestSong = latestSongs.length > 0 ? latestSongs[0] : null;
+    const weeklyHotSong = weeklyRanking.length > 0 ? weeklyRanking[0] : null;
 
     // 计算总播放量
     let totalPlayCount = 0;
@@ -60,7 +47,9 @@ export const analyticsRouter = router({
     }
 
     return {
-      stats: { totalSongs, todaySongs, totalPlayCount },
+      stats: { totalSongs, todaySongs, totalPlayCount, weekSongs },
+      latestSong,
+      weeklyHotSong,
       latestSongs,
       dailyRanking,
       weeklyRanking,
@@ -76,7 +65,7 @@ export const analyticsRouter = router({
           .enum(['daily_summary', 'trend_analysis', 'anomaly_detection'])
           .optional(),
         limit: z.number().min(1).max(50).default(10),
-      })
+      }),
     )
     .query(async ({ ctx, input }) => {
       const { type, limit } = input;
