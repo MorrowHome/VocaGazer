@@ -3,6 +3,7 @@
 import { trpc } from '@/lib/trpc';
 import { formatCount, parseStats, timeAgo, coverImgProps } from '@/lib/utils';
 import { BackgroundLayers } from '@/components/BackgroundLayers';
+import { ClickFireworks } from '@/components/ClickFireworks';
 
 // ─── 霓虹装饰条 ───
 
@@ -101,6 +102,7 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen relative">
+      <ClickFireworks />
       <BackgroundLayers />
 
       {/* ─── 顶栏 ─── */}

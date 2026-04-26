@@ -4,6 +4,7 @@ import { useParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
 import { formatCount, parseStats, coverImgProps } from '@/lib/utils';
 import { BackgroundLayers } from '@/components/BackgroundLayers';
+import { ClickFireworks } from '@/components/ClickFireworks';
 
 const STAT_COLORS: Record<string, { label: string; textClass: string; bgClass: string }> = {
   playCount:   { label: '播放', textClass: 'text-cyan-400',   bgClass: 'bg-cyan-500/10' },
@@ -56,6 +57,7 @@ export default function SongDetailPage() {
 
   return (
     <main className="min-h-screen relative">
+      <ClickFireworks />
       <BackgroundLayers />
 
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-[rgb(var(--background))/80] border-b border-white/5">

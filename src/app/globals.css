@@ -263,39 +263,7 @@ body {
 }
 
 /* ================================
-   烟花效果
-   ================================ */
-
-.firework-burst {
-  position: absolute;
-  width: 0;
-  height: 0;
-  animation: burst-pop 6s ease-out infinite;
-}
-
-.firework-particle {
-  position: absolute;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--burst-color, rgb(var(--glow-cyan)));
-  box-shadow: 0 0 6px var(--burst-color, rgb(var(--glow-cyan)));
-  animation: particle-fly 1s ease-out calc(var(--delay, 0s)) infinite;
-}
-
-@keyframes burst-pop {
-  0%, 90%, 100% { transform: scale(0); opacity: 0; }
-  92% { transform: scale(1); opacity: 1; }
-  95% { transform: scale(1.2); opacity: 0.8; }
-}
-
-@keyframes particle-fly {
-  0% { transform: rotate(var(--angle, 0deg)) translateX(0); opacity: 1; }
-  100% { transform: rotate(var(--angle, 0deg)) translateX(80px); opacity: 0; }
-}
-
-/* ================================
-   闪烁星星
+   闪烁星星（增强）
    ================================ */
 
 .twinkle-star-static {

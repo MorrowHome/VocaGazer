@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { formatCount, parseStats, coverImgProps } from '@/lib/utils';
 import { BackgroundLayers } from '@/components/BackgroundLayers';
+import { ClickFireworks } from '@/components/ClickFireworks';
 
 const TABS = [
   { key: 'daily', label: '日榜 🌅' },
@@ -102,6 +103,7 @@ export default function RankingPage() {
 
   return (
     <main className="min-h-screen relative">
+      <ClickFireworks />
       <BackgroundLayers />
 
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-[rgb(var(--background))/80] border-b border-white/5">
