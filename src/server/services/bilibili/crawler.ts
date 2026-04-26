@@ -1,30 +1,69 @@
 /**
  * B站 VOCALOID 歌曲采集服务
  */
+import { PrismaClient } from '@prisma/client';
 import { searchByKeyword, getVideoDetail, delay } from './client';
 import { calculateScore } from '../ranking/scorer';
 import type { SongData } from './types';
 
+// 避免动态 import('@/lib/prisma') 在 tsx 运行时不解析 @/ 别名
+let _prisma: PrismaClient | null = null;
+function getPrisma() {
+  if (!_prisma) _prisma = new PrismaClient();
+  return _prisma;
+}
+
 // ========== 配置 ==========
 
-/** 搜索用标签列表 */
+/** 搜索用标签列表 - 只保留歌姬名和明确指向歌曲的标签 */
 const TAGS = [
+  // 核心歌曲标签（引导搜索聚焦于歌曲而非教程/软件）
+  'VOCALOID原创', '术力口原创', '虚拟歌手原创',
+  'VOCALOID曲', '术力口曲', 'VOCALOID中文曲',
   'VOCALOID', '虚拟歌手', '术力口',
-  '洛天依', '言和', '乐正绫', '星尘',
-  '镜音铃', '镜音连', '初音未来', '巡音流歌',
-  'GUMI', '墨清弦', '乐正龙牙', '徵羽摩柯',
-  'VOCALOID曲', 'VOCALOID中文曲', '术力口曲',
+
+  // 中文VOCALOID 主流
+  '洛天依', '洛天依原创', '言和', '言和原创',
+  '乐正绫', '乐正绫原创', '乐正龙牙',
+  '徵羽摩柯', '墨清弦',
+
+  // 中文 Synthesizer V / ACE
+  '星尘', '星尘infinity', '心华',
+  '赤羽', '苍穹', '诗岸', '海伊',
+  '永夜minus', 'Minus', '艾可',
+
+  // 日语VOCALOID
+  '初音未来', '初音未来原创',
+  '镜音铃', '镜音连', '巡音流歌',
+  'MEIKO', 'KAITO',
+  'GUMI', 'flower', '重音テト',
+  '音街ウナ',
+
+  // Synthesizer V AI 歌手
+  '小春六花', '夏色花梨', '花隈千冬',
 ];
 
 /** 排除关键词（非原创内容） */
 const EXCLUDE_KEYWORDS = [
+  // 榜单类
   '周榜', '月榜', '日榜', '年榜', '排行', '排名',
   '传说曲', '人气曲', '殿堂曲', '金曲',
+  // 教程/攻略类
   '教程', '教学', '攻略', '入门', '入坑', '指北', '指南',
   '翻译', '中译', '日文', '日语', '罗马音', '字幕',
+  // 翻唱/翻调类
   '翻唱', '翻填', '翻作',
   'remix', 'remaster', 'cover',
+  'カバー',           // 日语"翻唱"
+  // 填词翻唱
+  '填词',
+  // 谱面/游戏类
+  '自制谱', '谱面', '谱子', 'PJSK', 'project sekai',
+  // 片段/试唱
+  '一小段', '试唱',
+  // 演唱会/活动类
   '演唱会', '祭',
+  // 盘点/合集类
   '盘点', '合集', '合辑', '精选', '专辑',
   '手办', 'MAD', 'MMD', '3D', '建模', '手书',
 ];
@@ -34,12 +73,14 @@ const ORIGINAL_KEYWORDS = [
   '原创', '作曲', '编曲', '作词',
   'VOCALOID原曲', '术力口原曲',
   '自制', '自制曲', '本家', '个人制作',
+  '调声', '混音', '作曲编曲',
 ];
 
-/** 可能原创的关键词 */
-const LIKELY_ORIGINAL_KEYWORDS = [
-  'feat.', 'feat ', 'ft.', 'ft ',
-  ' / ', ' - ', '　',
+/** 描述中出现的原创特征（标题不必包含原创字眼） */
+const DESCRIPTION_ORIGINAL_HINTS = [
+  '作曲', '编曲', '作词', '调声',
+  'producer', 'produced by',
+  'music by', 'lyrics by',
 ];
 
 // ========== 过滤逻辑 ==========
@@ -49,13 +90,43 @@ function shouldExclude(title: string, description: string): boolean {
   return EXCLUDE_KEYWORDS.some((kw) => text.includes(kw.toLowerCase()));
 }
 
+/**
+ * 检查描述中是否指向他人作品的翻调/翻唱
+ * 例如：本家：BV1Y2oNB1ESs、本家: xxx、原曲：xxx
+ */
+function isCoverOfAnotherWork(description: string): boolean {
+  const desc = description || '';
+  // 本家 + BV号 = 基于他人作品的翻调
+  if (/本家\s*[:：]\s*BV/i.test(desc)) return true;
+  // 原曲 + BV号
+  if (/原曲\s*[:：]\s*BV/i.test(desc)) return true;
+  // 站内本家
+  if (/站内本家/i.test(desc)) return true;
+  return false;
+}
+
 function isOriginal(title: string, description: string): boolean {
-  const text = `${title} ${description}`;
   if (shouldExclude(title, description)) return false;
 
-  const hasOriginal = ORIGINAL_KEYWORDS.some((kw) => text.includes(kw));
-  const hasLikely = LIKELY_ORIGINAL_KEYWORDS.some((kw) => text.includes(kw));
-  return hasOriginal || hasLikely;
+  // 指向他人作品的翻调 → 排除
+  if (isCoverOfAnotherWork(description)) return false;
+
+  const combined = `${title} ${description}`;
+  const desc = description || '';
+
+  // 标题包含明确的原创标识
+  if (ORIGINAL_KEYWORDS.some((kw) => title.includes(kw))) return true;
+
+  // 描述中出现作曲/编曲等创作相关词汇（强信号）
+  if (DESCRIPTION_ORIGINAL_HINTS.some((kw) => desc.toLowerCase().includes(kw))) {
+    return true;
+  }
+
+  // 全文包含原创关键词
+  if (ORIGINAL_KEYWORDS.some((kw) => combined.includes(kw))) return true;
+
+  // 默认不认定为原创（宁可漏过也不要误判）
+  return false;
 }
 
 // ========== 采集主逻辑 ==========
@@ -149,7 +220,7 @@ export async function runCrawl(
 
   // 阶段 3：获取详情并入库
   let savedCount = 0;
-  const { prisma } = await import('@/lib/prisma');
+  const prisma = getPrisma();
 
   for (const v of originalVideos) {
     try {

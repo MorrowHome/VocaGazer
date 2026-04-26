@@ -19,43 +19,44 @@ const client = axios.create({
 });
 
 /**
- * 按关键词搜索视频
- * 尝试多个搜索端点，直到成功
+ * 从一条 API 响应中提取视频列表
  */
-export async function searchByKeyword(keyword: string): Promise<BiliSearchVideo[]> {
+function extractVideos(data: any): any[] {
+  if (data.result?.video) {
+    // /x/web-interface/search/all — result.video[]
+    return data.result.video;
+  }
+  if (Array.isArray(data.result)) {
+    // /x/web-interface/search/all/v2 — result[] (array of mixed types)
+    return data.result.filter((item: any) => item.bvid);
+  }
+  if (data.videos) {
+    return data.videos;
+  }
+  return [];
+}
+
+/**
+ * 按关键词搜索单页视频
+ */
+async function searchPage(
+  keyword: string,
+  page: number = 1,
+): Promise<BiliSearchVideo[]> {
   const endpoints = [
-    '/x/web-interface/search/all',      // stable: result.video[]
-    '/x/web-interface/search/all/v2',    // alt: result[] (array directly)
-    '/x/search/type',
+    { path: '/x/web-interface/search/all', params: { search_type: 'video' } },
+    { path: '/x/web-interface/search/all/v2', params: {} },
   ];
 
-  for (const endpoint of endpoints) {
+  for (const ep of endpoints) {
     try {
-      const res = await client.get(endpoint, {
-        params: {
-          keyword,
-          search_type: 'video',
-          page: 1,
-          order: 'pubdate',
-        },
+      const res = await client.get(ep.path, {
+        params: { keyword, page, order: 'pubdate', ...ep.params },
       });
 
       if (res.data.code !== 0) continue;
 
-      const data = res.data.data;
-
-      // 尝试多种返回格式
-      let videos: any[] = [];
-      if (data.result?.video) {
-        // /x/web-interface/search/all — result.video[]
-        videos = data.result.video;
-      } else if (Array.isArray(data.result)) {
-        // /x/web-interface/search/all/v2 — result[] (array of mixed types)
-        videos = data.result.filter((item: any) => item.bvid);
-      } else if (data.videos) {
-        videos = data.videos;
-      }
-
+      const videos = extractVideos(res.data.data);
       if (videos.length === 0) continue;
 
       return videos.map((v: any) => ({
@@ -72,6 +73,32 @@ export async function searchByKeyword(keyword: string): Promise<BiliSearchVideo[
   }
 
   return [];
+}
+
+/**
+ * 按关键词搜索视频（多页）
+ * 获取第 1 页和第 2 页的结果，提高召回率
+ */
+export async function searchByKeyword(
+  keyword: string,
+  maxPages: number = 2,
+): Promise<BiliSearchVideo[]> {
+  const allVideos: BiliSearchVideo[] = [];
+  const seen = new Set<string>();
+
+  for (let page = 1; page <= maxPages; page++) {
+    const videos = await searchPage(keyword, page);
+    for (const v of videos) {
+      if (!seen.has(v.bvid)) {
+        seen.add(v.bvid);
+        allVideos.push(v);
+      }
+    }
+    if (videos.length < 20) break; // 不足一页说明没有更多了
+    await delay(300);
+  }
+
+  return allVideos;
 }
 
 /**

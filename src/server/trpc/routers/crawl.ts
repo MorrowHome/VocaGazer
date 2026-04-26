@@ -4,6 +4,7 @@
 import { z } from 'zod';
 import { router, adminProcedure } from '../trpc';
 import { runCrawl } from '@/server/services/bilibili/crawler';
+import { generateAllRankings } from '@/server/services/ranking/generator';
 
 export const crawlRouter = router({
   // 触发一次增量采集
@@ -23,6 +24,11 @@ export const crawlRouter = router({
       });
       return result;
     }),
+
+  // 生成排行榜
+  generateRanks: adminProcedure.mutation(async () => {
+    return await generateAllRankings();
+  }),
 
   // 获取爬虫状态
   status: adminProcedure.query(async ({ ctx }) => {

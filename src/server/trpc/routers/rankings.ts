@@ -18,24 +18,17 @@ export const rankingsRouter = router({
     )
     .query(async ({ ctx, input }) => {
       const { period, limit } = input;
-      const targetDate = input.date
-        ? new Date(input.date)
-        : new Date();
+      const base = input.date ? new Date(input.date) : new Date();
+      const dayStart = new Date(base);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(base);
+      dayEnd.setHours(23, 59, 59, 999);
 
-      // 从 Ranking 表获取排行榜
       const rankings = await ctx.prisma.ranking.findMany({
-        where: {
-          period,
-          date: {
-            gte: new Date(targetDate.setHours(0, 0, 0, 0)),
-            lt: new Date(targetDate.setHours(23, 59, 59, 999)),
-          },
-        },
+        where: { period, date: { gte: dayStart, lt: dayEnd } },
         orderBy: { rank: 'asc' },
         take: limit,
-        include: {
-          song: true,
-        },
+        include: { song: true },
       });
 
       return rankings;

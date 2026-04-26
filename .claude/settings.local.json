@@ -22,7 +22,10 @@
       "Bash(curl -s http://localhost:3000/api/trpc/analytics.getHomepage)",
       "Bash(python3 -c ':*)",
       "Bash(curl:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(pkill -f \"tsx scripts/run-crawl\")",
+      "Bash(ls /Users/morrow/Codes/ClaudeCode/VocaGaretee/prisma/*.db)",
+      "Bash(ls /Users/morrow/Codes/ClaudeCode/VocaGaretee/*.db)"
     ]
   }
 }

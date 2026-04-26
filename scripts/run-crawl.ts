@@ -1,18 +1,18 @@
 /**
- * 手动采集脚本
+ * 手动采集脚本（深度模式）
  * 运行: npx tsx scripts/run-crawl.ts
  */
 import { runCrawl } from '../src/server/services/bilibili/crawler';
 
 async function main() {
   console.log('========================================');
-  console.log('  VOCALOID 歌曲采集');
+  console.log('  VOCALOID 深度采集');
   console.log('========================================');
 
   const result = await runCrawl({
-    withinHours: 168,
+    withinHours: 720,   // 30天
     verbose: true,
-    requestDelay: 600,
+    requestDelay: 500,
   });
 
   console.log('\n========================================');

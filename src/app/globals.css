@@ -8,6 +8,8 @@
   --glow-cyan: 6, 182, 212;
   --glow-purple: 107, 33, 168;
   --glow-pink: 236, 72, 153;
+  --glow-blue: 59, 130, 246;
+  --glow-green: 34, 197, 94;
 }
 
 body {
@@ -18,9 +20,96 @@ body {
     linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
   background-size: 60px 60px;
   background-position: -1px -1px;
+  overflow-x: hidden;
 }
 
-/* 霓虹边框 */
+/* ===== 流动 RGB 边框动画 ===== */
+
+@keyframes rgb-flow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes rgb-rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes neon-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes sparkle {
+  0%, 100% { opacity: 0; transform: scale(0); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.5; }
+}
+
+/* ===== 流动霓虹边框容器 ===== */
+
+.rgb-border {
+  position: relative;
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+.rgb-border::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(
+    90deg,
+    rgb(var(--glow-cyan)),
+    rgb(var(--glow-purple)),
+    rgb(var(--glow-pink)),
+    rgb(var(--glow-blue)),
+    rgb(var(--glow-green)),
+    rgb(var(--glow-cyan))
+  );
+  background-size: 300% 100%;
+  animation: rgb-flow 4s linear infinite;
+  border-radius: inherit;
+  z-index: 0;
+  opacity: 0.4;
+  transition: opacity 0.3s ease;
+}
+
+.rgb-border:hover::before {
+  opacity: 0.8;
+}
+
+.rgb-border-content {
+  position: relative;
+  z-index: 1;
+  background: rgb(var(--background));
+  margin: 1px;
+  border-radius: calc(1rem - 1px);
+  padding: 1.25rem;
+}
+
+/* ===== 霓虹边框（精简版） ===== */
 .neon-border {
   position: relative;
   border: 1px solid rgba(var(--glow-cyan), 0.15);
@@ -46,24 +135,217 @@ body {
   box-shadow: 0 0 20px rgba(var(--glow-pink), 0.06);
 }
 
-/* 歌曲卡片 */
+/* 歌曲卡片（加强版） */
 .song-card {
+  position: relative;
   border: 1px solid rgba(var(--glow-cyan), 0.1);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(var(--glow-purple), 0.04));
   backdrop-filter: blur(8px);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
 }
+
+.song-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgb(var(--glow-cyan)), rgb(var(--glow-pink)), transparent);
+  transition: left 0.6s ease;
+}
+
+.song-card:hover::after {
+  left: 150%;
+}
+
 .song-card:hover {
   border-color: rgba(var(--glow-cyan), 0.3);
-  transform: translateY(-2px);
+  transform: translateY(-3px);
   box-shadow:
-    0 8px 30px rgba(var(--glow-purple), 0.12),
-    0 0 20px rgba(var(--glow-cyan), 0.05);
+    0 8px 30px rgba(var(--glow-purple), 0.15),
+    0 0 25px rgba(var(--glow-cyan), 0.08);
 }
-.song-card:hover .song-card-glow {
+
+/* ===== 流动 RGB 卡片（加强版 stat card） ===== */
+.rgb-card {
+  position: relative;
+  border-radius: 1rem;
+  padding: 1.25rem;
+  text-align: center;
+  background: linear-gradient(135deg, rgba(var(--glow-purple), 0.08), rgba(var(--glow-cyan), 0.05));
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.rgb-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    90deg,
+    rgb(var(--glow-cyan)),
+    rgb(var(--glow-purple)),
+    rgb(var(--glow-pink)),
+    rgb(var(--glow-blue)),
+    rgb(var(--glow-cyan))
+  );
+  background-size: 300% 100%;
+  animation: rgb-flow 4s linear infinite;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.5;
+  transition: opacity 0.3s ease;
+}
+
+.rgb-card:hover::before {
   opacity: 1;
 }
+
+.rgb-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 8px 32px rgba(var(--glow-purple), 0.15),
+    0 0 20px rgba(var(--glow-cyan), 0.06);
+}
+
+/* ===== 二次元可爱元素 ===== */
+
+.cute-sparkle {
+  position: relative;
+}
+
+.cute-sparkle::after {
+  content: '✦';
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  font-size: 10px;
+  color: rgb(var(--glow-pink));
+  animation: sparkle 2s ease-in-out infinite;
+}
+
+/* 可爱飘浮元素 */
+.float-element {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* 闪烁星星装饰 */
+.twinkle-star {
+  position: absolute;
+  font-size: 6px;
+  animation: twinkle 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.twinkle-star:nth-child(2n) {
+  animation-delay: 0.5s;
+}
+
+.twinkle-star:nth-child(3n) {
+  animation-delay: 1s;
+}
+
+/* ===== 文字发光效果 ===== */
+
+.text-glow-cyan {
+  text-shadow: 0 0 10px rgba(var(--glow-cyan), 0.5), 0 0 20px rgba(var(--glow-cyan), 0.3);
+}
+
+.text-glow-pink {
+  text-shadow: 0 0 10px rgba(var(--glow-pink), 0.5), 0 0 20px rgba(var(--glow-pink), 0.3);
+}
+
+.text-glow-purple {
+  text-shadow: 0 0 10px rgba(var(--glow-purple), 0.5), 0 0 20px rgba(var(--glow-purple), 0.3);
+}
+
+/* 流动渐变文字 */
+.text-gradient-flow {
+  background: linear-gradient(
+    90deg,
+    rgb(var(--glow-cyan)),
+    rgb(var(--glow-purple)),
+    rgb(var(--glow-pink)),
+    rgb(var(--glow-blue)),
+    rgb(var(--glow-cyan))
+  );
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: rgb-flow 4s linear infinite;
+}
+
+/* ===== 霓虹按钮 ===== */
+
+.neon-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.5rem;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, rgba(var(--glow-purple), 0.3), rgba(var(--glow-cyan), 0.2));
+  border: 1px solid rgba(var(--glow-cyan), 0.25);
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.neon-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(var(--glow-cyan), 0.1),
+    rgba(var(--glow-pink), 0.1),
+    transparent
+  );
+  background-size: 200% 100%;
+  animation: rgb-flow 3s linear infinite;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.neon-btn:hover::before {
+  opacity: 1;
+}
+
+.neon-btn:hover {
+  border-color: rgba(var(--glow-cyan), 0.5);
+  box-shadow:
+    0 0 20px rgba(var(--glow-cyan), 0.15),
+    inset 0 0 20px rgba(var(--glow-cyan), 0.05);
+  transform: translateY(-1px);
+}
+
+/* ===== 玻璃卡片 ===== */
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 1rem;
+  transition: all 0.3s ease;
+}
+
+.glass-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* ===== 旧样式保持兼容 ===== */
 
 /* 封面图卡片角标 */
 .song-card-badge {
@@ -77,9 +359,9 @@ body {
   font-size: 11px;
   font-weight: 700;
   color: white;
+  z-index: 2;
 }
 
-/* 统计数字 */
 .stat-value {
   font-weight: 800;
   background: linear-gradient(135deg, rgb(var(--glow-cyan)), rgb(var(--glow-pink)));
@@ -145,6 +427,32 @@ body {
   margin: 1.5rem 0;
 }
 
+/* 二次元可爱分割线 */
+.divider-cute {
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(var(--glow-pink), 0.2),
+    rgba(var(--glow-cyan), 0.2),
+    transparent
+  );
+  margin: 1.5rem 0;
+  position: relative;
+}
+
+.divider-cute::after {
+  content: '♡';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  color: rgba(var(--glow-pink), 0.3);
+  font-size: 10px;
+  background: rgb(var(--background));
+  padding: 0 8px;
+}
+
 /* 滚动条 */
 ::-webkit-scrollbar {
   width: 6px;
@@ -158,4 +466,10 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(var(--glow-cyan), 0.4);
+}
+
+/* 选中文字颜色 */
+::selection {
+  background: rgba(var(--glow-pink), 0.3);
+  color: white;
 }

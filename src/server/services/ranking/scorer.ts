@@ -40,8 +40,11 @@ export function calculateScore(stats: Stats): number {
 /**
  * 计算所有歌曲的评分并更新数据库
  */
-export async function recalculateAllScores(): Promise<number> {
-  const { prisma } = await import('@/lib/prisma');
+export async function recalculateAllScores(prisma?: any): Promise<number> {
+  if (!prisma) {
+    const { PrismaClient } = await import('@prisma/client');
+    prisma = new PrismaClient();
+  }
 
   const songs = await prisma.song.findMany();
   let updated = 0;
