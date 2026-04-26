@@ -3,6 +3,53 @@
 import { trpc } from '@/lib/trpc';
 import { formatCount, parseStats, timeAgo, coverImgProps } from '@/lib/utils';
 
+// ─── 粒子系统 ───
+
+function ParticleField() {
+  const stars = Array.from({ length: 40 }, (_, i) => {
+    const colors = ['star-cyan', 'star-pink', 'star-purple', 'star-white'];
+    return {
+      id: i,
+      left: `${Math.random() * 100}%`,
+      delay: `${Math.random() * 15}s`,
+      duration: `${12 + Math.random() * 20}s`,
+      size: `${1 + Math.random() * 2}px`,
+      color: colors[Math.floor(Math.random() * colors.length)],
+    };
+  });
+
+  return (
+    <div className="particle-field" aria-hidden="true">
+      {stars.map((s) => (
+        <div
+          key={s.id}
+          className={`star ${s.color}`}
+          style={{
+            left: s.left,
+            bottom: '-10px',
+            width: s.size,
+            height: s.size,
+            animationDelay: s.delay,
+            animationDuration: s.duration,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ─── 霓虹装饰条 ───
+
+function NeonDecoration() {
+  return (
+    <div className="neon-decoration" aria-hidden="true">
+      {[1,2,3,4,5,6,7].map((i) => (
+        <div key={i} className="bar" />
+      ))}
+    </div>
+  );
+}
+
 // ─── 排行榜条目 ───
 
 function RankEntry({ song, rank }: { song: any; rank: number }) {
@@ -21,9 +68,7 @@ function RankEntry({ song, rank }: { song: any; rank: number }) {
             loading="lazy"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-xs text-gray-600">
-            ♪
-          </div>
+          <div className="w-full h-full flex items-center justify-center text-xs text-gray-600">♪</div>
         )}
       </div>
       <div className="min-w-0 flex-1">
@@ -40,7 +85,7 @@ function RankEntry({ song, rank }: { song: any; rank: number }) {
   );
 }
 
-// ─── 歌曲卡片（带封面） ───
+// ─── 歌曲卡片 ───
 
 function SongCard({ song }: { song: any }) {
   const stats = parseStats(song.statistics);
@@ -49,35 +94,25 @@ function SongCard({ song }: { song: any }) {
   return (
     <a
       href={`/song/${song.bvId}`}
-      className="song-card rounded-xl group"
+      className="song-card group"
     >
-      {/* 封面 */}
-      <div className="relative aspect-[16/9] bg-white/5 overflow-hidden">
+      <div className="relative aspect-[16/9] bg-white/5 overflow-hidden rounded-t-xl">
         {img.src ? (
           <img
             {...img}
             alt={song.title}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
             loading="lazy"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-700 text-4xl">
-            ♪
-          </div>
+          <div className="w-full h-full flex items-center justify-center text-gray-700 text-4xl">♪</div>
         )}
-        {/* 渐变覆盖 */}
         <div className="absolute inset-0 bg-gradient-to-t from-[rgb(var(--background))] via-transparent to-transparent" />
-        {/* 分数角标 */}
-        <div className="song-card-badge">
-          {song.score.toFixed(1)}
-        </div>
-        {/* 播放量覆盖层 */}
-        <div className="absolute bottom-2 right-2 text-[10px] text-white/60 bg-black/40 px-1.5 py-0.5 rounded-md backdrop-blur-sm">
+        <div className="song-card-badge">★ {song.score.toFixed(1)}</div>
+        <div className="absolute bottom-2 right-2 text-[10px] text-white/70 bg-black/50 px-1.5 py-0.5 rounded-md backdrop-blur-sm border border-white/10">
           ▶ {formatCount(stats.playCount ?? 0)}
         </div>
       </div>
-
-      {/* 文字信息 */}
       <div className="p-3 space-y-1.5">
         <p className="text-sm font-semibold text-white truncate group-hover:text-vocaloid-cyan transition-colors">
           {song.title}
@@ -103,30 +138,64 @@ export default function HomePage() {
   const latestSongs = pageData?.latestSongs ?? [];
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen relative">
+      <ParticleField />
+      <div className="grid-bg" aria-hidden="true" />
+      <div className="scanline-overlay" aria-hidden="true" />
+
       {/* ─── 顶栏 ─── */}
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-[rgb(var(--background))/80] border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 md:px-8 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <h1 className="text-lg font-bold tracking-wider text-gradient-flow">
-              VOCALOID HUB
-            </h1>
-            <span className="text-[10px] text-gray-600 hidden sm:inline">♪ 虚拟歌手原创音乐平台</span>
+            {/* 霓虹装饰头像 */}
+            <div className="neon-avatar neon-avatar-small hidden sm:flex" aria-hidden="true">♪</div>
+            <div>
+              <h1 className="text-lg font-bold tracking-wider text-gradient-flow">
+                VOCALOID HUB
+              </h1>
+              <p className="text-[9px] text-gray-600 tracking-widest uppercase -mt-0.5">Virtual Singer Music</p>
+            </div>
           </div>
           <nav className="flex items-center gap-6 text-sm text-gray-400">
-            <a href="/ranking" className="hover:text-vocaloid-cyan transition-colors">排行榜</a>
-            <a href="/analytics" className="hover:text-vocaloid-cyan transition-colors">数据分析</a>
-            <a href="/forum" className="hover:text-vocaloid-cyan transition-colors">论坛</a>
-            <a href="/about" className="hover:text-vocaloid-cyan transition-colors">关于</a>
+            <a href="/ranking" className="hover:text-vocaloid-cyan transition-colors flex items-center gap-1">
+              <span>🏆</span> 排行榜
+            </a>
+            <a href="/analytics" className="hover:text-vocaloid-cyan transition-colors">📊 数据分析</a>
+            <a href="/forum" className="hover:text-vocaloid-cyan transition-colors">💬 论坛</a>
+            <a href="/about" className="hover:text-vocaloid-cyan transition-colors">❓ 关于</a>
           </nav>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 space-y-10">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 space-y-12 relative z-10">
+        {/* ─── HERO 区域 ─── */}
+        <section className="text-center py-10 relative">
+          {/* 装饰霓虹灯条 */}
+          <div className="flex justify-center mb-6">
+            <NeonDecoration />
+          </div>
+
+          <h2 className="text-4xl md:text-6xl font-black text-neon-flicker tracking-wider mb-3">
+            VOCALOID
+          </h2>
+          <p className="text-lg md:text-xl text-gray-400 mb-2 tracking-widest">
+            <span className="text-glow-cyan">♪</span> 探索虚拟歌手的原创音乐世界{' '}
+            <span className="text-glow-pink">♪</span>
+          </p>
+          <div className="flex justify-center gap-3 mt-4">
+            <span className="music-float text-xl" aria-hidden="true">♫</span>
+            <span className="music-float-delay text-xl" aria-hidden="true">♩</span>
+            <span className="music-float text-xl" style={{animationDelay: '0.5s'}} aria-hidden="true">♬</span>
+          </div>
+          <div className="flex justify-center mt-6">
+            <NeonDecoration />
+          </div>
+        </section>
+
         {/* ─── 统计栏 ─── */}
         <section>
           {isLoading ? (
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-4">
               {[...Array(3)].map((_, i) => (
                 <div key={i} className="h-28 rounded-2xl bg-white/5 animate-pulse" />
               ))}
@@ -140,26 +209,29 @@ export default function HomePage() {
           )}
         </section>
 
-        {/* ─── 排行榜 日榜 | 周榜 ─── */}
+        {/* ─── 排行榜 ─── */}
         <section>
-          <div className="flex items-center gap-3 mb-6">
-            <h2 className="section-title text-lg text-white">排行榜</h2>
-            <a href="/ranking" className="text-xs text-gray-500 hover:text-vocaloid-cyan transition-colors ml-auto">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl float-element" aria-hidden="true">🏆</span>
+              <h2 className="section-title text-xl text-white">排行榜</h2>
+            </div>
+            <a href="/ranking" className="neon-btn !py-1.5 !px-4 text-xs">
               查看全部 &rarr;
             </a>
           </div>
-          <div className="grid md:grid-cols-2 gap-5">
+          <div className="grid md:grid-cols-2 gap-6">
             {/* 日榜 */}
             <div className="rgb-border">
               <div className="rgb-border-content">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm">🌅</span>
-                    <h3 className="text-sm font-semibold text-vocaloid-cyan tracking-widest uppercase">
-                      今日日榜
+                    <span className="text-glow-cyan text-lg" aria-hidden="true">☀</span>
+                    <h3 className="text-sm font-bold text-glow-cyan tracking-widest uppercase">
+                      日榜
                     </h3>
                   </div>
-                  <span className="text-[10px] text-gray-500">DAILY</span>
+                  <span className="text-[10px] text-gray-500 bg-white/5 px-2 py-0.5 rounded-full">DAILY</span>
                 </div>
                 {isLoading ? (
                   <div className="space-y-3">
@@ -184,12 +256,12 @@ export default function HomePage() {
               <div className="rgb-border-content">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm">📅</span>
-                    <h3 className="text-sm font-semibold text-vocaloid-pink tracking-widest uppercase">
-                      本周周榜
+                    <span className="text-glow-pink text-lg" aria-hidden="true">◈</span>
+                    <h3 className="text-sm font-bold text-glow-pink tracking-widest uppercase">
+                      周榜
                     </h3>
                   </div>
-                  <span className="text-[10px] text-gray-500">WEEKLY</span>
+                  <span className="text-[10px] text-gray-500 bg-white/5 px-2 py-0.5 rounded-full">WEEKLY</span>
                 </div>
                 {isLoading ? (
                   <div className="space-y-3">
@@ -211,13 +283,15 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* 二次元可爱分割线 */}
         <div className="divider-cute" />
 
         {/* ─── 最新发布 ─── */}
         <section>
-          <div className="flex items-center gap-3 mb-6">
-            <h2 className="section-title text-lg text-white">最新发布</h2>
-            <span className="float-element text-lg">🌸</span>
+          <div className="flex items-center gap-4 mb-6">
+            <span className="text-2xl float-element" aria-hidden="true">🌸</span>
+            <h2 className="section-title text-xl text-white">最新发布</h2>
+            <span className="text-xl music-float-delay" aria-hidden="true">♪</span>
           </div>
           {isLoading ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -235,15 +309,21 @@ export default function HomePage() {
             </div>
           )}
         </section>
-      </div>
 
-      {/* ─── 页脚 ─── */}
-      <footer className="border-t border-white/5 mt-16 py-8">
-        <div className="max-w-7xl mx-auto px-4 md:px-8 text-center">
-          <p className="text-gradient-flow text-sm font-semibold tracking-wider">VOCALOID HUB</p>
-          <p className="text-xs text-gray-600 mt-2">♪ 为虚拟歌手原创音乐而生 ♪</p>
-        </div>
-      </footer>
+        {/* ─── 底部装饰 ─── */}
+        <section className="text-center py-8 space-y-3">
+          <div className="flex justify-center gap-4 text-2xl opacity-40">
+            <span className="music-float" aria-hidden="true">♫</span>
+            <span className="music-float-delay" aria-hidden="true">♩</span>
+            <span className="music-float" style={{animationDelay: '0.5s'}} aria-hidden="true">♬</span>
+            <span className="music-float" style={{animationDelay: '1.5s'}} aria-hidden="true">♪</span>
+          </div>
+          <NeonDecoration />
+          <p className="text-[10px] text-gray-700 tracking-[0.3em] uppercase mt-4">
+            Powered by Bilibili API · All rights reserved
+          </p>
+        </section>
+      </div>
     </main>
   );
 }
@@ -253,9 +333,9 @@ export default function HomePage() {
 function StatCard({ label, value, emoji }: { label: string; value: string; emoji?: string }) {
   return (
     <div className="rgb-card">
-      {emoji && <span className="text-xl block mb-1">{emoji}</span>}
+      {emoji && <span className="text-2xl block mb-2">{emoji}</span>}
       <p className="stat-value text-3xl md:text-4xl">{value}</p>
-      <p className="text-xs text-gray-500 mt-1 tracking-wider">{label}</p>
+      <p className="text-xs text-gray-500 mt-1 tracking-wider uppercase">{label}</p>
     </div>
   );
 }
