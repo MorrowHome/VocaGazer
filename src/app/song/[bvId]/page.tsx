@@ -218,7 +218,7 @@ export default function SongDetailPage() {
         {/* ─── 底部 ─── */}
         <div className="flex flex-col items-center gap-4 pt-4">
           <div className="opacity-30">
-            <NeonAvatar size={60} seed="初音未来" style="big-smile" />
+            <NeonAvatar size={60} seed="初音未来" style="miku" />
           </div>
           <NeonAvatarGroup size={40} />
           <div className="flex justify-center gap-4">

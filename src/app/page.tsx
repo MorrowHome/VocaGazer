@@ -133,13 +133,13 @@ export default function HomePage() {
           {/* 二次元霓虹头像 — 从网络加载的现成头像 */}
           <div className="flex justify-center -mt-4 mb-2">
             <div className="scale-75 md:scale-100 opacity-40 md:opacity-60 hover:opacity-100 transition-all duration-500">
-              <NeonAvatar size={100} seed="初音未来" style="big-smile" />
+              <NeonAvatar size={100} seed="初音未来" style="miku" />
             </div>
-            <div className="scale-75 md:scale-100 -ml-4 opacity-30 md:opacity-40 hover:opacity-80 transition-all duration-500 mt-4">
-              <NeonAvatar size={80} seed="洛天依" style="lorelei" />
+            <div className="scale-75 md:scale-100 -ml-3 opacity-30 md:opacity-40 hover:opacity-80 transition-all duration-500 mt-4">
+              <NeonAvatar size={80} seed="洛天依" style="sakura" />
             </div>
-            <div className="scale-75 md:scale-100 -ml-4 opacity-25 md:opacity-30 hover:opacity-70 transition-all duration-500 -mt-2">
-              <NeonAvatar size={70} seed="星尘" style="adventurer" />
+            <div className="scale-75 md:scale-100 -ml-3 opacity-25 md:opacity-30 hover:opacity-70 transition-all duration-500 -mt-2">
+              <NeonAvatar size={70} seed="星尘" style="vocaloid" />
             </div>
           </div>
 
