@@ -4,7 +4,7 @@ import { useParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
 import { formatCount, parseStats, coverImgProps } from '@/lib/utils';
 import { BackgroundLayers } from '@/components/BackgroundLayers';
-import { NeonAvatar } from '@/components/NeonAvatar';
+import { NeonAvatar, NeonAvatarGroup } from '@/components/NeonAvatar';
 
 const STAT_COLORS: Record<string, { label: string; textClass: string; bgClass: string }> = {
   playCount:   { label: '播放', textClass: 'text-cyan-400',   bgClass: 'bg-cyan-500/10' },
@@ -218,8 +218,9 @@ export default function SongDetailPage() {
         {/* ─── 底部 ─── */}
         <div className="flex flex-col items-center gap-4 pt-4">
           <div className="opacity-30">
-            <NeonAvatar size={60} />
+            <NeonAvatar size={60} seed="初音未来" style="big-smile" />
           </div>
+          <NeonAvatarGroup size={40} />
           <div className="flex justify-center gap-4">
             <a href="/" className="neon-btn !py-2 !px-6">← 返回首页</a>
             <a href="/ranking" className="neon-btn !py-2 !px-6">🏆 排行榜</a>
