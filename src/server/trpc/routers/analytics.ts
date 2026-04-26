@@ -8,6 +8,16 @@ function parseStats(s: string) {
   try { return JSON.parse(s); } catch { return {}; }
 }
 
+const rangeSchema = z.enum(['7d', '30d', '90d', 'all']).default('all');
+
+function getDateRange(range: string): Date | null {
+  if (range === 'all') return null;
+  const days = { '7d': 7, '30d': 30, '90d': 90 }[range] ?? 7;
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return d;
+}
+
 export const analyticsRouter = router({
   // 获取首页全量数据
   getHomepage: publicProcedure.query(async ({ ctx }) => {
@@ -59,106 +69,185 @@ export const analyticsRouter = router({
     };
   }),
 
-  // 获取数据分析页全量数据
-  getAnalytics: publicProcedure.query(async ({ ctx }) => {
-    const allSongs = await ctx.prisma.song.findMany({
-      orderBy: { publishTime: 'desc' },
-    });
+  // 获取数据分析页数据（支持时间范围过滤）
+  getAnalytics: publicProcedure
+    .input(z.object({ range: rangeSchema }))
+    .query(async ({ ctx, input }) => {
+      const { range } = input;
+      const dateFilter = getDateRange(range);
+      const where = dateFilter ? { publishTime: { gte: dateFilter } } : {};
 
-    // 聚合计算
-    const artistMap = new Map<string, { count: number; totalPlays: number }>();
-    const tagMap = new Map<string, number>();
-    let totalPlayCount = 0;
-    let totalLikeCount = 0;
+      const allSongs = await ctx.prisma.song.findMany({
+        where,
+        orderBy: { publishTime: 'desc' },
+      });
 
-    // 按月分组
-    const monthMap = new Map<string, number>();
-    // 评分分布
-    const scoreDist = [0, 0, 0, 0, 0]; // 0-20, 20-40, 40-60, 60-80, 80-100
+      // ── 基础聚合 ──
+      let totalPlayCount = 0;
+      let totalLikeCount = 0;
+      let totalCoinCount = 0;
+      let totalFavCount = 0;
+      let totalShareCount = 0;
+      let totalCommentCount = 0;
 
-    for (const song of allSongs) {
-      const stats = parseStats(song.statistics);
-      const plays = stats.playCount || 0;
-      totalPlayCount += plays;
-      totalLikeCount += stats.likes || 0;
+      const artistMap = new Map<string, { count: number; totalPlays: number; totalLikes: number }>();
+      const tagMap = new Map<string, number>();
+      const monthMap = new Map<string, number>();
+      const weekMap = new Map<string, number>();
+      const scoreDist = [0, 0, 0, 0, 0];
+      const artistScoreMap = new Map<string, { sum: number; count: number }>();
 
-      // 艺术家
-      const artist = song.author || '未知';
-      const existing = artistMap.get(artist) || { count: 0, totalPlays: 0 };
-      artistMap.set(artist, { count: existing.count + 1, totalPlays: existing.totalPlays + plays });
+      // ── Top 歌曲 ──
+      const songStatsList: Array<{
+        id: string; bvId: string; title: string; author: string;
+        score: number; plays: number; likes: number; coins: number;
+        favorites: number; shares: number; comments: number;
+        publishTime: Date;
+      }> = [];
 
-      // 标签
-      try {
-        const tags: string[] = JSON.parse(song.tags);
-        for (const tag of tags) {
-          tagMap.set(tag, (tagMap.get(tag) || 0) + 1);
-        }
-      } catch {}
+      for (const song of allSongs) {
+        const stats = parseStats(song.statistics);
+        const plays = stats.playCount || 0;
+        const likes = stats.likes || 0;
+        const coins = stats.coins || 0;
+        const favs = stats.favorites || 0;
+        const shares = stats.shares || 0;
+        const comments = stats.comments || 0;
 
-      // 按月
-      const monthKey = new Date(song.publishTime).toISOString().slice(0, 7); // "2024-01"
-      monthMap.set(monthKey, (monthMap.get(monthKey) || 0) + 1);
+        totalPlayCount += plays;
+        totalLikeCount += likes;
+        totalCoinCount += coins;
+        totalFavCount += favs;
+        totalShareCount += shares;
+        totalCommentCount += comments;
 
-      // 评分分布
-      const score = song.score;
-      if (score < 20) scoreDist[0]++;
-      else if (score < 40) scoreDist[1]++;
-      else if (score < 60) scoreDist[2]++;
-      else if (score < 80) scoreDist[3]++;
-      else scoreDist[4]++;
-    }
+        // 艺术家聚合
+        const artist = song.author || '未知';
+        const a = artistMap.get(artist) || { count: 0, totalPlays: 0, totalLikes: 0 };
+        artistMap.set(artist, { count: a.count + 1, totalPlays: a.totalPlays + plays, totalLikes: a.totalLikes + likes });
 
-    // 排序
-    const topArtists = Array.from(artistMap.entries())
-      .map(([name, data]) => ({ name, ...data }))
-      .sort((a, b) => b.totalPlays - a.totalPlays)
-      .slice(0, 15);
+        // 艺术家评分均值
+        const as = artistScoreMap.get(artist) || { sum: 0, count: 0 };
+        artistScoreMap.set(artist, { sum: as.sum + song.score, count: as.count + 1 });
 
-    const topTags = Array.from(tagMap.entries())
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 20);
+        // 标签
+        try {
+          const tags: string[] = JSON.parse(song.tags);
+          for (const tag of tags) {
+            tagMap.set(tag, (tagMap.get(tag) || 0) + 1);
+          }
+        } catch {}
 
-    const songsByMonth = Array.from(monthMap.entries())
-      .map(([month, count]) => ({ month, count }))
-      .sort((a, b) => a.month.localeCompare(b.month));
+        // 月份
+        const monthKey = new Date(song.publishTime).toISOString().slice(0, 7);
+        monthMap.set(monthKey, (monthMap.get(monthKey) || 0) + 1);
 
-    const avgScore = allSongs.length > 0
-      ? allSongs.reduce((sum, s) => sum + s.score, 0) / allSongs.length
-      : 0;
+        // 周
+        const d = new Date(song.publishTime);
+        const weekStart = new Date(d);
+        weekStart.setDate(d.getDate() - d.getDay());
+        const weekKey = weekStart.toISOString().slice(0, 10);
+        weekMap.set(weekKey, (weekMap.get(weekKey) || 0) + 1);
 
-    return {
-      overview: {
-        totalSongs: allSongs.length,
-        totalArtists: artistMap.size,
-        totalPlayCount,
-        totalLikeCount,
-        avgScore: Math.round(avgScore * 10) / 10,
-      },
-      topTags,
-      topArtists,
-      songsByMonth,
-      scoreDistribution: scoreDist,
-    };
-  }),
+        // 评分分布
+        const sc = song.score;
+        if (sc < 20) scoreDist[0]++;
+        else if (sc < 40) scoreDist[1]++;
+        else if (sc < 60) scoreDist[2]++;
+        else if (sc < 80) scoreDist[3]++;
+        else scoreDist[4]++;
+
+        // 歌曲详情（用于 top songs 表）
+        songStatsList.push({
+          id: song.id, bvId: song.bvId, title: song.title,
+          author: song.author || '未知', score: song.score,
+          plays, likes, coins, favorites: favs, shares, comments,
+          publishTime: song.publishTime,
+        });
+      }
+
+      // ── 排序输出 ──
+      const topArtists = Array.from(artistMap.entries())
+        .map(([name, data]) => ({ name, ...data }))
+        .sort((a, b) => b.totalPlays - a.totalPlays)
+        .slice(0, 15);
+
+      const topTags = Array.from(tagMap.entries())
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 20);
+
+      const songsByMonth = Array.from(monthMap.entries())
+        .map(([month, count]) => ({ month, count }))
+        .sort((a, b) => a.month.localeCompare(b.month));
+
+      const songsByWeek = Array.from(weekMap.entries())
+        .map(([week, count]) => ({ week, count }))
+        .sort((a, b) => a.week.localeCompare(b.week));
+
+      const topSongs = songStatsList
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 20);
+
+      const mostPlayed = songStatsList
+        .sort((a, b) => b.plays - a.plays)
+        .slice(0, 10);
+
+      // 平均分最高的 UP 主
+      const topRatedArtists = Array.from(artistScoreMap.entries())
+        .map(([name, data]) => ({ name, avgScore: Math.round((data.sum / data.count) * 10) / 10, count: data.count }))
+        .filter((a) => a.count >= 2)
+        .sort((a, b) => b.avgScore - a.avgScore)
+        .slice(0, 10);
+
+      const avgScore = allSongs.length > 0
+        ? Math.round((allSongs.reduce((sum, s) => sum + s.score, 0) / allSongs.length) * 10) / 10
+        : 0;
+
+      return {
+        overview: {
+          totalSongs: allSongs.length,
+          totalArtists: artistMap.size,
+          totalPlayCount,
+          totalLikeCount,
+          totalCoinCount,
+          totalFavCount,
+          avgScore,
+          avgPlaysPerSong: allSongs.length > 0 ? Math.round(totalPlayCount / allSongs.length) : 0,
+          avgLikesPerSong: allSongs.length > 0 ? Math.round(totalLikeCount / allSongs.length) : 0,
+        },
+        engagement: {
+          likePlayRatio: totalPlayCount > 0 ? ((totalLikeCount / totalPlayCount) * 100).toFixed(1) : '0',
+          coinPlayRatio: totalPlayCount > 0 ? ((totalCoinCount / totalPlayCount) * 100).toFixed(1) : '0',
+          favPlayRatio: totalPlayCount > 0 ? ((totalFavCount / totalPlayCount) * 100).toFixed(1) : '0',
+          sharePlayRatio: totalPlayCount > 0 ? ((totalShareCount / totalPlayCount) * 100).toFixed(1) : '0',
+          commentPlayRatio: totalPlayCount > 0 ? ((totalCommentCount / totalPlayCount) * 100).toFixed(1) : '0',
+        },
+        topTags,
+        topArtists,
+        topRatedArtists,
+        topSongs,
+        mostPlayed,
+        songsByMonth,
+        songsByWeek,
+        scoreDistribution: scoreDist,
+      };
+    }),
 
   // 获取 AI 报告列表
   getReports: publicProcedure
     .input(
       z.object({
-        type: z
-          .enum(['daily_summary', 'trend_analysis', 'anomaly_detection'])
-          .optional(),
+        type: z.enum(['daily_summary', 'trend_analysis', 'anomaly_detection']).optional(),
         limit: z.number().min(1).max(50).default(10),
       }),
     )
     .query(async ({ ctx, input }) => {
       const { type, limit } = input;
-      const reports = await ctx.prisma.aiReport.findMany({
+      return ctx.prisma.aiReport.findMany({
         where: type ? { type } : {},
         orderBy: { createdAt: 'desc' },
         take: limit,
       });
-      return reports;
     }),
 });
