@@ -3,7 +3,6 @@
 import { trpc } from '@/lib/trpc';
 import { formatCount, parseStats, timeAgo, coverImgProps } from '@/lib/utils';
 import { BackgroundLayers } from '@/components/BackgroundLayers';
-import { NeonAvatar, NeonAvatarGroup } from '@/components/NeonAvatar';
 
 // ─── 霓虹装饰条 ───
 
@@ -130,19 +129,6 @@ export default function HomePage() {
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 space-y-12 relative z-10">
         {/* ─── HERO ─── */}
         <section className="relative py-8">
-          {/* 二次元霓虹头像 — 从网络加载的现成头像 */}
-          <div className="flex justify-center -mt-4 mb-2">
-            <div className="scale-75 md:scale-100 opacity-40 md:opacity-60 hover:opacity-100 transition-all duration-500">
-              <NeonAvatar size={100} seed="初音未来" style="miku" />
-            </div>
-            <div className="scale-75 md:scale-100 -ml-3 opacity-30 md:opacity-40 hover:opacity-80 transition-all duration-500 mt-4">
-              <NeonAvatar size={80} seed="洛天依" style="sakura" />
-            </div>
-            <div className="scale-75 md:scale-100 -ml-3 opacity-25 md:opacity-30 hover:opacity-70 transition-all duration-500 -mt-2">
-              <NeonAvatar size={70} seed="星尘" style="vocaloid" />
-            </div>
-          </div>
-
           <div className="text-center relative">
             <div className="flex justify-center mb-4">
               <NeonDecoration />
@@ -299,8 +285,6 @@ export default function HomePage() {
 
         {/* ─── 底部 ─── */}
         <section className="text-center py-8 space-y-4">
-          {/* 二次元头像集合 */}
-          <NeonAvatarGroup size={60} />
           <div className="flex justify-center gap-4 text-2xl opacity-40" aria-hidden="true">
             <span className="music-float">♫</span>
             <span className="music-float-delay">♩</span>
