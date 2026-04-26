@@ -120,6 +120,7 @@ export default function HomePage() {
             </div>
           </div>
           <nav className="flex items-center gap-6 text-sm text-gray-400">
+            <a href="/recommend" className="hover:text-vocaloid-cyan transition-colors">⭐ 推荐</a>
             <a href="/ranking" className="hover:text-vocaloid-cyan transition-colors flex items-center gap-1">
               <span>🏆</span> 排行榜
             </a>
@@ -325,35 +326,37 @@ export default function HomePage() {
   );
 }
 
-// ─── 顶部小歌曲卡片（封面 + 标题 + UP主 + 播放量）───
+// ─── 顶部歌曲卡片（封面铺满整卡）───
 
 function MiniSongCard({ song, label }: { song: any; label: string }) {
   const stats = parseStats(song.statistics);
   const img = coverImgProps(song.picUrl);
   return (
-    <div className="relative h-full">
-      <div className="rgb-card !p-3 !rounded-xl h-full flex flex-col justify-between group-hover:translate-y-[-2px] transition-all cursor-pointer">
-        <div className="flex items-start gap-2.5">
-          {/* 封面 */}
-          <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-white/5 ring-1 ring-white/10">
-            {img.src ? (
-              <img {...img} alt="" className="w-full h-full object-cover" loading="lazy" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-700 text-lg">♪</div>
-            )}
-          </div>
-          {/* 文字 */}
-          <div className="min-w-0 flex-1">
-            <p className="text-xs text-gray-400 tracking-wider mb-0.5">{label}</p>
-            <p className="text-sm font-bold text-white truncate group-hover:text-vocaloid-cyan transition-colors">
-              {song.title}
-            </p>
-            <p className="text-[11px] text-gray-500 truncate mt-0.5">{song.author}</p>
-          </div>
-        </div>
-        {/* 播放量 */}
-        <div className="flex items-center gap-1.5 mt-2 text-[11px] text-gray-500">
-          <span>▶</span>
+    <div className="relative h-full group cursor-pointer">
+      <div className="absolute inset-0 rounded-xl overflow-hidden">
+        {img.src ? (
+          <img
+            {...img}
+            alt=""
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-white/5 text-gray-700 text-4xl">♪</div>
+        )}
+        {/* 渐变遮罩 */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[rgb(var(--background))] via-[rgb(var(--background))/70] to-[rgb(var(--background))/30]" />
+        {/* RGB边框 */}
+        <div className="absolute inset-0 rounded-xl border border-white/10 group-hover:border-vocaloid-cyan/40 transition-colors" />
+      </div>
+      <div className="relative z-10 p-4 h-full flex flex-col justify-end min-h-[140px]">
+        <p className="text-[11px] text-gray-400 tracking-wider mb-1.5">{label}</p>
+        <p className="text-base font-bold text-white truncate group-hover:text-vocaloid-cyan transition-colors drop-shadow-lg">
+          {song.title}
+        </p>
+        <p className="text-xs text-gray-300 truncate mt-0.5 drop-shadow">{song.author}</p>
+        <div className="flex items-center gap-1.5 mt-2 text-xs text-gray-300 drop-shadow">
+          <span className="text-vocaloid-cyan">▶</span>
           <span>{formatCount(stats.playCount ?? 0)} 播放</span>
         </div>
       </div>

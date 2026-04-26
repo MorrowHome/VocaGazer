@@ -8,6 +8,7 @@ import { postsRouter } from './routers/posts';
 import { usersRouter } from './routers/users';
 import { analyticsRouter } from './routers/analytics';
 import { crawlRouter } from './routers/crawl';
+import { recommendRouter } from './routers/recommend';
 
 export const appRouter = router({
   songs: songsRouter,
@@ -16,6 +17,7 @@ export const appRouter = router({
   users: usersRouter,
   analytics: analyticsRouter,
   crawl: crawlRouter,
+  recommend: recommendRouter,
 });
 
 export type AppRouter = typeof appRouter;
