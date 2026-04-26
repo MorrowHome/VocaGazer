@@ -3,6 +3,8 @@
 import { useParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
 import { formatCount, parseStats, coverImgProps } from '@/lib/utils';
+import { BackgroundLayers } from '@/components/BackgroundLayers';
+import { NeonAvatar } from '@/components/NeonAvatar';
 
 const STAT_COLORS: Record<string, { label: string; textClass: string; bgClass: string }> = {
   playCount:   { label: '播放', textClass: 'text-cyan-400',   bgClass: 'bg-cyan-500/10' },
@@ -22,8 +24,8 @@ export default function SongDetailPage() {
   if (isLoading) {
     return (
       <main className="min-h-screen relative">
-        <div className="grid-bg" aria-hidden="true" />
-        <div className="max-w-3xl mx-auto px-4 md:px-8 py-8 space-y-4">
+        <BackgroundLayers />
+        <div className="max-w-3xl mx-auto px-4 md:px-8 py-8 space-y-4 relative z-10">
           <div className="h-6 w-20 rounded-lg bg-white/5 animate-pulse" />
           <div className="h-10 w-2/3 rounded-xl bg-white/5 animate-pulse" />
           <div className="h-4 w-1/3 rounded-lg bg-white/5 animate-pulse" />
@@ -36,8 +38,8 @@ export default function SongDetailPage() {
   if (error || !song) {
     return (
       <main className="min-h-screen relative">
-        <div className="grid-bg" aria-hidden="true" />
-        <div className="max-w-3xl mx-auto px-4 md:px-8 py-8">
+        <BackgroundLayers />
+        <div className="max-w-3xl mx-auto px-4 md:px-8 py-8 relative z-10">
           <a href="/" className="neon-btn !py-1.5 !px-4 text-xs">&larr; 返回首页</a>
           <p className="text-gray-500 mt-8">歌曲未找到或加载失败</p>
         </div>
@@ -55,10 +57,8 @@ export default function SongDetailPage() {
 
   return (
     <main className="min-h-screen relative">
-      <div className="grid-bg" aria-hidden="true" />
-      <div className="scanline-overlay" aria-hidden="true" />
+      <BackgroundLayers />
 
-      {/* 顶栏 */}
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-[rgb(var(--background))/80] border-b border-white/5">
         <div className="max-w-3xl mx-auto px-4 md:px-8 h-14 flex items-center justify-between">
           <a href="/" className="text-sm text-gray-500 hover:text-vocaloid-cyan transition-colors flex items-center gap-2">
@@ -71,7 +71,6 @@ export default function SongDetailPage() {
         {/* ─── 标题区 ─── */}
         <div className="rgb-border">
           <div className="rgb-border-content space-y-4">
-            {/* 霓虹装饰 */}
             <div className="flex items-center gap-3 mb-1">
               <div className="neon-avatar neon-avatar-small text-sm" aria-hidden="true">♪</div>
               <span className="text-[10px] text-gray-500 tracking-[0.2em] uppercase">Track Information</span>
@@ -97,7 +96,6 @@ export default function SongDetailPage() {
               ) : null}
             </div>
 
-            {/* 标签 */}
             {tags.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {tags.slice(0, 12).map((tag) => (
@@ -111,7 +109,6 @@ export default function SongDetailPage() {
               </div>
             )}
 
-            {/* B站按钮 */}
             <a
               href={biliUrl}
               target="_blank"
@@ -144,7 +141,6 @@ export default function SongDetailPage() {
                 NOW PLAYING
               </span>
             </div>
-            {/* 装饰性霓虹光 */}
             <div className="absolute -top-10 -right-10 w-32 h-32 bg-vocaloid-cyan/5 rounded-full blur-3xl" />
             <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-vocaloid-pink/5 rounded-full blur-3xl" />
           </div>
@@ -179,7 +175,6 @@ export default function SongDetailPage() {
 
         {/* ─── 综合评分 ─── */}
         <div className="neon-rank rounded-2xl p-8 text-center relative overflow-hidden">
-          {/* 背景光晕 */}
           <div className="absolute -top-16 -left-16 w-48 h-48 rounded-full bg-vocaloid-pink/10 blur-3xl animate-pulse" />
           <div className="absolute -bottom-16 -right-16 w-48 h-48 rounded-full bg-vocaloid-cyan/10 blur-3xl animate-pulse" style={{animationDelay: '1s'}} />
           <div className="relative z-10">
@@ -187,7 +182,6 @@ export default function SongDetailPage() {
             <p className="text-5xl md:text-7xl font-black text-gradient-flow">
               {song.score.toFixed(1)}
             </p>
-            {/* 星级评分 */}
             <div className="flex justify-center gap-1.5 mt-4">
               {[1, 2, 3, 4, 5].map((star) => {
                 const filled = star <= Math.round(song.score / 20);
@@ -221,10 +215,15 @@ export default function SongDetailPage() {
           </div>
         )}
 
-        {/* ─── 底部导航 ─── */}
-        <div className="flex justify-center gap-4 pt-4">
-          <a href="/" className="neon-btn !py-2 !px-6">← 返回首页</a>
-          <a href="/ranking" className="neon-btn !py-2 !px-6">🏆 排行榜</a>
+        {/* ─── 底部 ─── */}
+        <div className="flex flex-col items-center gap-4 pt-4">
+          <div className="opacity-30">
+            <NeonAvatar size={60} />
+          </div>
+          <div className="flex justify-center gap-4">
+            <a href="/" className="neon-btn !py-2 !px-6">← 返回首页</a>
+            <a href="/ranking" className="neon-btn !py-2 !px-6">🏆 排行榜</a>
+          </div>
         </div>
       </div>
     </main>

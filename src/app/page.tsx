@@ -2,41 +2,8 @@
 
 import { trpc } from '@/lib/trpc';
 import { formatCount, parseStats, timeAgo, coverImgProps } from '@/lib/utils';
-
-// ─── 粒子系统 ───
-
-function ParticleField() {
-  const stars = Array.from({ length: 40 }, (_, i) => {
-    const colors = ['star-cyan', 'star-pink', 'star-purple', 'star-white'];
-    return {
-      id: i,
-      left: `${Math.random() * 100}%`,
-      delay: `${Math.random() * 15}s`,
-      duration: `${12 + Math.random() * 20}s`,
-      size: `${1 + Math.random() * 2}px`,
-      color: colors[Math.floor(Math.random() * colors.length)],
-    };
-  });
-
-  return (
-    <div className="particle-field" aria-hidden="true">
-      {stars.map((s) => (
-        <div
-          key={s.id}
-          className={`star ${s.color}`}
-          style={{
-            left: s.left,
-            bottom: '-10px',
-            width: s.size,
-            height: s.size,
-            animationDelay: s.delay,
-            animationDuration: s.duration,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
+import { BackgroundLayers } from '@/components/BackgroundLayers';
+import { NeonAvatar } from '@/components/NeonAvatar';
 
 // ─── 霓虹装饰条 ───
 
@@ -92,10 +59,7 @@ function SongCard({ song }: { song: any }) {
   const img = coverImgProps(song.picUrl);
 
   return (
-    <a
-      href={`/song/${song.bvId}`}
-      className="song-card group"
-    >
+    <a href={`/song/${song.bvId}`} className="song-card group">
       <div className="relative aspect-[16/9] bg-white/5 overflow-hidden rounded-t-xl">
         {img.src ? (
           <img
@@ -131,7 +95,6 @@ function SongCard({ song }: { song: any }) {
 
 export default function HomePage() {
   const { data: pageData, isLoading } = trpc.analytics.getHomepage.useQuery();
-
   const stats = pageData?.stats;
   const dailyRanking = pageData?.dailyRanking ?? [];
   const weeklyRanking = pageData?.weeklyRanking ?? [];
@@ -139,15 +102,12 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen relative">
-      <ParticleField />
-      <div className="grid-bg" aria-hidden="true" />
-      <div className="scanline-overlay" aria-hidden="true" />
+      <BackgroundLayers />
 
       {/* ─── 顶栏 ─── */}
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-[rgb(var(--background))/80] border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 md:px-8 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {/* 霓虹装饰头像 */}
             <div className="neon-avatar neon-avatar-small hidden sm:flex" aria-hidden="true">♪</div>
             <div>
               <h1 className="text-lg font-bold tracking-wider text-gradient-flow">
@@ -168,27 +128,47 @@ export default function HomePage() {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 space-y-12 relative z-10">
-        {/* ─── HERO 区域 ─── */}
-        <section className="text-center py-10 relative">
-          {/* 装饰霓虹灯条 */}
-          <div className="flex justify-center mb-6">
-            <NeonDecoration />
+        {/* ─── HERO ─── */}
+        <section className="relative py-8">
+          {/* 霓虹线条二次元头像 */}
+          <div className="absolute left-1/2 -translate-x-1/2 -top-2 opacity-30 md:opacity-50 pointer-events-none select-none" aria-hidden="true">
+            <NeonAvatar size={160} />
           </div>
 
-          <h2 className="text-4xl md:text-6xl font-black text-neon-flicker tracking-wider mb-3">
-            VOCALOID
-          </h2>
-          <p className="text-lg md:text-xl text-gray-400 mb-2 tracking-widest">
-            <span className="text-glow-cyan">♪</span> 探索虚拟歌手的原创音乐世界{' '}
-            <span className="text-glow-pink">♪</span>
-          </p>
-          <div className="flex justify-center gap-3 mt-4">
-            <span className="music-float text-xl" aria-hidden="true">♫</span>
-            <span className="music-float-delay text-xl" aria-hidden="true">♩</span>
-            <span className="music-float text-xl" style={{animationDelay: '0.5s'}} aria-hidden="true">♬</span>
-          </div>
-          <div className="flex justify-center mt-6">
-            <NeonDecoration />
+          <div className="text-center pt-16 relative">
+            <div className="flex justify-center mb-4">
+              <NeonDecoration />
+            </div>
+
+            {/* 二次元可爱装饰 */}
+            <div className="flex justify-center gap-2 mb-2" aria-hidden="true">
+              <span className="float-element text-lg">🌸</span>
+              <span className="music-float text-lg">♫</span>
+              <span className="float-element-delay text-sm">✦</span>
+              <span className="music-float-delay text-lg">♩</span>
+              <span className="float-element text-lg" style={{animationDelay: '0.5s'}}>💫</span>
+            </div>
+
+            <h2 className="text-4xl md:text-6xl font-black text-neon-flicker tracking-wider mb-1">
+              VOCALOID
+            </h2>
+            <p className="text-xs text-gray-600 tracking-[0.4em] uppercase mb-3">Powered by Neon</p>
+            <p className="text-base md:text-lg text-gray-400 tracking-widest">
+              <span className="text-glow-cyan">♪</span> 探索虚拟歌手的原创音乐世界{' '}
+              <span className="text-glow-pink">♪</span>
+            </p>
+
+            {/* 浮动音符 */}
+            <div className="flex justify-center gap-4 mt-4" aria-hidden="true">
+              <span className="music-float text-xl text-glow-cyan">♫</span>
+              <span className="music-float-delay text-xl text-glow-pink">♩</span>
+              <span className="music-float text-xl text-glow-purple" style={{animationDelay: '0.5s'}}>♬</span>
+              <span className="music-float text-xl text-glow-cyan" style={{animationDelay: '1.5s'}}>♪</span>
+            </div>
+
+            <div className="flex justify-center mt-4">
+              <NeonDecoration />
+            </div>
           </div>
         </section>
 
@@ -283,7 +263,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* 二次元可爱分割线 */}
         <div className="divider-cute" />
 
         {/* ─── 最新发布 ─── */}
@@ -310,17 +289,23 @@ export default function HomePage() {
           )}
         </section>
 
-        {/* ─── 底部装饰 ─── */}
-        <section className="text-center py-8 space-y-3">
-          <div className="flex justify-center gap-4 text-2xl opacity-40">
-            <span className="music-float" aria-hidden="true">♫</span>
-            <span className="music-float-delay" aria-hidden="true">♩</span>
-            <span className="music-float" style={{animationDelay: '0.5s'}} aria-hidden="true">♬</span>
-            <span className="music-float" style={{animationDelay: '1.5s'}} aria-hidden="true">♪</span>
+        {/* ─── 底部 ─── */}
+        <section className="text-center py-8 space-y-4">
+          {/* 霓裳二次元头像 */}
+          <div className="flex justify-center">
+            <div className="opacity-40 hover:opacity-70 transition-opacity">
+              <NeonAvatar size={80} />
+            </div>
+          </div>
+          <div className="flex justify-center gap-4 text-2xl opacity-40" aria-hidden="true">
+            <span className="music-float">♫</span>
+            <span className="music-float-delay">♩</span>
+            <span className="music-float" style={{animationDelay: '0.5s'}}>♬</span>
+            <span className="music-float" style={{animationDelay: '1.5s'}}>♪</span>
           </div>
           <NeonDecoration />
           <p className="text-[10px] text-gray-700 tracking-[0.3em] uppercase mt-4">
-            Powered by Bilibili API · All rights reserved
+            VOCALOID HUB · Virtual Singer Original Music
           </p>
         </section>
       </div>

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { formatCount, parseStats, coverImgProps } from '@/lib/utils';
+import { BackgroundLayers } from '@/components/BackgroundLayers';
 
 const TABS = [
   { key: 'daily', label: '日榜 🌅' },
@@ -22,7 +23,7 @@ const STAT_COLORS: Record<string, { label: string; textClass: string; bgClass: s
   comments:    { label: '评论', textClass: 'text-orange-400', bgClass: 'bg-orange-500/10' },
 };
 
-// ─── 排行条目组件 ───
+// ─── 排行条目 ───
 function RankCard({ song, rank, entryScore }: { song: any; rank: number; entryScore: number }) {
   const stats = parseStats(song.statistics);
   const img = coverImgProps(song.picUrl);
@@ -34,7 +35,6 @@ function RankCard({ song, rank, entryScore }: { song: any; rank: number; entrySc
         href={`/song/${song.bvId}`}
         className="flex items-start gap-4 p-4 rounded-xl hover:bg-white/[0.03] transition-all group/card border border-transparent hover:border-white/10"
       >
-        {/* 排名 */}
         <div className="flex flex-col items-center shrink-0 w-10 mt-1">
           <span className={`rank-number ${rankClass}`}>{rank}</span>
           {rank <= 3 && (
@@ -44,7 +44,6 @@ function RankCard({ song, rank, entryScore }: { song: any; rank: number; entrySc
           )}
         </div>
 
-        {/* 封面 */}
         <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 bg-white/5 ring-1 ring-white/10">
           {img.src ? (
             <img {...img} alt="" className="w-full h-full object-cover" loading="lazy" />
@@ -53,7 +52,6 @@ function RankCard({ song, rank, entryScore }: { song: any; rank: number; entrySc
           )}
         </div>
 
-        {/* 信息 + 统计数据 */}
         <div className="min-w-0 flex-1">
           <p className="text-white font-bold truncate group-hover/card:text-vocaloid-cyan transition-colors text-base">
             {song.title}
@@ -75,14 +73,12 @@ function RankCard({ song, rank, entryScore }: { song: any; rank: number; entrySc
           </div>
         </div>
 
-        {/* 综合评分 */}
         <div className="text-right shrink-0 mt-1">
           <p className="text-[10px] text-gray-600 tracking-widest uppercase">Score</p>
           <p className="text-2xl font-black text-gradient-flow">{entryScore.toFixed(1)}</p>
         </div>
       </a>
 
-      {/* B站链接 */}
       <a
         href={`https://www.bilibili.com/video/${song.bvId}`}
         target="_blank"
@@ -106,11 +102,8 @@ export default function RankingPage() {
 
   return (
     <main className="min-h-screen relative">
-      {/* 粒子背景 */}
-      <div className="grid-bg" aria-hidden="true" />
-      <div className="scanline-overlay" aria-hidden="true" />
+      <BackgroundLayers />
 
-      {/* 顶栏 */}
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-[rgb(var(--background))/80] border-b border-white/5">
         <div className="max-w-5xl mx-auto px-4 md:px-8 h-14 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -123,7 +116,7 @@ export default function RankingPage() {
       </header>
 
       <div className="max-w-5xl mx-auto px-4 md:px-8 py-8 relative z-10">
-        {/* 标签切换 - 霓虹边框 */}
+        {/* 标签 */}
         <div className="rgb-border inline-flex mb-6">
           <div className="rgb-border-content !p-1 !bg-white/5 flex gap-1">
             {TABS.map((tab) => (
@@ -142,7 +135,7 @@ export default function RankingPage() {
           </div>
         </div>
 
-        {/* 统计图例 */}
+        {/* 图例 */}
         <div className="flex flex-wrap gap-3 mb-6 text-xs">
           {Object.values(STAT_COLORS).map((cfg) => (
             <span key={cfg.label} className="inline-flex items-center gap-1.5 text-gray-500">
