@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ========== 歌曲相关 ==========
+
+model Song {
+  id          String   @id @default(cuid())
+  bvId        String   @unique
+  title       String
+  author      String
+  description String?
+  duration    Int?
+  picUrl      String?
+  tags        String   @default("[]")   // JSON array stored as string (SQLite compat)
+  publishTime DateTime
+  score       Float    @default(0)
+  statistics  String   @default("{}")   // JSON object stored as string (SQLite compat)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  dailyStats SongDailyStats[]
+  rankings   Ranking[]
+
+  @@index([publishTime])
+  @@index([score])
+}
+
+model SongDailyStats {
+  id        String   @id @default(cuid())
+  songId    String
+  song      Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+  date      DateTime
+  playCount Int      @default(0)
+  likes     Int      @default(0)
+  coins     Int      @default(0)
+  favorites Int      @default(0)
+  shares    Int      @default(0)
+  comments  Int      @default(0)
+  score     Float    @default(0)
+  createdAt DateTime @default(now())
+
+  @@unique([songId, date])
+  @@index([date])
+}
+
+model Ranking {
+  id        String   @id @default(cuid())
+  songId    String
+  song      Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+  period    String   // 'daily' | 'weekly' | 'monthly' | 'alltime'
+  rank      Int
+  score     Float
+  date      DateTime
+  createdAt DateTime @default(now())
+
+  @@index([period, date, rank])
+}
+
+// ========== 论坛相关 ==========
+
+model Post {
+  id           String   @id @default(cuid())
+  title        String
+  content      String
+  authorId     String
+  author       User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  type         String   // 'review' | 'recommend' | 'discussion' | 'question'
+  tags         String   @default("[]") // JSON array stored as string
+  relatedSongs String   @default("[]") // JSON array stored as string
+  views        Int      @default(0)
+  likes        Int      @default(0)
+  isPinned     Boolean  @default(false)
+  isDeleted    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  replies Reply[]
+
+  @@index([type, createdAt])
+  @@index([authorId])
+}
+
+model Reply {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  content   String
+  likes     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([postId])
+  @@index([authorId])
+}
+
+// ========== 用户相关 ==========
+
+model User {
+  id           String    @id @default(cuid())
+  username     String    @unique
+  email        String    @unique
+  passwordHash String
+  avatar       String?
+  role         String    @default("user") // 'user' | 'admin'
+  createdAt    DateTime  @default(now())
+  lastLogin    DateTime?
+
+  posts   Post[]
+  replies Reply[]
+}
+
+// ========== AI 分析 ==========
+
+model AiReport {
+  id        String   @id @default(cuid())
+  type      String   // 'daily_summary' | 'trend_analysis' | 'anomaly_detection'
+  title     String
+  content   String
+  metadata  String?  // JSON object stored as string
+  createdAt DateTime @default(now())
+
+  @@index([type, createdAt])
+}
+
+// ========== 系统设置 ==========
+
+model Setting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+}

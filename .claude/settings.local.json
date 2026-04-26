@@ -5,7 +5,24 @@
       "Bash(node scripts/crawler-test.js)",
       "Bash(git remote:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(npm --version)",
+      "Bash(npm run:*)",
+      "Bash(docker compose up:*)",
+      "Bash(brew list:*)",
+      "Bash(npx prisma:*)",
+      "Bash(node:*)",
+      "Bash(open:*)",
+      "Bash(curl -s http://localhost:3000/api/trpc/analytics.getOverview)",
+      "Bash(npx tsx:*)",
+      "Bash(python3 -m json.tool)",
+      "Bash(lsof -ti:3000)",
+      "Bash(xargs kill:*)",
+      "Bash(lsof -ti:3000,3001)",
+      "Bash(curl -s http://localhost:3000/api/trpc/analytics.getHomepage)",
+      "Bash(python3 -c ':*)",
+      "Bash(curl:*)",
+      "Bash(git checkout:*)"
     ]
   }
 }

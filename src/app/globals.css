@@ -1,0 +1,161 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground: 255, 255, 255;
+  --background: 8, 8, 20;
+  --glow-cyan: 6, 182, 212;
+  --glow-purple: 107, 33, 168;
+  --glow-pink: 236, 72, 153;
+}
+
+body {
+  color: rgb(var(--foreground));
+  background: rgb(var(--background));
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 60px 60px;
+  background-position: -1px -1px;
+}
+
+/* 霓虹边框 */
+.neon-border {
+  position: relative;
+  border: 1px solid rgba(var(--glow-cyan), 0.15);
+  background: linear-gradient(135deg, rgba(var(--glow-purple), 0.06), rgba(var(--glow-cyan), 0.04));
+  backdrop-filter: blur(12px);
+  transition: all 0.3s ease;
+}
+.neon-border:hover {
+  border-color: rgba(var(--glow-cyan), 0.4);
+  box-shadow:
+    0 0 15px rgba(var(--glow-cyan), 0.08),
+    inset 0 0 15px rgba(var(--glow-cyan), 0.03);
+}
+
+/* 排行榜霓虹变体 */
+.neon-rank {
+  border: 1px solid rgba(var(--glow-purple), 0.12);
+  background: linear-gradient(135deg, rgba(var(--glow-purple), 0.06), rgba(255, 255, 255, 0.02));
+  backdrop-filter: blur(12px);
+}
+.neon-rank:hover {
+  border-color: rgba(var(--glow-pink), 0.3);
+  box-shadow: 0 0 20px rgba(var(--glow-pink), 0.06);
+}
+
+/* 歌曲卡片 */
+.song-card {
+  border: 1px solid rgba(var(--glow-cyan), 0.1);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(var(--glow-purple), 0.04));
+  backdrop-filter: blur(8px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+.song-card:hover {
+  border-color: rgba(var(--glow-cyan), 0.3);
+  transform: translateY(-2px);
+  box-shadow:
+    0 8px 30px rgba(var(--glow-purple), 0.12),
+    0 0 20px rgba(var(--glow-cyan), 0.05);
+}
+.song-card:hover .song-card-glow {
+  opacity: 1;
+}
+
+/* 封面图卡片角标 */
+.song-card-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: linear-gradient(135deg, rgba(var(--glow-purple), 0.8), rgba(var(--glow-cyan), 0.6));
+  backdrop-filter: blur(4px);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+}
+
+/* 统计数字 */
+.stat-value {
+  font-weight: 800;
+  background: linear-gradient(135deg, rgb(var(--glow-cyan)), rgb(var(--glow-pink)));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 霓虹标题装饰 */
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+.section-title::before {
+  content: '';
+  width: 4px;
+  height: 24px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, rgb(var(--glow-cyan)), rgb(var(--glow-pink)));
+  flex-shrink: 0;
+}
+
+/* 数字排名 */
+.rank-number {
+  font-weight: 900;
+  font-size: 1.25rem;
+  width: 32px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.rank-1 { color: rgb(var(--glow-pink)); text-shadow: 0 0 12px rgba(var(--glow-pink), 0.5); }
+.rank-2 { color: rgb(var(--glow-cyan)); text-shadow: 0 0 8px rgba(var(--glow-cyan), 0.3); }
+.rank-3 { color: rgb(var(--glow-purple)); }
+.rank-other { color: rgba(255, 255, 255, 0.3); }
+
+/* 排行榜条 */
+.rank-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.rank-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* 渐变分割线 */
+.divider-gradient {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(var(--glow-cyan), 0.3),
+    rgba(var(--glow-pink), 0.3),
+    transparent
+  );
+  margin: 1.5rem 0;
+}
+
+/* 滚动条 */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(var(--glow-cyan), 0.2);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--glow-cyan), 0.4);
+}
