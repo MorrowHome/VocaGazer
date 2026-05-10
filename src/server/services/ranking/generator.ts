@@ -1,6 +1,11 @@
 /**
  * 排行榜生成服务
- * 根据评分数据生成日/周/月/总榜快照
+ * 基于所有歌曲的当前评分生成排行榜快照
+ *
+ * 周期含义：
+ * - daily / weekly / monthly：同一份全量排序结果，只是生成频率不同
+ *   未来会基于 SongDailyStats 的增量数据做热榜排名
+ * - alltime：全量排序（与上述相同，保留作为独立快照）
  */
 import { calculateScore } from './scorer';
 
@@ -14,34 +19,6 @@ interface Stats {
 }
 
 type Period = 'daily' | 'weekly' | 'monthly' | 'alltime';
-
-function getDateRange(period: Period): { gte: Date; lt: Date } {
-  const now = new Date();
-
-  switch (period) {
-    case 'daily': {
-      const start = new Date(now);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(start);
-      end.setDate(end.getDate() + 1);
-      return { gte: start, lt: end };
-    }
-    case 'weekly': {
-      const start = new Date(now);
-      start.setDate(start.getDate() - 7);
-      start.setHours(0, 0, 0, 0);
-      return { gte: start, lt: now };
-    }
-    case 'monthly': {
-      const start = new Date(now);
-      start.setDate(start.getDate() - 30);
-      start.setHours(0, 0, 0, 0);
-      return { gte: start, lt: now };
-    }
-    case 'alltime':
-      return { gte: new Date(0), lt: now };
-  }
-}
 
 /**
  * 获取 Prisma 实例（避免 @/ 别名在 tsx 下不解析）
@@ -60,12 +37,9 @@ async function getPrisma() {
  */
 export async function generateRanking(period: Period): Promise<number> {
   const prisma = await getPrisma();
-  const { gte } = getDateRange(period);
 
-  // 获取周期内的歌曲
-  const songs = await prisma.song.findMany({
-    where: period === 'alltime' ? {} : { publishTime: { gte } },
-  });
+  // 所有歌曲参与排名，按当前评分排序
+  const songs = await prisma.song.findMany();
 
   // 计算每首歌的当前评分
   const ranked = songs

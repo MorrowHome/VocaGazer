@@ -40,6 +40,15 @@ const EXCLUDE_KEYWORDS = [
   '游戏', '实况', '直播', '录播',
 ];
 
+const MEDIA_KEYWORDS = [
+  'jojo', 'JoJo',
+  '鬼灭', '咒术', '海贼', '火影', '死神',
+  '龙珠', '灌篮高手', '进击的巨人', 'EVA',
+  '间谍过家家', '葬送的芙莉莲', '我推的孩子',
+  '原神', '崩坏', '星穹铁道', '方舟', '碧蓝',
+  '电影', '影视', '电视剧', '综艺', '纪录片',
+];
+
 const VOCALOID_TAGS = [
   'vocaloid', 'VOCALOID', 'ボーカロイド',
   '初音ミク', '初音未来', 'miku', '初音',
@@ -76,6 +85,17 @@ function mentionsVocaloidChar(text: string): boolean {
   return VOCALOID_TAGS.some((vt) => text.toLowerCase().includes(vt.toLowerCase()));
 }
 
+function titleOnlyMatchesExclude(title: string): { matched: boolean; isMediaOnly: boolean } {
+  const titleLow = title.toLowerCase();
+  const matched = EXCLUDE_KEYWORDS.some((kw) => titleLow.includes(kw.toLowerCase()));
+  if (!matched) return { matched: false, isMediaOnly: false };
+  const mediaHit = MEDIA_KEYWORDS.some((kw) => titleLow.includes(kw.toLowerCase()));
+  const nonMediaHit = EXCLUDE_KEYWORDS.some(
+    (kw) => !MEDIA_KEYWORDS.includes(kw) && titleLow.includes(kw.toLowerCase()),
+  );
+  return { matched: true, isMediaOnly: mediaHit && !nonMediaHit };
+}
+
 function hasVocaloidTag(tags: string[]): boolean {
   return tags.some((t) =>
     VOCALOID_TAGS.some((vt) => t.toLowerCase().includes(vt.toLowerCase())),
@@ -102,8 +122,13 @@ async function main() {
     const titleDesc = `${song.title} ${desc}`;
     const reasons: string[] = [];
 
-    if (shouldExclude(song.title)) {
-      reasons.push('含排除关键词');
+    // 排除关键词检查（含媒体名豁免）
+    const excludeCheck = titleOnlyMatchesExclude(song.title);
+    const titleMentionsChar = mentionsVocaloidChar(song.title);
+    if (excludeCheck.matched) {
+      if (!(excludeCheck.isMediaOnly && titleMentionsChar)) {
+        reasons.push('含排除关键词');
+      }
     }
 
     // 标签/角色名检查：标题里有角色名的跳过标签检查

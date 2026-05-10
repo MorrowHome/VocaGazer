@@ -54,7 +54,8 @@ const EXCLUDE_KEYWORDS = [
   '翻译', '中译', '日文', '日语', '罗马音', '字幕',
   // 翻唱/翻调类
   '翻唱', '翻填', '翻作',
-  'remix', 'remaster', 'cover',
+  // 'remix' 暂不排除——部分 V 家 remix 属于合法原创
+  'remaster', 'cover',
   'カバー',           // 日语"翻唱"
   // 填词翻唱
   '填词',
@@ -75,18 +76,20 @@ const EXCLUDE_KEYWORDS = [
   '片头', '片尾', '主题曲',
   'BGM', 'OST', '原声', '原声带',
   '插曲', '配乐', '纯音乐', 'instrumental',
-  // 知名动漫名（大概率不是VOCALOID曲）
+  // 实况/Vlog类
+  'Vlog', 'vlog', '日常', '记录',
+  // 游戏实况
+  '游戏', '实况', '直播', '录播',
+];
+
+/** 媒体名关键词（动漫/游戏/影视）——标题含 V 家角色名时豁免 */
+const MEDIA_KEYWORDS = [
   'jojo', 'JoJo',
   '鬼灭', '咒术', '海贼', '火影', '死神',
   '龙珠', '灌篮高手', '进击的巨人', 'EVA',
   '间谍过家家', '葬送的芙莉莲', '我推的孩子',
   '原神', '崩坏', '星穹铁道', '方舟', '碧蓝',
-  // 影视类
   '电影', '影视', '电视剧', '综艺', '纪录片',
-  // 实况/Vlog类
-  'Vlog', 'vlog', '日常', '记录',
-  // 游戏实况
-  '游戏', '实况', '直播', '录播',
 ];
 
 /** 原创判定关键词 */
@@ -130,6 +133,19 @@ const VOCALOID_TAGS = [
   '术力口', 'ボカロ', 'vocaloid中文',
 ];
 
+/** 歌曲分类检测 */
+const REMIX_KEYWORDS = ['remix', 'Remix', 'REMIX', 'Rearrange', 'rearrange'];
+const COVER_KEYWORDS = ['翻唱', '翻填', 'cover', 'Cover', 'COVER', 'カバー', '翻调'];
+
+function detectCategory(title: string, description: string): string {
+  const text = `${title} ${description}`;
+  const isRemix = REMIX_KEYWORDS.some((kw) => text.includes(kw));
+  const isCover = COVER_KEYWORDS.some((kw) => text.includes(kw));
+  if (isRemix) return 'remix';
+  if (isCover) return 'cover';
+  return 'original';
+}
+
 // ========== 过滤逻辑 ==========
 
 function shouldExclude(title: string, description: string): boolean {
@@ -153,16 +169,31 @@ function isCoverOfAnotherWork(description: string): boolean {
 }
 
 function isOriginal(title: string, description: string): boolean {
-  if (shouldExclude(title, description)) return false;
+  const combined = `${title} ${description}`;
+  const desc = description || '';
+  const titleLow = title.toLowerCase();
 
   // 指向他人作品的翻调 → 排除
   if (isCoverOfAnotherWork(description)) return false;
 
-  const combined = `${title} ${description}`;
-  const desc = description || '';
+  // 检查标题是否提到 V 家角色——用于豁免媒体名关键词
+  const mentionsChar = VOCALOID_TAGS.some((vt) => titleLow.includes(vt.toLowerCase()));
+
+  // 排除关键词检查（媒体名在提及 V 家角色时豁免）
+  if (shouldExclude(title, description)) {
+    if (!mentionsChar) return false;
+    // 提到 V 家角色的情况下，只检查非媒体名的排除词
+    const nonMediaExclude = EXCLUDE_KEYWORDS.some((kw) =>
+      !MEDIA_KEYWORDS.includes(kw) && titleLow.includes(kw.toLowerCase()),
+    );
+    if (nonMediaExclude) return false;
+  }
 
   // 标题包含明确的原创标识
   if (ORIGINAL_KEYWORDS.some((kw) => title.includes(kw))) return true;
+
+  // 标题提到 V 家角色 → 宽松认定为原创（避免游戏联动曲被误杀）
+  if (mentionsChar) return true;
 
   // 描述中出现作曲/编曲等创作相关词汇（强信号）
   if (DESCRIPTION_ORIGINAL_HINTS.some((kw) => desc.toLowerCase().includes(kw))) {
@@ -345,6 +376,42 @@ export async function runCrawl(
 
       // 检查里程碑
       await checkSongMilestones(song.id, songData.statistics.playCount);
+
+      // 保存每日统计快照
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      await prisma.songDailyStats.upsert({
+        where: { songId_date: { songId: song.id, date: today } },
+        update: {
+          playCount: songData.statistics.playCount,
+          likes: songData.statistics.likes,
+          coins: songData.statistics.coins,
+          favorites: songData.statistics.favorites,
+          shares: songData.statistics.shares,
+          comments: songData.statistics.comments,
+          score,
+        },
+        create: {
+          songId: song.id,
+          date: today,
+          playCount: songData.statistics.playCount,
+          likes: songData.statistics.likes,
+          coins: songData.statistics.coins,
+          favorites: songData.statistics.favorites,
+          shares: songData.statistics.shares,
+          comments: songData.statistics.comments,
+          score,
+        },
+      });
+
+      // 更新歌曲分类
+      const category = detectCategory(songData.title, songData.description || '');
+      if (song.category !== category) {
+        await prisma.song.update({
+          where: { id: song.id },
+          data: { category },
+        });
+      }
 
       savedCount++;
       await delay(requestDelay);

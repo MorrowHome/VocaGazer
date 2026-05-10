@@ -21,6 +21,7 @@ model Song {
   publishTime DateTime
   score       Float    @default(0)
   statistics  String   @default("{}")   // JSON object stored as string (SQLite compat)
+  category    String   @default("original") // 'original' | 'remix' | 'cover' | 'unknown'
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
