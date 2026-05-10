@@ -69,7 +69,7 @@ export async function generateRanking(period: Period): Promise<number> {
 
   // 计算每首歌的当前评分
   const ranked = songs
-    .map((song) => {
+    .map((song: any) => {
       try {
         const stats = JSON.parse(song.statistics) as Stats;
         const score = calculateScore(stats);
@@ -78,8 +78,8 @@ export async function generateRanking(period: Period): Promise<number> {
         return null;
       }
     })
-    .filter((s): s is NonNullable<typeof s> => s !== null)
-    .sort((a, b) => b.score - a.score)
+    .filter((s: any): s is NonNullable<any> => s !== null)
+    .sort((a: any, b: any) => b.score - a.score)
     .slice(0, 100);
 
   if (ranked.length === 0) return 0;
@@ -94,7 +94,7 @@ export async function generateRanking(period: Period): Promise<number> {
   });
 
   // 批量插入新排行
-  const data = ranked.map((r, i) => ({
+  const data = ranked.map((r: any, i: number) => ({
     songId: r.songId,
     period,
     rank: i + 1,

@@ -20,14 +20,15 @@ export function parseStats(s: string): Record<string, number> {
 }
 
 /** 计算相对时间 */
-export function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
+export function timeAgo(dateStr: string | Date): string {
+  const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
+  const diff = Date.now() - date.getTime();
   const h = Math.floor(diff / 3600000);
   if (h < 1) return '刚刚';
   if (h < 24) return `${h}小时前`;
   const d = Math.floor(h / 24);
   if (d < 30) return `${d}天前`;
-  return new Date(dateStr).toLocaleDateString('zh-CN');
+  return date.toLocaleDateString('zh-CN');
 }
 
 /**

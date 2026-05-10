@@ -25,7 +25,22 @@
       "Bash(git checkout:*)",
       "Bash(pkill -f \"tsx scripts/run-crawl\")",
       "Bash(ls /Users/morrow/Codes/ClaudeCode/VocaGaretee/prisma/*.db)",
-      "Bash(ls /Users/morrow/Codes/ClaudeCode/VocaGaretee/*.db)"
+      "Bash(ls /Users/morrow/Codes/ClaudeCode/VocaGaretee/*.db)",
+      "Bash(npx tsc:*)",
+      "Bash(pkill -f \"next dev\")",
+      "Bash(npx next:*)",
+      "Bash(ls node_modules/@trpc/server/dist/*.mjs)",
+      "Bash(grep -l 'createContext' node_modules/@trpc/server/dist/*.mjs)",
+      "Bash(grep:*)",
+      "Bash(echo \"Home: $\\(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/\\)\")",
+      "Bash(echo \"Login: $\\(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/login\\)\")",
+      "Bash(echo \"Register: $\\(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/register\\)\")",
+      "Bash(echo \"Forum: $\\(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/forum\\)\")",
+      "Bash(echo \"Forum new: $\\(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/forum/new\\)\")",
+      "WebSearch",
+      "Bash(chmod +x:*)",
+      "Bash(sqlite3 *)",
+      "Bash(git check-ignore *)"
     ]
   }
 }

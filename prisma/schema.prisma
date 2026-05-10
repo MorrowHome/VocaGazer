@@ -26,6 +26,7 @@ model Song {
 
   dailyStats SongDailyStats[]
   rankings   Ranking[]
+  milestones SongMilestone[]
 
   @@index([publishTime])
   @@index([score])
@@ -127,6 +128,21 @@ model AiReport {
   createdAt DateTime @default(now())
 
   @@index([type, createdAt])
+}
+
+// ========== 里程碑追踪 ==========
+
+model SongMilestone {
+  id         String   @id @default(cuid())
+  songId     String
+  song       Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+  threshold  Int      // 100000, 1000000, etc.
+  achievedAt DateTime // 达成时的精确时间
+  playCount  Int      // 达成时的精确播放数
+  createdAt  DateTime @default(now())
+
+  @@unique([songId, threshold])
+  @@index([threshold, achievedAt])
 }
 
 // ========== 系统设置 ==========

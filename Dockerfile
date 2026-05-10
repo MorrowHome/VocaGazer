@@ -1,33 +1,26 @@
 FROM node:20-alpine AS base
-
-# Install dependencies only when needed
-FROM base AS deps
 WORKDIR /app
+
+# 安装依赖
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --only=production
 
-# Build the app
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+FROM base AS build
+RUN npm ci
 COPY . .
-ENV NEXT_TELEMETRY_DISABLED=1
+RUN npx prisma generate
 RUN npm run build
 
-# Production image
 FROM base AS runner
-WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+COPY --from=build /app/.next ./.next
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/prisma ./prisma
+COPY --from=build /app/package.json ./package.json
+COPY --from=build /app/next.config.js ./next.config.js
+COPY --from=build /app/public ./public
 
-COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
-USER nextjs
 EXPOSE 3000
-ENV PORT=3000
-CMD ["node", "server.js"]
+CMD ["sh", "-c", "npx prisma db push && npm start"]

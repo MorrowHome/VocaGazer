@@ -1,0 +1,84 @@
+'use client';
+
+import { trpc } from '@/lib/trpc';
+import { BackgroundLayers } from '@/components/BackgroundLayers';
+import { ClickFireworks } from '@/components/ClickFireworks';
+import { timeAgo } from '@/lib/utils';
+
+const MILESTONE_LABELS: Record<number, { label: string; symbol: string; color: string }> = {
+  100000:    { label: '10 万', symbol: '★', color: '#39BEB9' },
+  1000000:   { label: '100 万', symbol: '◆', color: '#B388FF' },
+  10000000:  { label: '1000 万', symbol: '◈', color: '#FF6B9D' },
+};
+
+export default function MilestonesPage() {
+  const { data: milestones, isLoading } = trpc.milestones.getAll.useQuery();
+
+  return (
+    <main className="min-h-screen relative">
+      <ClickFireworks />
+      <BackgroundLayers />
+
+      <header className="sticky top-0 z-50 backdrop-blur-lg bg-white/70 border-b border-kawaii-border/50">
+        <div className="max-w-4xl mx-auto px-4 md:px-8 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <a href="/" className="text-sm text-kawaii-muted hover:text-kawaii-pink transition-colors font-medium">&larr; 返回</a>
+            <span aria-hidden="true" className="text-kawaii-yellow">★</span>
+            <h1 className="text-lg font-black tracking-wide text-gradient-flow">里程碑</h1>
+          </div>
+        </div>
+      </header>
+
+      <div className="max-w-4xl mx-auto px-4 md:px-8 py-8 space-y-6 relative z-10">
+        {isLoading ? (
+          <div className="space-y-3">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="h-16 rounded-2xl bg-white/60 animate-pulse" />
+            ))}
+          </div>
+        ) : !milestones?.length ? (
+          <div className="card p-12 text-center">
+            <p className="text-lg mb-2 text-kawaii-muted" aria-hidden="true">★</p>
+            <p className="text-sm text-kawaii-muted font-medium">暂无里程碑数据</p>
+            <p className="text-xs text-kawaii-muted/60 mt-2 font-medium">歌曲播放量达到 10 万、100 万时自动记录</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {milestones.map((m) => {
+              const info = MILESTONE_LABELS[m.threshold] || { label: `${m.threshold.toLocaleString()}`, symbol: '★', color: '#FFB08C' };
+              return (
+                <a
+                  key={m.id}
+                  href={`/song/${m.song.bvId}`}
+                  className="card flex items-center gap-4 p-4 hover:border-kawaii-pink/30 transition-all group"
+                >
+                  <span
+                    className="text-2xl shrink-0 transition-transform group-hover:scale-125"
+                    style={{ color: info.color }}
+                    aria-hidden="true"
+                  >
+                    {info.symbol}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-black text-kawaii-text truncate group-hover:text-kawaii-pink transition-colors">
+                      {m.song.title}
+                    </p>
+                    <p className="text-[11px] text-kawaii-muted font-medium">{m.song.author}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-black" style={{ color: info.color }}>
+                      {info.label}
+                    </p>
+                    <p className="text-[10px] text-kawaii-muted font-medium">
+                      {timeAgo(m.achievedAt)}
+                    </p>
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </main>
+  );
+}

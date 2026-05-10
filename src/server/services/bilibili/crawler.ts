@@ -4,6 +4,7 @@
 import { PrismaClient } from '@prisma/client';
 import { searchByKeyword, getVideoDetail, delay } from './client';
 import { calculateScore } from '../ranking/scorer';
+import { checkSongMilestones } from '../milestone';
 import type { SongData } from './types';
 
 // 避免动态 import('@/lib/prisma') 在 tsx 运行时不解析 @/ 别名
@@ -66,6 +67,26 @@ const EXCLUDE_KEYWORDS = [
   // 盘点/合集类
   '盘点', '合集', '合辑', '精选', '专辑',
   '手办', 'MAD', 'MMD', '3D', '建模', '手书',
+  // 完整版/长篇类（如 JoJo 完整版剪辑、电影等）
+  '完整版', '全集', '全话', '全篇',
+  // 真人化/实写类
+  '真人', '实写', '实写化', '真人版', '真人化',
+  // 动画/影视类非歌曲
+  '片头', '片尾', '主题曲',
+  'BGM', 'OST', '原声', '原声带',
+  '插曲', '配乐', '纯音乐', 'instrumental',
+  // 知名动漫名（大概率不是VOCALOID曲）
+  'jojo', 'JoJo',
+  '鬼灭', '咒术', '海贼', '火影', '死神',
+  '龙珠', '灌篮高手', '进击的巨人', 'EVA',
+  '间谍过家家', '葬送的芙莉莲', '我推的孩子',
+  '原神', '崩坏', '星穹铁道', '方舟', '碧蓝',
+  // 影视类
+  '电影', '影视', '电视剧', '综艺', '纪录片',
+  // 实况/Vlog类
+  'Vlog', 'vlog', '日常', '记录',
+  // 游戏实况
+  '游戏', '实况', '直播', '录播',
 ];
 
 /** 原创判定关键词 */
@@ -83,11 +104,37 @@ const DESCRIPTION_ORIGINAL_HINTS = [
   'music by', 'lyrics by',
 ];
 
+/** VOCALOID 角色/引擎标签（用于验证视频是否真的和VOCALOID相关） */
+const VOCALOID_TAGS = [
+  // 日语
+  'vocaloid', 'VOCALOID', 'ボーカロイド',
+  '初音ミク', '初音未来', 'miku', '初音',
+  '鏡音リン', '镜音铃', '镜音连', '鏡音レン',
+  '巡音ルカ', '巡音流歌', 'luka',
+  'MEIKO', 'KAITO',
+  // 中文
+  '洛天依', '言和', '乐正绫', '乐正龙牙',
+  '徵羽摩柯', '墨清弦',
+  // Synthesizer V / ACE
+  '星尘', '星塵', 'infinity', '心华',
+  '赤羽', '苍穹', '诗岸', '海伊', '永夜', '永夜minus', 'Minus', '艾可',
+  '小春六花', '夏色花梨', '花隈千冬',
+  // 其他常见VOCALOID/UTAU歌手
+  'GUMI', 'flower', '重音テト',
+  '音街ウナ', '歌愛ユキ',
+  // 引擎
+  'synthesizer v', 'Synthesizer V',
+  'UTAU', 'CeVIO', 'VOICEVOX',
+  'NEUTRINO', 'NAKOTALK',
+  // 通用
+  '术力口', 'ボカロ', 'vocaloid中文',
+];
+
 // ========== 过滤逻辑 ==========
 
 function shouldExclude(title: string, description: string): boolean {
-  const text = `${title} ${description}`.toLowerCase();
-  return EXCLUDE_KEYWORDS.some((kw) => text.includes(kw.toLowerCase()));
+  // 只检查标题。描述包含歌词/元数据, 误报率太高
+  return EXCLUDE_KEYWORDS.some((kw) => title.toLowerCase().includes(kw.toLowerCase()));
 }
 
 /**
@@ -227,6 +274,30 @@ export async function runCrawl(
       const detail = await getVideoDetail(v.bvid);
       if (!detail) continue;
 
+      // 二级过滤：检查时长（VOCALOID 歌曲通常在 90s~12min）
+      const duration = detail.duration;
+      if (duration < 60 || duration > 900) {
+        log(`  排除（时长异常 ${duration}s）: ${v.title}`);
+        continue;
+      }
+
+      // 二级过滤：检查标签是否包含 VOCALOID 相关标签
+      // 但如果标题/描述中已明确提到 VOCALOID 角色名或引擎，则跳过标签检查
+      const titleDesc = `${v.title} ${v.description}`;
+      const mentionsVocaloidChar = VOCALOID_TAGS.some((vt) =>
+        titleDesc.toLowerCase().includes(vt.toLowerCase()),
+      );
+
+      if (!mentionsVocaloidChar) {
+        const hasVocaloidTag = detail.tags?.some((t: string) =>
+          VOCALOID_TAGS.some((vt) => t.toLowerCase().includes(vt.toLowerCase())),
+        );
+        if (!hasVocaloidTag) {
+          log(`  排除（标题无角色名+无VOCALOID标签）: ${v.title}`);
+          continue;
+        }
+      }
+
       const songData: SongData = {
         bvId: detail.bvid,
         title: detail.title,
@@ -250,7 +321,7 @@ export async function runCrawl(
       const score = calculateScore(songData.statistics);
 
       // upsert：已存在则更新统计数据
-      await prisma.song.upsert({
+      const song = await prisma.song.upsert({
         where: { bvId: songData.bvId },
         update: {
           statistics: JSON.stringify(songData.statistics),
@@ -271,6 +342,9 @@ export async function runCrawl(
           score,
         },
       });
+
+      // 检查里程碑
+      await checkSongMilestones(song.id, songData.statistics.playCount);
 
       savedCount++;
       await delay(requestDelay);

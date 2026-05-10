@@ -1,9 +1,7 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
 import './globals.css';
 import { TRPCProvider } from '@/components/TRPCProvider';
-
-const inter = Inter({ subsets: ['latin'] });
+import { AuthProvider } from '@/components/AuthContext';
 
 export const metadata: Metadata = {
   title: 'VOCALOID Music Hub',
@@ -17,8 +15,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="zh-CN">
-      <body className={`${inter.className} antialiased`}>
-        <TRPCProvider>{children}</TRPCProvider>
+      <body className="antialiased">
+        <TRPCProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </TRPCProvider>
       </body>
     </html>
   );
