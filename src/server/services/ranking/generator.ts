@@ -1,11 +1,13 @@
 /**
  * 排行榜生成服务
- * 基于所有歌曲的当前评分生成排行榜快照
+ * 基于歌曲发布时间过滤 + 当前评分生成排行榜快照
  *
  * 周期含义：
- * - daily / weekly / monthly：同一份全量排序结果，只是生成频率不同
- *   未来会基于 SongDailyStats 的增量数据做热榜排名
- * - alltime：全量排序（与上述相同，保留作为独立快照）
+ * - daily:   发布在最近 1  天内的歌曲参与排名
+ * - weekly:  发布在最近 7  天内的歌曲参与排名
+ * - monthly: 发布在最近 30 天内的歌曲参与排名
+ * - yearly:  发布在最近 365 天内的歌曲参与排名
+ * - alltime: 所有歌曲参与排名
  */
 import { calculateScore } from './scorer';
 
@@ -18,7 +20,41 @@ interface Stats {
   comments: number;
 }
 
-type Period = 'daily' | 'weekly' | 'monthly' | 'alltime';
+type Period = 'daily' | 'weekly' | 'monthly' | 'yearly' | 'alltime';
+
+/**
+ * 根据周期和参考日期计算歌曲的发布时间过滤范围
+ * @param period  排名周期
+ * @param refDate 参考日期（默认当前时间），用于"当年某月某日的排行"查询
+ */
+function getDateRange(period: Period, refDate: Date = new Date()): { start?: Date } {
+  const ref = new Date(refDate);
+
+  switch (period) {
+    case 'daily': {
+      const start = new Date(ref);
+      start.setDate(start.getDate() - 1);
+      return { start };
+    }
+    case 'weekly': {
+      const start = new Date(ref);
+      start.setDate(start.getDate() - 7);
+      return { start };
+    }
+    case 'monthly': {
+      const start = new Date(ref);
+      start.setMonth(start.getMonth() - 1);
+      return { start };
+    }
+    case 'yearly': {
+      const start = new Date(ref);
+      start.setFullYear(start.getFullYear() - 1);
+      return { start };
+    }
+    case 'alltime':
+      return {};
+  }
+}
 
 /**
  * 获取 Prisma 实例（避免 @/ 别名在 tsx 下不解析）
@@ -38,8 +74,11 @@ async function getPrisma() {
 export async function generateRanking(period: Period): Promise<number> {
   const prisma = await getPrisma();
 
-  // 所有歌曲参与排名，按当前评分排序
-  const songs = await prisma.song.findMany();
+  // 根据周期过滤歌曲的发布时间范围
+  const { start } = getDateRange(period);
+  const where = start ? { publishTime: { gte: start } } : {};
+
+  const songs = await prisma.song.findMany({ where });
 
   // 计算每首歌的当前评分
   const ranked = songs
@@ -84,8 +123,8 @@ export async function generateRanking(period: Period): Promise<number> {
  * 生成所有周期的排行榜
  */
 export async function generateAllRankings(): Promise<Record<Period, number>> {
-  const periods: Period[] = ['daily', 'weekly', 'monthly', 'alltime'];
-  const results: Record<Period, number> = { daily: 0, weekly: 0, monthly: 0, alltime: 0 };
+  const periods: Period[] = ['daily', 'weekly', 'monthly', 'yearly', 'alltime'];
+  const results: Record<Period, number> = { daily: 0, weekly: 0, monthly: 0, yearly: 0, alltime: 0 };
 
   for (const period of periods) {
     results[period] = await generateRanking(period);

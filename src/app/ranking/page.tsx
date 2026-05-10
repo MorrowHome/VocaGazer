@@ -10,6 +10,7 @@ const TABS = [
   { key: 'daily', label: '日榜' },
   { key: 'weekly', label: '周榜' },
   { key: 'monthly', label: '月榜' },
+  { key: 'yearly', label: '年榜' },
   { key: 'alltime', label: '总榜' },
 ] as const;
 
@@ -100,7 +101,16 @@ function RankCard({ song, rank, entryScore }: { song: any; rank: number; entrySc
 // ─── 页面 ───
 export default function RankingPage() {
   const [period, setPeriod] = useState<Period>('daily');
-  const { data: rankings, isLoading } = trpc.rankings.get.useQuery({ period, limit: 100 });
+  const [selectedDate, setSelectedDate] = useState<string>('');
+  const { data: availableDates } = trpc.rankings.getAvailableDates.useQuery(
+    { period },
+    { enabled: period !== 'alltime' },
+  );
+  const { data: rankings, isLoading } = trpc.rankings.get.useQuery({
+    period,
+    limit: 100,
+    date: selectedDate || null,
+  });
 
   return (
     <main className="min-h-screen relative">
@@ -119,11 +129,14 @@ export default function RankingPage() {
 
       <div className="max-w-5xl mx-auto px-4 md:px-8 py-8 relative z-10">
         {/* 标签 */}
-        <div className="flex gap-2 mb-6">
+        <div className="flex gap-2 mb-4">
           {TABS.map((tab) => (
             <button
               key={tab.key}
-              onClick={() => setPeriod(tab.key)}
+              onClick={() => {
+                setPeriod(tab.key);
+                setSelectedDate('');
+              }}
               className={`px-5 py-2 rounded-full text-sm font-bold transition-all ${
                 period === tab.key
                   ? 'bg-kawaii-pink text-white shadow-md'
@@ -135,8 +148,28 @@ export default function RankingPage() {
           ))}
         </div>
 
-        {/* 图例 */}
-        <div className="flex flex-wrap gap-3 mb-6 text-xs text-kawaii-muted font-medium">
+        {/* 日期选择 + 图例 */}
+        <div className="flex flex-wrap items-center gap-3 mb-6 text-xs text-kawaii-muted font-medium">
+          {period !== 'alltime' && (
+            <div className="flex items-center gap-2 bg-white/70 px-3 py-1.5 rounded-full border border-kawaii-border">
+              <span>📅</span>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="bg-transparent text-xs text-kawaii-text outline-none font-medium [color-scheme:light]"
+                max={new Date().toISOString().slice(0, 10)}
+              />
+              {selectedDate && (
+                <button
+                  onClick={() => setSelectedDate('')}
+                  className="text-kawaii-muted hover:text-kawaii-pink ml-1"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          )}
           {Object.values(STAT_COLORS).map((cfg) => (
             <span key={cfg.label} className="inline-flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full" style={{ background: cfg.color }} />
