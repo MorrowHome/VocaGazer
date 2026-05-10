@@ -103,9 +103,12 @@ async function runMilestoneScan() {
   console.log('[Scheduler] 开始扫描里程碑...');
   try {
     const { scanMilestones } = await import('./milestone');
-    const count = await scanMilestones();
-    if (count > 0) {
-      console.log(`[Scheduler] 发现 ${count} 个新里程碑！`);
+    const result = await scanMilestones();
+    if (result.newMilestones > 0) {
+      console.log(`[Scheduler] 发现 ${result.newMilestones} 个新里程碑！`);
+    }
+    if (result.approachingCount > 0) {
+      console.log(`[Scheduler] ${result.approachingCount} 首歌曲接近里程碑: ${result.newlyApproaching.slice(0, 3).join(', ')}`);
     }
   } catch (err) {
     console.error('[Scheduler] 里程碑扫描失败:', err);
