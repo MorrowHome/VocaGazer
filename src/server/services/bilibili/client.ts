@@ -118,6 +118,7 @@ export async function getVideoDetail(bvid: string): Promise<BiliVideoDetail | nu
       bvid: d.bvid,
       title: d.title,
       author: d.owner?.name || '',
+      authorAvatar: d.owner?.face || '',
       pubdate: d.pubdate,
       description: d.desc || '',
       duration: d.duration || 0,

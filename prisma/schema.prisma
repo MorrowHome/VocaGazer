@@ -17,6 +17,7 @@ model Song {
   description String?
   duration    Int?
   picUrl      String?
+  authorAvatar String?  // B站 up 主头像
   tags        String   @default("[]")   // JSON array stored as string (SQLite compat)
   publishTime DateTime
   score       Float    @default(0)

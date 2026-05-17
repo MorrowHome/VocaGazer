@@ -32,6 +32,7 @@ export interface BiliVideoDetail {
   bvid: string;
   title: string;
   author: string;
+  authorAvatar: string;  // up 主头像
   pubdate: number;
   description: string;
   duration: number;
@@ -52,6 +53,7 @@ export interface SongData {
   bvId: string;
   title: string;
   author: string;
+  authorAvatar: string;
   publishTime: Date;
   description: string;
   duration: number;

@@ -337,6 +337,7 @@ export async function runCrawl(
         bvId: detail.bvid,
         title: detail.title,
         author: detail.author,
+        authorAvatar: detail.authorAvatar,
         publishTime: new Date(detail.pubdate * 1000),
         description: detail.description,
         duration: detail.duration,
@@ -363,11 +364,13 @@ export async function runCrawl(
           tags: JSON.stringify(songData.tags),
           description: songData.description,
           score,
+          authorAvatar: songData.authorAvatar || undefined,
         },
         create: {
           bvId: songData.bvId,
           title: songData.title,
           author: songData.author,
+          authorAvatar: songData.authorAvatar,
           publishTime: songData.publishTime,
           description: songData.description,
           duration: songData.duration,
@@ -481,7 +484,11 @@ export async function refreshAllSongs(
 
       await prisma.song.update({
         where: { id: song.id },
-        data: { statistics: JSON.stringify(stats), score },
+        data: {
+          statistics: JSON.stringify(stats),
+          score,
+          authorAvatar: detail.authorAvatar || undefined,
+        },
       });
 
       // 保存每日快照
