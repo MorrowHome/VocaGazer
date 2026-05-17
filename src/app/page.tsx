@@ -154,6 +154,7 @@ export default function HomePage() {
           </div>
           <nav className="flex items-center gap-5 text-sm font-bold text-kawaii-muted">
             <a href="/recommend" className="hover:text-kawaii-pink transition-colors">推荐</a>
+            <a href="/search" className="hover:text-kawaii-pink transition-colors">搜索</a>
             <a href="/ranking" className="hover:text-kawaii-cyan transition-colors">排行榜</a>
             <a href="/milestones" className="hover:text-kawaii-yellow transition-colors">里程碑</a>
             <a href="/authors" className="hover:text-kawaii-cyan transition-colors">创作者</a>

@@ -106,7 +106,47 @@ export const songsRouter = router({
         .slice(0, input.limit);
     }),
 
-  // 获取高评分歌曲
+  // 搜索歌曲
+  search: publicProcedure
+    .input(
+      z.object({
+        q: z.string().min(1),
+        page: z.number().min(1).default(1),
+        limit: z.number().min(1).max(100).default(20),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const { q, page, limit } = input;
+      const skip = (page - 1) * limit;
+      const keyword = `%${q}%`;
+
+      // SQLite LIKE 查询
+      const [songs, total] = await Promise.all([
+        ctx.prisma.song.findMany({
+          where: {
+            OR: [
+              { title: { contains: q } },
+              { author: { contains: q } },
+            ],
+          },
+          orderBy: { score: 'desc' },
+          skip,
+          take: limit,
+        }),
+        ctx.prisma.song.count({
+          where: {
+            OR: [
+              { title: { contains: q } },
+              { author: { contains: q } },
+            ],
+          },
+        }),
+      ]);
+
+      return { songs, total };
+    }),
+
+  // 获取所有作者列表（按歌曲数排序）
   getTopRated: publicProcedure
     .input(
       z.object({
