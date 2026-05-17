@@ -28,7 +28,18 @@ echo -e "${PINK}▶ 同步数据库 ...${RESET}"
 npx prisma db push --accept-data-loss 2>/dev/null
 echo -e "  ${CYAN}✓${RESET} 数据库同步完成"
 
-# 4. 启动
+# 4. 释放端口（如果被占用）
+echo -e "${PINK}▶ 检查端口 3000 ...${RESET}"
+if lsof -ti :3000 &>/dev/null; then
+  echo -e "  ${YELLOW}⚠ 端口 3000 被占用，正在释放...${RESET}"
+  lsof -ti :3000 | xargs kill -9 2>/dev/null
+  sleep 1
+  echo -e "  ${CYAN}✓${RESET} 端口已释放"
+else
+  echo -e "  ${CYAN}✓${RESET} 端口可用"
+fi
+
+# 5. 启动
 echo ""
 echo -e "${PURPLE}⋆｡°✩ 启动开发服务器 ✩°｡⋆${RESET}"
 echo -e "  ${CYAN}▶${RESET} 访问地址: ${PURPLE}http://localhost:3000${RESET}"
