@@ -114,6 +114,7 @@ export async function getVideoDetail(bvid: string): Promise<BiliVideoDetail | nu
 
     const d = res.data.data;
     return {
+      aid: d.aid,
       bvid: d.bvid,
       title: d.title,
       author: d.owner?.name || '',
@@ -141,3 +142,37 @@ export async function getVideoDetail(bvid: string): Promise<BiliVideoDetail | nu
  */
 export const delay = (ms: number) =>
   new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * 获取视频热评（按点赞数排序取前 N 条）
+ */
+export async function getVideoComments(
+  aid: number,
+  limit: number = 3,
+): Promise<import('./types').HotCommentsResult> {
+  try {
+    const res = await client.get('/x/v2/reply', {
+      params: { type: 1, oid: aid, sort: 2, ps: limit },
+    });
+
+    if (res.data.code !== 0) {
+      return { comments: [], total: 0 };
+    }
+
+    const replies = res.data.data?.replies || [];
+    return {
+      comments: replies.map((r: any) => ({
+        mid: r.mid,
+        uname: r.member?.uname || '匿名',
+        content: r.content?.message || '',
+        likes: r.like || 0,
+        rpid: r.rpid,
+        avatar: r.member?.avatar || '',
+        ctime: r.ctime ? new Date(r.ctime * 1000).toISOString() : '',
+      })),
+      total: res.data.data?.page?.acount || 0,
+    };
+  } catch {
+    return { comments: [], total: 0 };
+  }
+}

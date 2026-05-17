@@ -15,6 +15,76 @@ const STAT_COLORS: Record<string, { label: string; color: string }> = {
   comments:    { label: '评论', color: '#FFB08C' },
 };
 
+// ─── 热评组件 ───
+
+function CommentSection({ bvId }: { bvId: string }) {
+  const { data: hot, isLoading } = trpc.comments.getTop.useQuery(
+    decodeURIComponent(bvId),
+  );
+
+  if (isLoading) {
+    return (
+      <div className="card !p-6 animate-pulse">
+        <div className="h-4 w-20 rounded bg-white/60 mb-4" />
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-16 rounded-xl bg-white/60" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (!hot || hot.comments.length === 0) return null;
+
+  return (
+    <div className="card !p-6">
+      <div className="flex items-center gap-2 mb-4">
+        <span className="text-lg text-kawaii-orange" aria-hidden="true">♪</span>
+        <h2 className="text-xs font-black text-kawaii-muted tracking-wider uppercase">热评</h2>
+        {hot.total > 3 && (
+          <span className="text-[10px] text-kawaii-muted font-medium ml-auto">
+            共 {hot.total} 条评论
+          </span>
+        )}
+      </div>
+      <div className="space-y-3">
+        {hot.comments.map((c, i) => (
+          <div
+            key={c.rpid}
+            className="flex gap-3 p-3 rounded-xl bg-white/70 border border-kawaii-border/30"
+          >
+            <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-kawaii-surface ring-1 ring-kawaii-border/30">
+              {c.avatar ? (
+                <img src={c.avatar} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-xs text-kawaii-muted">♪</div>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-bold text-kawaii-text truncate">{c.uname}</span>
+                <span className="ml-auto flex items-center gap-1 text-[11px] font-bold text-kawaii-pink shrink-0">
+                  <span aria-hidden="true">♥</span>
+                  {c.likes}
+                </span>
+                {i === 0 && (
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-kawaii-pink/10 text-kawaii-pink shrink-0 border border-kawaii-pink/20">
+                    TOP 1
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-kawaii-text/80 leading-relaxed line-clamp-3">
+                {c.content}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function SongDetailPage() {
   const { bvId } = useParams<{ bvId: string }>();
   const { data: song, isLoading, error } = trpc.songs.getByBvId.useQuery(
@@ -201,6 +271,11 @@ export default function SongDetailPage() {
               ))}
             </div>
           </div>
+        )}
+
+        {/* ─── 热评 ─── */}
+        {song && (
+          <CommentSection bvId={bvId} />
         )}
 
         {/* ─── 综合评分 ─── */}

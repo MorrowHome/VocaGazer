@@ -8,8 +8,27 @@ export interface BiliSearchVideo {
   tag?: string;
 }
 
+/** Bilibili 评论 */
+export interface BiliComment {
+  mid: number;
+  uname: string;
+  content: string;
+  likes: number;
+  rpid: number;
+  avatar: string;
+  /** 格式化时间 */
+  ctime: string;
+}
+
+/** 热评结果 */
+export interface HotCommentsResult {
+  comments: BiliComment[];
+  total: number;
+}
+
 /** Bilibili API 视频详情 */
 export interface BiliVideoDetail {
+  aid: number;
   bvid: string;
   title: string;
   author: string;

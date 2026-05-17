@@ -11,6 +11,7 @@ import { crawlRouter } from './routers/crawl';
 import { recommendRouter } from './routers/recommend';
 import { aiRouter } from './routers/ai';
 import { milestonesRouter } from './routers/milestones';
+import { commentsRouter } from './routers/comments';
 
 export const appRouter = router({
   songs: songsRouter,
@@ -22,6 +23,7 @@ export const appRouter = router({
   recommend: recommendRouter,
   ai: aiRouter,
   milestones: milestonesRouter,
+  comments: commentsRouter,
 });
 
 export type AppRouter = typeof appRouter;
