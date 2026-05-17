@@ -47,7 +47,8 @@
       "Bash(kill 11777 11778)",
       "Bash(git push *)",
       "Bash(./crawl.sh *)",
-      "Bash(ipconfig getifaddr *)"
+      "Bash(ipconfig getifaddr *)",
+      "Bash(git status *)"
     ]
   }
 }
