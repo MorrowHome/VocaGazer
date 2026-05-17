@@ -91,17 +91,20 @@ export const songsRouter = router({
     )
     .query(async ({ ctx, input }) => {
       const songs = await ctx.prisma.song.findMany({
-        select: { author: true },
+        select: { author: true, authorAvatar: true, picUrl: true },
       });
 
-      const countMap = new Map<string, number>();
+      const authorMap = new Map<string, { count: number; avatar: string }>();
       for (const s of songs) {
         const author = s.author || '未知';
-        countMap.set(author, (countMap.get(author) || 0) + 1);
+        const entry = authorMap.get(author) || { count: 0, avatar: '' };
+        entry.count++;
+        if (s.authorAvatar && !entry.avatar) entry.avatar = s.authorAvatar;
+        authorMap.set(author, entry);
       }
 
-      return Array.from(countMap.entries())
-        .map(([author, count]) => ({ author, count }))
+      return Array.from(authorMap.entries())
+        .map(([author, { count, avatar }]) => ({ author, count, avatar }))
         .sort((a, b) => b.count - a.count)
         .slice(0, input.limit);
     }),
@@ -118,7 +121,6 @@ export const songsRouter = router({
     .query(async ({ ctx, input }) => {
       const { q, page, limit } = input;
       const skip = (page - 1) * limit;
-      const keyword = `%${q}%`;
 
       // SQLite LIKE 查询
       const [songs, total] = await Promise.all([

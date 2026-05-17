@@ -12,6 +12,8 @@ function RecSongCard({ song, rank }: { song: any; rank?: number }) {
   return (
     <a
       href={`/song/${song.bvId}`}
+      target="_blank"
+      rel="noopener noreferrer"
       className="card overflow-hidden group hover:border-kawaii-pink/20 transition-all"
     >
       <div className="relative aspect-[16/9] bg-kawaii-surface overflow-hidden">

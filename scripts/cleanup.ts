@@ -1,53 +1,68 @@
 /**
- * 清理已入库的非 VOCALOID 数据
- * 使用最新过滤规则重新检查全部歌曲
+ * 一键数据清洗脚本
+ * 用法: npx tsx scripts/cleanup.ts [--dry-run] [--verbose]
  *
- * 用法: npx tsx scripts/cleanup.ts
+ * 功能：
+ * 1. 用最新过滤规则重新评估所有歌曲
+ * 2. 删除不符合要求的垃圾数据
+ * 3. 补充缺失的创作者头像
  */
 import { PrismaClient } from '@prisma/client';
+import { getVideoDetail, delay } from '../src/server/services/bilibili/client';
 
 const prisma = new PrismaClient();
+const isDryRun = process.argv.includes('--dry-run');
+const verbose = process.argv.includes('--verbose');
 
-// ─── 排除关键词（与 crawler.ts 保持一致） ───
+// ========== 过滤规则（与 crawler.ts 保持一致） ==========
 
-const EXCLUDE_KEYWORDS = [
-  '周榜', '月榜', '日榜', '年榜', '排行', '排名',
-  '传说曲', '人气曲', '殿堂曲', '金曲',
-  '教程', '教学', '攻略', '入门', '入坑', '指北', '指南',
-  '翻译', '中译', '日文', '日语', '罗马音', '字幕',
-  '翻唱', '翻填', '翻作',
-  'remix', 'remaster', 'cover',
-  'カバー',
-  '填词',
-  '自制谱', '谱面', '谱子', 'PJSK', 'project sekai',
+const HARD_EXCLUDE = [
+  '入驻B站', '入驻b站', '入驻 b站',
+  '大家好', '自我介绍', '个人介绍',
+  '翻调', '翻配', '翻唱', '翻填', '翻作',
+  'remaster', 'カバー',
+  '开箱', '联名', '首发',
+  '手表', '播放器', '耳机',
+  '最新视频已上线', '快来围观',
+  '周五夜放克', '周五夜',
+  '_bgt_', 'MAD', 'AMV', '手书', '模型', '手办',
+  '教程', '教学', '攻略', '入门', '入坑',
+  '翻译', '中译', '字幕',
+  '周榜', '月榜', '日榜', '排行', '排名',
+  '实况', '直播', '录播',
+  '盘点', '合集', '合辑', '精选',
+  '全集', '完整版',
   '一小段', '试唱',
-  '演唱会', '祭',
-  '盘点', '合集', '合辑', '精选', '专辑',
-  '手办', 'MAD', 'MMD', '3D', '建模', '手书',
-  '完整版', '全集', '全话', '全篇',
-  '真人', '实写', '实写化', '真人版', '真人化',
-  // 'OP' / 'ED' 太短（2字母）容易误匹配歌词/元数据，用 '片头' '片尾' '主题曲' 替代
-  '片头', '片尾', '主题曲',
-  'BGM', 'OST', '原声', '原声带',
-  '插曲', '配乐', '纯音乐', 'instrumental',
-  'jojo', 'JoJo',
-  '鬼灭', '咒术', '海贼', '火影', '死神',
-  '龙珠', '灌篮高手', '进击的巨人', 'EVA',
-  '间谍过家家', '葬送的芙莉莲', '我推的孩子',
-  '原神', '崩坏', '星穹铁道', '方舟', '碧蓝',
-  '电影', '影视', '电视剧', '综艺', '纪录片',
+  '纯音乐', 'instrumental', 'BGM',
+  '原声', '原声带', '配乐',
+].sort((a, b) => b.length - a.length);
+
+const SOFT_EXCLUDE = [
   'Vlog', 'vlog', '日常', '记录',
-  '游戏', '实况', '直播', '录播',
+  '本命', '我推', '推し', '填词',
+  'cover', 'Cover',
+  '片头', '片尾', '谱面', '谱子', '自制谱', 'PJSK',
+  '真人', '实写', '祭', '演唱会',
+  '主题曲', '插曲', '纯伴奏',
+  'PV', 'pv', '生贺', '开箱',
+  'MMD', 'mmd', '动画', '动漫',
 ];
 
-const MEDIA_KEYWORDS = [
-  'jojo', 'JoJo',
-  '鬼灭', '咒术', '海贼', '火影', '死神',
-  '龙珠', '灌篮高手', '进击的巨人', 'EVA',
-  '间谍过家家', '葬送的芙莉莲', '我推的孩子',
-  '原神', '崩坏', '星穹铁道', '方舟', '碧蓝',
-  '电影', '影视', '电视剧', '综艺', '纪录片',
+const STRONG_ORIGINAL = [
+  '原创', '作曲', '编曲', '作词',
+  'VOCALOID原曲', '术力口原曲',
+  '自制曲', '本家', '个人制作',
+  '调声', '混音', 'producer', 'produced by',
 ];
+
+const DESC_ORIGINAL_SIGNALS = [
+  '作曲', '编曲', '作词', '调声',
+  'producer', 'produced by',
+  'music by', 'lyrics by',
+  'VOCALOID', 'vocaloid', '调教',
+];
+
+const KNOWN_NON_MUSIC = ['苍穹', '艾可瑞', '斗破苍穹', '苍穹的法芙娜'];
 
 const VOCALOID_TAGS = [
   'vocaloid', 'VOCALOID', 'ボーカロイド',
@@ -63,116 +78,137 @@ const VOCALOID_TAGS = [
   'GUMI', 'flower', '重音テト',
   '音街ウナ', '歌愛ユキ',
   'synthesizer v', 'Synthesizer V',
-  'UTAU', 'CeVIO', 'VOICEVOX',
-  'NEUTRINO', 'NAKOTALK',
+  'UTAU', 'CeVIO', 'VOICEVOX', 'NEUTRINO', 'NAKOTALK',
   '术力口', 'ボカロ', 'vocaloid中文',
 ];
 
-// ─── 检测逻辑 ───
-
-function shouldExclude(title: string): boolean {
-  // 只检查标题。描述包含歌词/元数据, 误报率太高
-  return EXCLUDE_KEYWORDS.some((kw) => title.toLowerCase().includes(kw.toLowerCase()));
-}
-
-function shouldExcludeFromDesc(description: string): boolean {
-  // 描述仅检查强信号（较长的关键词）
-  const strong = EXCLUDE_KEYWORDS.filter(kw => kw.length >= 4);
-  return strong.some((kw) => description.toLowerCase().includes(kw.toLowerCase()));
-}
-
-function mentionsVocaloidChar(text: string): boolean {
-  return VOCALOID_TAGS.some((vt) => text.toLowerCase().includes(vt.toLowerCase()));
-}
-
-function titleOnlyMatchesExclude(title: string): { matched: boolean; isMediaOnly: boolean } {
+function judgeOriginality(
+  title: string, description: string, duration?: number,
+): { isOriginal: boolean; score: number; reason: string } {
   const titleLow = title.toLowerCase();
-  const matched = EXCLUDE_KEYWORDS.some((kw) => titleLow.includes(kw.toLowerCase()));
-  if (!matched) return { matched: false, isMediaOnly: false };
-  const mediaHit = MEDIA_KEYWORDS.some((kw) => titleLow.includes(kw.toLowerCase()));
-  const nonMediaHit = EXCLUDE_KEYWORDS.some(
-    (kw) => !MEDIA_KEYWORDS.includes(kw) && titleLow.includes(kw.toLowerCase()),
-  );
-  return { matched: true, isMediaOnly: mediaHit && !nonMediaHit };
+  const desc = (description || '').toLowerCase();
+  const combined = `${titleLow} ${desc}`;
+
+  for (const kw of HARD_EXCLUDE) {
+    if (titleLow.includes(kw.toLowerCase())) {
+      return { isOriginal: false, score: -100, reason: `硬排除: "${kw}"` };
+    }
+  }
+  if (duration !== undefined && duration > 0 && (duration < 30 || duration > 900)) {
+    return { isOriginal: false, score: -80, reason: `时长异常: ${duration}s` };
+  }
+  if (/本家\s*[:：]\s*BV/i.test(desc)) return { isOriginal: false, score: -90, reason: '描述含本家+BV' };
+  if (/原曲\s*[:：]\s*BV/i.test(desc)) return { isOriginal: false, score: -90, reason: '描述含原曲+BV' };
+  if (/站内本家/i.test(desc)) return { isOriginal: false, score: -90, reason: '描述含站内本家' };
+
+  const mentionsChar = VOCALOID_TAGS.some((vt) => titleLow.includes(vt.toLowerCase()));
+  if (!mentionsChar) return { isOriginal: false, score: -50, reason: '标题无 V 家角色名' };
+
+  for (const nm of KNOWN_NON_MUSIC) {
+    if (titleLow.includes(nm.toLowerCase()) && !desc.includes('作曲') && !desc.includes('原创')) {
+      return { isOriginal: false, score: -70, reason: `非音乐信号: "${nm}"` };
+    }
+  }
+  for (const kw of STRONG_ORIGINAL) {
+    if (title.includes(kw)) return { isOriginal: true, score: 100, reason: `强原创: "${kw}"` };
+  }
+
+  let score = 20;
+  if (duration && duration >= 60 && duration <= 480) score += 15;
+  if (DESC_ORIGINAL_SIGNALS.some((s) => desc.includes(s))) score += 25;
+  if (description && description.includes('VOCALOID')) score += 10;
+  for (const kw of SOFT_EXCLUDE) {
+    if (titleLow.includes(kw.toLowerCase())) score -= 20;
+  }
+  const hasAnyMusicSignal = STRONG_ORIGINAL.some((k) => combined.includes(k.toLowerCase()))
+    || DESC_ORIGINAL_SIGNALS.some((s) => combined.includes(s))
+    || combined.includes('VOCALOID')
+    || combined.includes('歌');
+  if (!hasAnyMusicSignal) score -= 10;
+
+  return score >= 25
+    ? { isOriginal: true, score, reason: `得分 ${score}` }
+    : { isOriginal: false, score, reason: `得分不足 ${score}` };
 }
 
-function hasVocaloidTag(tags: string[]): boolean {
-  return tags.some((t) =>
-    VOCALOID_TAGS.some((vt) => t.toLowerCase().includes(vt.toLowerCase())),
-  );
-}
-
-function isSuspiciousDuration(duration: number): boolean {
-  return duration < 60 || duration > 900;
-}
-
-// ─── 主流程 ───
+// ========== 执行清洗 ==========
 
 async function main() {
-  const allSongs = await prisma.song.findMany({ orderBy: { publishTime: 'desc' } });
-  console.log(`共 ${allSongs.length} 首歌曲，开始检查...\n`);
+  console.log('');
+  console.log(`  ♢ 一键数据清洗${isDryRun ? '（预览模式，不会删除）' : ''}`);
+  console.log('');
 
-  const badSongs: Array<{ id: string; title: string; author: string; reason: string }> = [];
+  const allSongs = await prisma.song.findMany({
+    select: {
+      id: true, bvId: true, title: true, author: true,
+      description: true, duration: true, statistics: true, authorAvatar: true,
+    },
+    orderBy: { id: 'asc' },
+  });
+  console.log(`  数据库中共 ${allSongs.length} 首歌\n`);
+
+  const toDelete: typeof allSongs = [];
+  const needsAvatar: typeof allSongs = [];
 
   for (const song of allSongs) {
-    let tags: string[] = [];
-    try { tags = JSON.parse(song.tags || '[]'); } catch {}
-
-    const desc = song.description || '';
-    const titleDesc = `${song.title} ${desc}`;
-    const reasons: string[] = [];
-
-    // 排除关键词检查（含媒体名豁免）
-    const excludeCheck = titleOnlyMatchesExclude(song.title);
-    const titleMentionsChar = mentionsVocaloidChar(song.title);
-    if (excludeCheck.matched) {
-      if (!(excludeCheck.isMediaOnly && titleMentionsChar)) {
-        reasons.push('含排除关键词');
-      }
-    }
-
-    // 标签/角色名检查：标题里有角色名的跳过标签检查
-    if (!mentionsVocaloidChar(titleDesc) && !hasVocaloidTag(tags)) {
-      reasons.push('无角色名+无VOCALOID标签');
-    }
-
-    if (song.duration && isSuspiciousDuration(song.duration)) {
-      reasons.push(`时长异常(${song.duration}s)`);
-    }
-
-    if (reasons.length > 0) {
-      badSongs.push({ id: song.id, title: song.title, author: song.author || '未知', reason: reasons.join(', ') });
+    const judgment = judgeOriginality(song.title, song.description || '', song.duration || undefined);
+    if (!judgment.isOriginal) {
+      toDelete.push(song);
+      if (verbose) console.log(`  ✗ [删除] ${song.title.substring(0, 40)} | ${judgment.reason}`);
+    } else if (!song.authorAvatar && song.bvId) {
+      needsAvatar.push(song);
     }
   }
 
-  if (badSongs.length === 0) {
-    console.log('✅ 所有歌曲均通过检查，无需清理。');
-    return;
-  }
+  console.log(`  评估结果: 保留 ${allSongs.length - toDelete.length} 首, 待删除 ${toDelete.length} 首, 缺头像 ${needsAvatar.length} 首\n`);
 
-  console.log(`以下 ${badSongs.length} 首歌曲可能是误入库：\n`);
-  badSongs.forEach((s, i) => {
-    console.log(`  ${i + 1}. [${s.reason}] ${s.title} — ${s.author}`);
-  });
-
-  console.log('\n---');
-  console.log(`执行删除: npx tsx scripts/cleanup.ts --delete`);
-  console.log(`(不加 --delete 只预览不删除)`);
-
-  // 如果传了 --delete 参数则执行删除
-  if (process.argv.includes('--delete')) {
-    console.log('\n开始删除...');
-    for (const s of badSongs) {
-      await prisma.song.delete({ where: { id: s.id } });
-      console.log(`  ✗ 已删除: ${s.title}`);
+  // 删除垃圾数据
+  if (toDelete.length > 0 && !isDryRun) {
+    console.log('  ▶ 删除垃圾数据...');
+    const ids = toDelete.map((s) => s.id);
+    for (let i = 0; i < ids.length; i += 50) {
+      const batch = ids.slice(i, i + 50);
+      await prisma.ranking.deleteMany({ where: { songId: { in: batch } } });
+      await prisma.songDailyStats.deleteMany({ where: { songId: { in: batch } } });
+      await prisma.songMilestone.deleteMany({ where: { songId: { in: batch } } });
+      await prisma.song.deleteMany({ where: { id: { in: batch } } });
     }
-    console.log(`\n✅ 共删除 ${badSongs.length} 首`);
+    console.log(`  ✓ 已删除 ${toDelete.length} 首`);
   }
 
-  await prisma.$disconnect();
+  // 补充头像（按创作者去重，节省 API 调用）
+  if (needsAvatar.length > 0 && !isDryRun) {
+    const authorBvMap = new Map<string, string>();
+    for (const s of needsAvatar) {
+      if (!authorBvMap.has(s.author)) authorBvMap.set(s.author, s.bvId);
+    }
+    console.log(`  ▶ 补充 ${authorBvMap.size} 位创作者的头像（${needsAvatar.length} 首歌曲）...`);
+    const authorList: { author: string; bvId: string }[] = [];
+    authorBvMap.forEach((bvId, author) => { authorList.push({ author, bvId }); });
+    let filled = 0, failed = 0, i = 0;
+    for (const { author, bvId } of authorList) {
+      try {
+        const detail = await getVideoDetail(bvId);
+        await delay(400);
+        if (detail?.authorAvatar) {
+          await prisma.song.updateMany({ where: { author }, data: { authorAvatar: detail.authorAvatar } });
+          filled++;
+        } else { failed++; }
+      } catch { failed++; }
+      i++;
+      if (i % 10 === 0) console.log(`    进度: ${i}/${authorBvMap.size}`);
+    }
+    console.log(`  ✓ 头像补充: ${filled} 成功, ${failed} 失败\n`);
+  }
+
+  const finalSongs = await prisma.song.count();
+  const finalAuthors = await prisma.song.findMany({ select: { author: true }, distinct: ['author'] });
+  console.log(`  ♢ 清洗${isDryRun ? '预览' : '完成'}`);
+  console.log(`    最终歌曲: ${finalSongs} 首, 创作者: ${finalAuthors.length} 位`);
+  console.log('');
 }
 
 main().catch((err) => {
-  console.error('清理失败:', err);
+  console.error('清洗失败:', err);
   process.exit(1);
-});
+}).finally(() => prisma.$disconnect());

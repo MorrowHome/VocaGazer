@@ -87,8 +87,10 @@ function CommentSection({ bvId }: { bvId: string }) {
 
 // ─── 播放趋势图 ───
 
-function TrendChart({ dailyStats }: { dailyStats: Array<{ date: string; playCount: number }> }) {
-  const sorted = [...dailyStats].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+function TrendChart({ dailyStats }: { dailyStats: Array<{ date: string | Date; playCount: number }> }) {
+  const sorted = [...dailyStats]
+    .map((d) => ({ ...d, date: typeof d.date === 'string' ? d.date : d.date.toISOString().slice(0, 10) }))
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   // 计算每日增量
   const deltas = sorted.map((d, i) => {

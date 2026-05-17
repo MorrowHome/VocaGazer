@@ -42,7 +42,12 @@
       "Bash(sqlite3 *)",
       "Bash(git check-ignore *)",
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('keys:', list\\(d.keys\\(\\)\\)\\); print\\('result' in d\\)\")",
-      "Bash(python3 *)"
+      "Bash(python3 *)",
+      "Bash(git reset *)",
+      "Bash(kill 11777 11778)",
+      "Bash(git push *)",
+      "Bash(./crawl.sh *)",
+      "Bash(ipconfig getifaddr *)"
     ]
   }
 }

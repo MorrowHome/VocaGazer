@@ -35,6 +35,8 @@ function RankCard({ song, rank, entryScore }: { song: any; rank: number; entrySc
     <div className="group relative">
       <a
         href={`/song/${song.bvId}`}
+        target="_blank"
+        rel="noopener noreferrer"
         className="flex items-start gap-4 p-4 rounded-xl hover:bg-kawaii-surface transition-all group/card"
       >
         <div className="flex flex-col items-center shrink-0 w-10 mt-1">

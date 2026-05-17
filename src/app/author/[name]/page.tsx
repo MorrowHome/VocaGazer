@@ -20,7 +20,11 @@ export default function AuthorPage() {
         <div className="max-w-4xl mx-auto px-4 md:px-8 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <a href="/" className="text-sm text-kawaii-muted hover:text-kawaii-pink transition-colors font-medium">&larr; 返回</a>
-            <span aria-hidden="true" className="text-kawaii-cyan">♫</span>
+            {data && data.songs[0]?.authorAvatar ? (
+              <img src={data.songs[0].authorAvatar} alt="" className="w-8 h-8 rounded-full object-cover ring-2 ring-kawaii-border/30 shrink-0" />
+            ) : (
+              <span aria-hidden="true" className="text-kawaii-cyan">♫</span>
+            )}
             <h1 className="text-lg font-black tracking-wide text-gradient-flow truncate max-w-[200px] md:max-w-md">
               {author}
             </h1>

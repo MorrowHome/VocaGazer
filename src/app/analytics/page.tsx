@@ -81,6 +81,8 @@ function TableRow({ rank, song }: { rank: number; song: any }) {
   return (
     <a
       href={`/song/${song.bvId}`}
+      target="_blank"
+      rel="noopener noreferrer"
       className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-kawaii-surface transition-colors group"
     >
       <span className="text-xs text-kawaii-muted w-6 text-right font-bold">{rank}</span>
