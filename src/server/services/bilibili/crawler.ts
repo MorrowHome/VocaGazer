@@ -44,98 +44,232 @@ const TAGS = [
   '小春六花', '夏色花梨', '花隈千冬',
 ];
 
-/** 排除关键词（非原创内容） */
-const EXCLUDE_KEYWORDS = [
-  // 榜单类
-  '周榜', '月榜', '日榜', '年榜', '排行', '排名',
-  '传说曲', '人气曲', '殿堂曲', '金曲',
-  // 教程/攻略类
-  '教程', '教学', '攻略', '入门', '入坑', '指北', '指南',
-  '翻译', '中译', '日文', '日语', '罗马音', '字幕',
-  // 翻唱/翻调类
-  '翻唱', '翻填', '翻作',
-  // 'remix' 暂不排除——部分 V 家 remix 属于合法原创
-  'remaster', 'cover',
-  'カバー',           // 日语"翻唱"
-  // 填词翻唱
-  '填词',
-  // 谱面/游戏类
-  '自制谱', '谱面', '谱子', 'PJSK', 'project sekai',
-  // 片段/试唱
-  '一小段', '试唱',
-  // 演唱会/活动类
-  '演唱会', '祭',
-  // 盘点/合集类
-  '盘点', '合集', '合辑', '精选', '专辑',
-  '手办', 'MAD', 'MMD', '3D', '建模', '手书',
-  // 完整版/长篇类（如 JoJo 完整版剪辑、电影等）
-  '完整版', '全集', '全话', '全篇',
-  // 真人化/实写类
-  '真人', '实写', '实写化', '真人版', '真人化',
-  // 动画/影视类非歌曲
-  '片头', '片尾', '主题曲',
-  'BGM', 'OST', '原声', '原声带',
-  '插曲', '配乐', '纯音乐', 'instrumental',
-  // 实况/Vlog类
-  'Vlog', 'vlog', '日常', '记录',
-  // 游戏实况
-  '游戏', '实况', '直播', '录播',
-  // 入驻/自我介绍类（非歌曲内容）
-  '入驻B站', '入驻 b站', '入驻b站',
+// ========== 评分制过滤 ==========
+
+/**
+ * 硬排除关键词——出现即排除，即使标题含 V 家角色名
+ * 这些模式明确表示非原创歌曲内容
+ */
+const HARD_EXCLUDE = [
+  // 入驻/自我介绍
+  '入驻B站', '入驻b站', '入驻 b站',
   '大家好', '自我介绍', '个人介绍',
+  // 翻调/翻配/翻唱（非原创）
+  '翻调', '翻配',
+  '翻唱', '翻填', '翻作',
+  'remaster',
+  'カバー',
+  // 商业推广
+  '开箱', '联名', '首发',
+  '手表', '播放器', '耳机',
+  // 频道推广
+  '最新视频已上线', '快来围观',
+  // 游戏（非音乐）
+  '周五夜放克',
+  '周五夜',
+  '_bgt_',  // 自动生成水印
+  // 纯动画/影视
+  'MAD', 'AMV',
+  '手书',
+  '模型', '手办',
+  // 教程
+  '教程', '教学', '攻略',
+  '入门', '入坑',
+  '翻译', '中译', '字幕',
+  // 榜单
+  '周榜', '月榜', '日榜',
+  '排行', '排名',
+  // 实况直播
+  '实况', '直播', '录播',
+  // 盘点
+  '盘点', '合集', '合辑', '精选',
+  '全集', '完整版',
+  // 片段
+  '一小段', '试唱',
+  // 纯演奏/纯音乐
+  '纯音乐', 'instrumental', 'BGM',
+  '原声', '原声带', '配乐',
+].sort((a, b) => b.length - a.length); // 长词优先
+
+/**
+ * 商业/非音乐关键词——含这些关键词且没有原创证据时排除
+ */
+const SOFT_EXCLUDE = [
+  'Vlog', 'vlog', '日常', '记录',
   '本命', '我推', '推し',
+  '填词',
+  'cover', 'Cover',
+  '原创曲',  // "非歌曲原创" 类
+  '片头', '片尾',
+  '谱面', '谱子', '自制谱', 'PJSK',
+  '真人', '实写',
+  '祭',
+  '演唱会',
+  '主题曲',
+  '插曲',
+  '纯伴奏',
+  'PV', 'pv',
+  '生贺',  // 生日祝贺视频（不是歌）
+  '开箱',
+  'MMD', 'mmd',
+  '动画', '动漫',
 ];
 
-/** 媒体名关键词（动漫/游戏/影视）——标题含 V 家角色名时豁免 */
-const MEDIA_KEYWORDS = [
-  'jojo', 'JoJo',
-  '鬼灭', '咒术', '海贼', '火影', '死神',
-  '龙珠', '灌篮高手', '进击的巨人', 'EVA',
-  '间谍过家家', '葬送的芙莉莲', '我推的孩子',
-  '原神', '崩坏', '星穹铁道', '方舟', '碧蓝',
-  '电影', '影视', '电视剧', '综艺', '纪录片',
-];
-
-/** 原创判定关键词 */
-const ORIGINAL_KEYWORDS = [
+/** 原创证据关键词——标题含这些的几乎肯定是原创歌 */
+const STRONG_ORIGINAL = [
   '原创', '作曲', '编曲', '作词',
   'VOCALOID原曲', '术力口原曲',
-  '自制', '自制曲', '本家', '个人制作',
-  '调声', '混音', '作曲编曲',
+  '自制曲', '本家',
+  '个人制作',
+  '调声', '混音',
+  'producer', 'produced by',
 ];
 
-/** 描述中出现的原创特征（标题不必包含原创字眼） */
-const DESCRIPTION_ORIGINAL_HINTS = [
+/** 描述中的原创信号 */
+const DESC_ORIGINAL_SIGNALS = [
   '作曲', '编曲', '作词', '调声',
   'producer', 'produced by',
   'music by', 'lyrics by',
+  'VOCALOID', 'vocaloid',
+  '调教',
 ];
 
-/** VOCALOID 角色/引擎标签（用于验证视频是否真的和VOCALOID相关） */
+/** 已知非音乐的媒体/品牌名（含 V 角色名关键词时的误判防护） */
+const KNOWN_NON_MUSIC = [
+  '苍穹', // 可能指游戏"苍穹"而非歌姬
+  '艾可瑞', // 换热器品牌
+  '斗破苍穹',
+  '苍穹的法芙娜',
+];
+
+/** VOCALOID 角色/引擎标签 */
 const VOCALOID_TAGS = [
-  // 日语
   'vocaloid', 'VOCALOID', 'ボーカロイド',
   '初音ミク', '初音未来', 'miku', '初音',
   '鏡音リン', '镜音铃', '镜音连', '鏡音レン',
   '巡音ルカ', '巡音流歌', 'luka',
   'MEIKO', 'KAITO',
-  // 中文
   '洛天依', '言和', '乐正绫', '乐正龙牙',
   '徵羽摩柯', '墨清弦',
-  // Synthesizer V / ACE
   '星尘', '星塵', 'infinity', '心华',
   '赤羽', '苍穹', '诗岸', '海伊', '永夜', '永夜minus', 'Minus', '艾可',
   '小春六花', '夏色花梨', '花隈千冬',
-  // 其他常见VOCALOID/UTAU歌手
   'GUMI', 'flower', '重音テト',
   '音街ウナ', '歌愛ユキ',
-  // 引擎
   'synthesizer v', 'Synthesizer V',
   'UTAU', 'CeVIO', 'VOICEVOX',
   'NEUTRINO', 'NAKOTALK',
-  // 通用
   '术力口', 'ボカロ', 'vocaloid中文',
 ];
+
+/**
+ * 评分制原创判定
+ * 返回 { isOriginal: boolean, score: number, reason: string }
+ *
+ * 评分规则:
+ * - 硬排除关键词 → 直接排除 (score = -100)
+ * - 强原创关键词 → 直接接受 (score = +100)
+ * - 其余按信号正负分累计
+ */
+function judgeOriginality(
+  title: string,
+  description: string,
+  duration?: number,
+): { isOriginal: boolean; score: number; reason: string } {
+  const titleLow = title.toLowerCase();
+  const desc = (description || '').toLowerCase();
+  const combined = `${titleLow} ${desc}`;
+
+  // ── 硬排除（一票否决）──
+  for (const kw of HARD_EXCLUDE) {
+    if (titleLow.includes(kw.toLowerCase())) {
+      return { isOriginal: false, score: -100, reason: `硬排除: "${kw}"` };
+    }
+  }
+
+  // ── 时长过滤（过短或过长的大概率不是歌）──
+  if (duration !== undefined && duration > 0) {
+    if (duration < 30 || duration > 900) {
+      return { isOriginal: false, score: -80, reason: `时长异常: ${duration}s` };
+    }
+  }
+
+  // ── 检查是否指向他人的翻调──
+  if (/本家\s*[:：]\s*BV/i.test(desc)) {
+    return { isOriginal: false, score: -90, reason: '描述含本家+BV' };
+  }
+  if (/原曲\s*[:：]\s*BV/i.test(desc)) {
+    return { isOriginal: false, score: -90, reason: '描述含原曲+BV' };
+  }
+  if (/站内本家/i.test(desc)) {
+    return { isOriginal: false, score: -90, reason: '描述含站内本家' };
+  }
+
+  // 检查是否提到 V 家角色
+  const mentionsChar = VOCALOID_TAGS.some((vt) => titleLow.includes(vt.toLowerCase()));
+
+  // 非 V 家内容直接排除
+  if (!mentionsChar) {
+    return { isOriginal: false, score: -50, reason: '标题无 V 家角色名' };
+  }
+
+  // ── 已知非音乐关键词排除 ──
+  for (const nm of KNOWN_NON_MUSIC) {
+    if (titleLow.includes(nm.toLowerCase()) && !desc.includes('作曲') && !desc.includes('原创')) {
+      return { isOriginal: false, score: -70, reason: `非音乐信号: "${nm}"` };
+    }
+  }
+
+  // ── 强原创信号 ──
+  for (const kw of STRONG_ORIGINAL) {
+    if (title.includes(kw)) {
+      return { isOriginal: true, score: 100, reason: `强原创: "${kw}"` };
+    }
+  }
+
+  // ── 计分 ──
+  let score = 0;
+
+  // 正信号：标题提到 V 家角色
+  score += 20;
+
+  // 正信号：时长在合理范围（60-480s 是典型歌长）
+  if (duration && duration >= 60 && duration <= 480) {
+    score += 15;
+  }
+
+  // 正信号：描述有作曲/编曲等
+  if (DESC_ORIGINAL_SIGNALS.some((s) => desc.includes(s))) {
+    score += 25;
+  }
+
+  // 正信号：描述有 #VOCALOID# 等标签
+  if (description && description.includes('VOCALOID')) {
+    score += 10;
+  }
+
+  // 负信号：软的商业/非音乐关键词
+  for (const kw of SOFT_EXCLUDE) {
+    if (titleLow.includes(kw.toLowerCase())) {
+      score -= 20;
+    }
+  }
+
+  // 负信号：描述没有音乐相关词
+  const hasAnyMusicSignal = STRONG_ORIGINAL.some((k) => combined.includes(k.toLowerCase()))
+    || DESC_ORIGINAL_SIGNALS.some((s) => combined.includes(s))
+    || combined.includes('VOCALOID')
+    || combined.includes('歌');
+  if (!hasAnyMusicSignal) {
+    score -= 10;
+  }
+
+  // ── 决策 ──
+  if (score >= 25) {
+    return { isOriginal: true, score, reason: `得分 ${score}` };
+  }
+  return { isOriginal: false, score, reason: `得分不足 ${score}` };
+}
 
 /** 歌曲分类检测 */
 const REMIX_KEYWORDS = ['remix', 'Remix', 'REMIX', 'Rearrange', 'rearrange'];
@@ -143,72 +277,9 @@ const COVER_KEYWORDS = ['翻唱', '翻填', 'cover', 'Cover', 'COVER', 'カバ�
 
 function detectCategory(title: string, description: string): string {
   const text = `${title} ${description}`;
-  const isRemix = REMIX_KEYWORDS.some((kw) => text.includes(kw));
-  const isCover = COVER_KEYWORDS.some((kw) => text.includes(kw));
-  if (isRemix) return 'remix';
-  if (isCover) return 'cover';
+  if (REMIX_KEYWORDS.some((kw) => text.includes(kw))) return 'remix';
+  if (COVER_KEYWORDS.some((kw) => text.includes(kw))) return 'cover';
   return 'original';
-}
-
-// ========== 过滤逻辑 ==========
-
-function shouldExclude(title: string, description: string): boolean {
-  // 只检查标题。描述包含歌词/元数据, 误报率太高
-  return EXCLUDE_KEYWORDS.some((kw) => title.toLowerCase().includes(kw.toLowerCase()));
-}
-
-/**
- * 检查描述中是否指向他人作品的翻调/翻唱
- * 例如：本家：BV1Y2oNB1ESs、本家: xxx、原曲：xxx
- */
-function isCoverOfAnotherWork(description: string): boolean {
-  const desc = description || '';
-  // 本家 + BV号 = 基于他人作品的翻调
-  if (/本家\s*[:：]\s*BV/i.test(desc)) return true;
-  // 原曲 + BV号
-  if (/原曲\s*[:：]\s*BV/i.test(desc)) return true;
-  // 站内本家
-  if (/站内本家/i.test(desc)) return true;
-  return false;
-}
-
-function isOriginal(title: string, description: string): boolean {
-  const combined = `${title} ${description}`;
-  const desc = description || '';
-  const titleLow = title.toLowerCase();
-
-  // 指向他人作品的翻调 → 排除
-  if (isCoverOfAnotherWork(description)) return false;
-
-  // 检查标题是否提到 V 家角色——用于豁免媒体名关键词
-  const mentionsChar = VOCALOID_TAGS.some((vt) => titleLow.includes(vt.toLowerCase()));
-
-  // 排除关键词检查（媒体名在提及 V 家角色时豁免）
-  if (shouldExclude(title, description)) {
-    if (!mentionsChar) return false;
-    // 提到 V 家角色的情况下，只检查非媒体名的排除词
-    const nonMediaExclude = EXCLUDE_KEYWORDS.some((kw) =>
-      !MEDIA_KEYWORDS.includes(kw) && titleLow.includes(kw.toLowerCase()),
-    );
-    if (nonMediaExclude) return false;
-  }
-
-  // 标题包含明确的原创标识
-  if (ORIGINAL_KEYWORDS.some((kw) => title.includes(kw))) return true;
-
-  // 标题提到 V 家角色 → 宽松认定为原创（避免游戏联动曲被误杀）
-  if (mentionsChar) return true;
-
-  // 描述中出现作曲/编曲等创作相关词汇（强信号）
-  if (DESCRIPTION_ORIGINAL_HINTS.some((kw) => desc.toLowerCase().includes(kw))) {
-    return true;
-  }
-
-  // 全文包含原创关键词
-  if (ORIGINAL_KEYWORDS.some((kw) => combined.includes(kw))) return true;
-
-  // 默认不认定为原创（宁可漏过也不要误判）
-  return false;
 }
 
 // ========== 采集主逻辑 ==========
@@ -294,10 +365,14 @@ export async function runCrawl(
   const totalVideos = videoMap.size;
   log(`搜索完成，共去重后 ${totalVideos} 个视频`);
 
-  // 阶段 2：原创筛选
-  const originalVideos = Array.from(videoMap.values()).filter((v) =>
-    isOriginal(v.title, v.description),
-  );
+  // 阶段 2：原创筛选（评分制）
+  const originalVideos = Array.from(videoMap.values()).filter((v) => {
+    const judgment = judgeOriginality(v.title, v.description);
+    if (verbose && !judgment.isOriginal) {
+      log(`  排除: ${v.title.substring(0, 40)} → ${judgment.reason}`);
+    }
+    return judgment.isOriginal;
+  });
   log(`原创筛选完成，共 ${originalVideos.length} 个可能原创视频`);
 
   // 阶段 3：获取详情并入库
@@ -309,13 +384,12 @@ export async function runCrawl(
       const detail = await getVideoDetail(v.bvid);
       if (!detail) continue;
 
-      // 二级过滤：检查时长（VOCALOID 歌曲通常在 90s~12min）
-      const duration = detail.duration;
-      if (duration < 60 || duration > 900) {
-        log(`  排除（时长异常 ${duration}s）: ${v.title}`);
+      // 二级过滤：带时长数据的二次判定
+      const judgment = judgeOriginality(v.title, v.description, detail.duration);
+      if (!judgment.isOriginal) {
+        log(`  二级排除: ${v.title.substring(0, 40)} → ${judgment.reason}`);
         continue;
       }
-
       // 二级过滤：检查标签是否包含 VOCALOID 相关标签
       // 但如果标题/描述中已明确提到 VOCALOID 角色名或引擎，则跳过标签检查
       const titleDesc = `${v.title} ${v.description}`;
