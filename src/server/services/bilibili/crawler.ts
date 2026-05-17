@@ -427,3 +427,102 @@ export async function runCrawl(
   log(`入库完成，成功保存 ${savedCount} 首，失败 ${errors.length} 首`);
   return { totalVideos, originalCount: originalVideos.length, savedCount, errors };
 }
+
+/**
+ * 刷新所有已有歌曲的统计数据
+ * 遍历全部歌曲，从 B 站拉取最新数据并更新
+ * 为播放量趋势图提供数据积累
+ */
+export async function refreshAllSongs(
+  options: { requestDelay?: number; batchSize?: number } = {}
+): Promise<{ refreshed: number; failed: number; deletedBvIds: string[] }> {
+  const { requestDelay = 500, batchSize = 20 } = options;
+  const prisma = getPrisma();
+
+  const allSongs = await prisma.song.findMany({
+    select: { id: true, bvId: true, title: true },
+    orderBy: { updatedAt: 'asc' }, // 最后更新的优先刷新
+  });
+
+  console.log(`[Refresh] 共 ${allSongs.length} 首歌需要刷新`);
+
+  let refreshed = 0;
+  let failed = 0;
+  const deletedBvIds: string[] = [];
+
+  for (let i = 0; i < allSongs.length; i++) {
+    const song = allSongs[i];
+    if (i > 0 && i % batchSize === 0) {
+      console.log(`[Refresh] 进度 ${i}/${allSongs.length}`);
+    }
+
+    try {
+      const detail = await getVideoDetail(song.bvId);
+      await delay(requestDelay);
+
+      if (!detail) {
+        // 视频已删除或下架
+        deletedBvIds.push(song.bvId);
+        console.log(`[Refresh] ${song.title} ($song.bvId) 已无法访问，跳过`);
+        failed++;
+        continue;
+      }
+
+      const stats = {
+        playCount: detail.statistics.view,
+        likes: detail.statistics.like,
+        coins: detail.statistics.coin,
+        favorites: detail.statistics.favorite,
+        shares: detail.statistics.share,
+        comments: detail.statistics.reply,
+      };
+
+      const score = calculateScore(stats);
+
+      await prisma.song.update({
+        where: { id: song.id },
+        data: { statistics: JSON.stringify(stats), score },
+      });
+
+      // 保存每日快照
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      await prisma.songDailyStats.upsert({
+        where: { songId_date: { songId: song.id, date: today } },
+        update: {
+          playCount: stats.playCount,
+          likes: stats.likes,
+          coins: stats.coins,
+          favorites: stats.favorites,
+          shares: stats.shares,
+          comments: stats.comments,
+          score,
+        },
+        create: {
+          songId: song.id,
+          date: today,
+          playCount: stats.playCount,
+          likes: stats.likes,
+          coins: stats.coins,
+          favorites: stats.favorites,
+          shares: stats.shares,
+          comments: stats.comments,
+          score,
+        },
+      });
+
+      // 检查里程碑
+      await checkSongMilestones(song.id, stats.playCount);
+
+      refreshed++;
+    } catch (err: any) {
+      failed++;
+      if (failed <= 5) {
+        console.log(`[Refresh] 刷新失败 ${song.bvId}: ${err.message}`);
+      }
+    }
+  }
+
+  console.log(`[Refresh] 完成: ${refreshed} 成功, ${failed} 失败, ${deletedBvIds.length} 已删除`);
+  return { refreshed, failed, deletedBvIds };
+}

@@ -38,6 +38,18 @@ async function runRankingTask() {
   }
 }
 
+/** 全量刷新所有歌曲的统计数据 */
+async function runRefreshTask() {
+  console.log('[Scheduler] 开始全量刷新歌曲统计...');
+  try {
+    const { refreshAllSongs } = await import('./bilibili/crawler');
+    const result = await refreshAllSongs({ requestDelay: 400 });
+    console.log(`[Scheduler] 全量刷新完成: ${result.refreshed} 成功, ${result.failed} 失败`);
+  } catch (err) {
+    console.error('[Scheduler] 全量刷新失败:', err);
+  }
+}
+
 /** 生成每日 AI 数据摘要 */
 async function runAiDailySummary() {
   console.log('[Scheduler] 开始生成 AI 数据摘要...');
@@ -142,15 +154,21 @@ export function startScheduler() {
     runMilestoneScan();
   });
 
+  // 全量刷新：每天 3:00 运行
+  const refreshJob = cron.schedule('0 3 * * *', () => {
+    runRefreshTask();
+  });
+
   initialized = true;
   console.log('[Scheduler] 定时任务已启动');
   console.log('  - 采集: 每 6 小时 (0/6/12/18 点)');
   console.log('  - 排行榜: 每天 0:30');
   console.log('  - AI 晚报: 每天 20:00');
+  console.log('  - 全量刷新: 每天 3:00');
   console.log('  - 里程碑扫描: 每小时');
 
   // 返回句柄以便外部控制
-  return { crawlJob, rankJob, aiJob, milestoneJob };
+  return { crawlJob, rankJob, aiJob, refreshJob, milestoneJob };
 }
 
 /** 获取调度器状态 */
