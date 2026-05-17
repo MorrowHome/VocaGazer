@@ -156,6 +156,7 @@ export default function HomePage() {
             <a href="/recommend" className="hover:text-kawaii-pink transition-colors">推荐</a>
             <a href="/search" className="hover:text-kawaii-pink transition-colors">搜索</a>
             <a href="/ranking" className="hover:text-kawaii-cyan transition-colors">排行榜</a>
+            <a href="/tags" className="hover:text-kawaii-purple transition-colors">标签</a>
             <a href="/milestones" className="hover:text-kawaii-yellow transition-colors">里程碑</a>
             <a href="/authors" className="hover:text-kawaii-cyan transition-colors">创作者</a>
             <a href="/analytics" className="hover:text-kawaii-purple transition-colors">数据分析</a>
