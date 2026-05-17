@@ -85,6 +85,71 @@ function CommentSection({ bvId }: { bvId: string }) {
   );
 }
 
+// ─── 播放趋势图 ───
+
+function TrendChart({ dailyStats }: { dailyStats: Array<{ date: string; playCount: number }> }) {
+  const sorted = [...dailyStats].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  // 计算每日增量
+  const deltas = sorted.map((d, i) => {
+    const prev = i > 0 ? sorted[i - 1].playCount : d.playCount;
+    return { date: d.date, delta: d.playCount - prev, total: d.playCount };
+  });
+
+  const maxDelta = Math.max(...deltas.map((d) => d.delta), 1);
+  const maxTotal = Math.max(...deltas.map((d) => d.total), 1);
+
+  return (
+    <div className="card !p-6">
+      <div className="flex items-center gap-2 mb-4">
+        <span className="text-lg text-kawaii-cyan" aria-hidden="true">◈</span>
+        <h2 className="text-xs font-black text-kawaii-muted tracking-wider uppercase">播放趋势</h2>
+        <span className="text-[10px] text-kawaii-muted font-medium ml-auto">
+          {sorted.length} 天
+        </span>
+      </div>
+
+      {/* 累计播放曲线（柱状） */}
+      <div className="mb-4">
+        <p className="text-[10px] text-kawaii-muted font-bold mb-2">累计播放</p>
+        <div className="flex items-end gap-[2px] h-24 overflow-x-auto pb-1">
+          {deltas.map((d) => (
+            <div
+              key={d.date}
+              className="flex-1 min-w-[8px] rounded-t-sm transition-all hover:opacity-80"
+              style={{
+                height: `${(d.total / maxTotal) * 100}%`,
+                background: 'linear-gradient(to top, #39BEB9, #7EDDD9)',
+              }}
+              title={`${d.date.slice(5)}: ${(d.total / 10000).toFixed(1)}万`}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* 每日增量（柱状） */}
+      <div>
+        <p className="text-[10px] text-kawaii-muted font-bold mb-2">单日增量</p>
+        <div className="flex items-end gap-[2px] h-16 overflow-x-auto pb-1">
+          {deltas.map((d) => (
+            <div
+              key={d.date}
+              className="flex-1 min-w-[8px] rounded-t-sm transition-all hover:opacity-80"
+              style={{
+                height: `${(d.delta / maxDelta) * 100}%`,
+                background: d.delta > 0
+                  ? 'linear-gradient(to top, #B388FF, #D4B8FF)'
+                  : '#E8E0F0',
+              }}
+              title={`${d.date.slice(5)}: +${d.delta.toLocaleString()}`}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function SongDetailPage() {
   const { bvId } = useParams<{ bvId: string }>();
   const { data: song, isLoading, error } = trpc.songs.getByBvId.useQuery(
@@ -271,6 +336,11 @@ export default function SongDetailPage() {
               ))}
             </div>
           </div>
+        )}
+
+        {/* ─── 播放趋势 ─── */}
+        {song && song.dailyStats && song.dailyStats.length > 2 && (
+          <TrendChart dailyStats={song.dailyStats} />
         )}
 
         {/* ─── 热评 ─── */}
