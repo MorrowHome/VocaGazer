@@ -56,6 +56,56 @@ export const songsRouter = router({
       return song;
     }),
 
+  // 根据作者获取歌曲
+  getByAuthor: publicProcedure
+    .input(
+      z.object({
+        author: z.string(),
+        page: z.number().min(1).default(1),
+        limit: z.number().min(1).max(100).default(50),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const { author, page, limit } = input;
+      const skip = (page - 1) * limit;
+
+      const [songs, total] = await Promise.all([
+        ctx.prisma.song.findMany({
+          where: { author },
+          orderBy: { publishTime: 'desc' },
+          skip,
+          take: limit,
+        }),
+        ctx.prisma.song.count({ where: { author } }),
+      ]);
+
+      return { songs, total };
+    }),
+
+  // 获取所有作者列表（按歌曲数排序）
+  getAuthors: publicProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(200).default(50),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const songs = await ctx.prisma.song.findMany({
+        select: { author: true },
+      });
+
+      const countMap = new Map<string, number>();
+      for (const s of songs) {
+        const author = s.author || '未知';
+        countMap.set(author, (countMap.get(author) || 0) + 1);
+      }
+
+      return Array.from(countMap.entries())
+        .map(([author, count]) => ({ author, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, input.limit);
+    }),
+
   // 获取高评分歌曲
   getTopRated: publicProcedure
     .input(

@@ -13,7 +13,7 @@ function RankEntry({ song, rank }: { song: any; rank: number }) {
   const rankClass = rank <= 3 ? `rank-${rank}` : 'rank-other';
 
   return (
-    <a href={`/song/${song.bvId}`} className="rank-item group">
+    <a href={`/song/${song.bvId}`} target="_blank" rel="noopener noreferrer" className="rank-item group">
       <span className={`rank-number ${rankClass}`}>{rank}</span>
       <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 bg-white ring-1 ring-kawaii-border/50">
         {song.picUrl ? (
@@ -48,7 +48,7 @@ function SongCard({ song }: { song: any }) {
   const img = coverImgProps(song.picUrl);
 
   return (
-    <a href={`/song/${song.bvId}`} className="song-card group">
+    <a href={`/song/${song.bvId}`} target="_blank" rel="noopener noreferrer" className="song-card group">
       <div className="relative aspect-[16/9] bg-kawaii-pink-pale overflow-hidden rounded-t-xl">
         {img.src ? (
           <img
@@ -156,6 +156,7 @@ export default function HomePage() {
             <a href="/recommend" className="hover:text-kawaii-pink transition-colors">推荐</a>
             <a href="/ranking" className="hover:text-kawaii-cyan transition-colors">排行榜</a>
             <a href="/milestones" className="hover:text-kawaii-yellow transition-colors">里程碑</a>
+            <a href="/authors" className="hover:text-kawaii-cyan transition-colors">创作者</a>
             <a href="/analytics" className="hover:text-kawaii-purple transition-colors">数据分析</a>
             <a href="/forum" className="hover:text-kawaii-pink transition-colors">论坛</a>
             <a href="/about" className="hover:text-kawaii-cyan transition-colors">关于</a>
@@ -213,14 +214,14 @@ export default function HomePage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <StatCard label="本日新曲" value={formatCount(stats?.todaySongs ?? 0)} />
               {latestSong ? (
-                <a href={`/song/${latestSong.bvId}`} className="group">
+                <a href={`/song/${latestSong.bvId}`} target="_blank" rel="noopener noreferrer" className="group">
                   <MiniSongCard song={latestSong} label="最新投稿" />
                 </a>
               ) : (
                 <StatCard label="最新投稿" value="暂无" />
               )}
               {weeklyHotSong ? (
-                <a href={`/song/${weeklyHotSong.bvId}`} className="group">
+                <a href={`/song/${weeklyHotSong.bvId}`} target="_blank" rel="noopener noreferrer" className="group">
                   <MiniSongCard song={weeklyHotSong} label="本周最热" />
                 </a>
               ) : (

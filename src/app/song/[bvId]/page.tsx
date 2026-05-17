@@ -222,10 +222,15 @@ export default function SongDetailPage() {
             </h1>
 
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-kawaii-muted font-medium">
-              <span className="text-kawaii-pink font-black flex items-center gap-1">
+              <a
+                href={`/author/${encodeURIComponent(song.author)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-kawaii-pink font-black flex items-center gap-1 hover:text-kawaii-cyan transition-colors"
+              >
                 <span aria-hidden="true" className="text-lg">♪</span>
                 {song.author}
-              </span>
+              </a>
               <span className="w-1 h-1 rounded-full bg-kawaii-border" />
               <span>{new Date(song.publishTime).toLocaleDateString('zh-CN')}</span>
               {song.duration ? (
