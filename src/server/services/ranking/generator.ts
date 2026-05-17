@@ -33,21 +33,24 @@ function getDateRange(period: Period, refDate: Date = new Date()): { start?: Dat
   switch (period) {
     case 'daily': {
       const start = new Date(ref);
-      start.setDate(start.getDate() - 1);
+      start.setHours(0, 0, 0, 0);
       return { start };
     }
     case 'weekly': {
       const start = new Date(ref);
+      start.setHours(0, 0, 0, 0);
       start.setDate(start.getDate() - 7);
       return { start };
     }
     case 'monthly': {
       const start = new Date(ref);
+      start.setHours(0, 0, 0, 0);
       start.setMonth(start.getMonth() - 1);
       return { start };
     }
     case 'yearly': {
       const start = new Date(ref);
+      start.setHours(0, 0, 0, 0);
       start.setFullYear(start.getFullYear() - 1);
       return { start };
     }

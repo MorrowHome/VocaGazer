@@ -22,8 +22,9 @@ export const rankingsRouter = router({
 
       let targetDate: Date | null = null;
       if (date) {
-        targetDate = new Date(date);
-        targetDate.setHours(0, 0, 0, 0);
+        // 解析 YYYY-MM-DD 为本地时间（避免 UTC 偏移导致日期错位）
+        const [y, m, d] = date.split('-').map(Number);
+        targetDate = new Date(y, m - 1, d);
       }
 
       // 如果指定了日期，查该日期的快照
@@ -94,6 +95,9 @@ export const rankingsRouter = router({
         distinct: ['date'],
         take: 90,
       });
-      return dates.map((d: { date: Date }) => d.date.toISOString().slice(0, 10));
+      return dates.map((d: { date: Date }) => {
+        const date = new Date(d.date);
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+      });
     }),
 });
