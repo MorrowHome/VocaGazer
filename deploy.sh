@@ -13,44 +13,55 @@ echo ""
 echo -e "${PURPLE}  ♪ VOCALOID Music Hub VPS 部署脚本 ♪${RESET}"
 echo ""
 
-# ─── 配置（按需修改） ───
-REPO_URL="https://github.com/morrowstudio/VocaGaretee.git"
-INSTALL_DIR="$HOME/VocaGaretee"
-PORT=3000
-
-# ─── 第一步：拉取最新代码 ───
-echo -e "${PINK}▶ 拉取最新代码 ...${RESET}"
-if [ -d "$INSTALL_DIR" ]; then
-  cd "$INSTALL_DIR"
-  git pull
-  echo -e "  ${CYAN}✓${RESET} 代码已更新"
+# ─── 自动检测项目目录 ───
+# 优先当前目录（deploy.sh 所在位置），其次常见部署路径
+if [ -f "$PWD/package.json" ] && grep -q '"next"' "$PWD/package.json" 2>/dev/null; then
+  PROJECT_DIR="$PWD"
+elif [ -f "/opt/vocaloid-hub/package.json" ]; then
+  PROJECT_DIR="/opt/vocaloid-hub"
+elif [ -f "$HOME/VocaGaretee/package.json" ]; then
+  PROJECT_DIR="$HOME/VocaGaretee"
 else
-  git clone "$REPO_URL" "$INSTALL_DIR"
-  cd "$INSTALL_DIR"
-  echo -e "  ${CYAN}✓${RESET} 代码已克隆"
+  PROJECT_DIR=""
 fi
 
-# ─── 第二步：安装依赖 ───
+# ─── 拉取/克隆代码 ───
+if [ -n "$PROJECT_DIR" ]; then
+  cd "$PROJECT_DIR"
+  echo -e "  ${CYAN}◉${RESET} 项目目录: ${PURPLE}$PROJECT_DIR${RESET}"
+  # 检查是否 git 仓库
+  if [ -d ".git" ]; then
+    echo -e "${PINK}▶ 拉取最新代码 ...${RESET}"
+    git stash 2>/dev/null || true        # 暂存本地改动（如 dev.db）
+    git pull
+    echo -e "  ${CYAN}✓${RESET} 代码已更新"
+  fi
+else
+  echo -e "${PINK}▶ 未找到项目，开始克隆 ...${RESET}"
+  git clone https://github.com/MorrowHome/VocaGazer.git /opt/vocaloid-hub
+  cd /opt/vocaloid-hub
+  PROJECT_DIR="/opt/vocaloid-hub"
+  echo -e "  ${CYAN}✓${RESET} 代码已克隆到 ${PURPLE}/opt/vocaloid-hub${RESET}"
+fi
+
+# ─── 安装依赖 ───
 echo -e "${PINK}▶ 安装依赖 ...${RESET}"
 npm install --silent 2>/dev/null
 echo -e "  ${CYAN}✓${RESET} 依赖安装完成"
 
-# ─── 第三步：生成 Prisma 客户端 ───
-echo -e "${PINK}▶ 生成 Prisma 客户端 ...${RESET}"
-npx prisma generate 2>/dev/null
-echo -e "  ${CYAN}✓${RESET} Prisma 客户端生成完成"
-
-# ─── 第四步：同步数据库 ───
+# ─── 生成 Prisma ───
 echo -e "${PINK}▶ 同步数据库 ...${RESET}"
+npx prisma generate 2>/dev/null
 npx prisma db push --accept-data-loss 2>/dev/null
 echo -e "  ${CYAN}✓${RESET} 数据库同步完成"
 
-# ─── 第五步：构建 ───
+# ─── 构建 ───
 echo -e "${PINK}▶ 构建生产版本 ...${RESET}"
 npm run build 2>&1 | tail -3
 echo -e "  ${CYAN}✓${RESET} 构建完成"
 
-# ─── 第六步：释放端口 ───
+# ─── 释放端口 ───
+PORT=3000
 echo -e "${PINK}▶ 检查端口 ${PORT} ...${RESET}"
 if lsof -ti :$PORT &>/dev/null; then
   echo -e "  ${YELLOW}⚠ 端口 ${PORT} 被占用，正在释放...${RESET}"
@@ -59,24 +70,23 @@ if lsof -ti :$PORT &>/dev/null; then
 fi
 echo -e "  ${CYAN}✓${RESET} 端口可用"
 
-# ─── 第七步：启动 ───
+# ─── 启动 ───
 echo ""
 echo -e "${PURPLE}⋆｡°✩ 启动生产服务器 ✩°｡⋆${RESET}"
 echo -e "  ${CYAN}▶${RESET} 访问地址: ${PURPLE}http://localhost:${PORT}${RESET}"
+
+PM2_NAME="voca-hub"
 if command -v pm2 &>/dev/null; then
-  # 用 PM2 启动（后台守护，重启后自动恢复）
   echo -e "  ${YELLOW}▶${RESET} 使用 PM2 守护进程"
-  pm2 delete voca-hub 2>/dev/null || true
-  TZ=Asia/Shanghai pm2 start npm --name voca-hub -- start -- --port $PORT
+  pm2 delete "$PM2_NAME" 2>/dev/null || true
+  TZ=Asia/Shanghai pm2 start npm --name "$PM2_NAME" -- start -- --port $PORT
   pm2 save
-  echo -e "  ${CYAN}✓${RESET} PM2 已启动 (进程名: voca-hub)"
-  echo -e "  ${YELLOW}▶${RESET} 查看日志: ${CYAN}pm2 logs voca-hub${RESET}"
-  echo -e "  ${YELLOW}▶${RESET} 重启: ${CYAN}pm2 restart voca-hub${RESET}"
-  echo -e "  ${YELLOW}▶${RESET} 停止: ${CYAN}pm2 stop voca-hub${RESET}"
+  echo -e "  ${CYAN}✓${RESET} PM2 已启动 (进程名: $PM2_NAME)"
+  echo -e "  ${YELLOW}▶${RESET} 日志: ${CYAN}pm2 logs $PM2_NAME${RESET}"
+  echo -e "  ${YELLOW}▶${RESET} 重启: ${CYAN}pm2 restart $PM2_NAME${RESET}"
+  echo -e "  ${YELLOW}▶${RESET} 停止: ${CYAN}pm2 stop $PM2_NAME${RESET}"
 else
-  # 没有 PM2，直接前台启动
-  echo -e "  ${YELLOW}⚠${RESET} 未安装 PM2，建议安装: ${CYAN}npm i -g pm2${RESET}"
-  echo -e "  ${YELLOW}▶${RESET} 现在使用前台模式启动"
+  echo -e "  ${YELLOW}⚠${RESET} 未安装 PM2，建议: ${CYAN}npm i -g pm2${RESET}"
   echo ""
   TZ=Asia/Shanghai exec npm start -- --port $PORT
 fi
