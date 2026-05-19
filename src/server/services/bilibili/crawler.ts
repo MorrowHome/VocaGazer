@@ -458,9 +458,8 @@ export async function runCrawl(
       // 检查里程碑
       await checkSongMilestones(song.id, songData.statistics.playCount);
 
-      // 保存每日统计快照
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      // 保存每日统计快照（按中国时区）
+      const today = new Date(new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' }));
       await prisma.songDailyStats.upsert({
         where: { songId_date: { songId: song.id, date: today } },
         update: {
@@ -565,9 +564,8 @@ export async function refreshAllSongs(
         },
       });
 
-      // 保存每日快照
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      // 保存每日快照（按中国时区）
+      const today = new Date(new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' }));
       await prisma.songDailyStats.upsert({
         where: { songId_date: { songId: song.id, date: today } },
         update: {

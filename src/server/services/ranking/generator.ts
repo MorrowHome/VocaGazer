@@ -27,8 +27,15 @@ type Period = 'daily' | 'weekly' | 'monthly' | 'yearly' | 'alltime';
  * @param period  排名周期
  * @param refDate 参考日期（默认当前时间），用于"当年某月某日的排行"查询
  */
+/** Convert a Date to China-timezone midnight UTC */
+function chinaMidnight(date: Date): Date {
+  const chinaStr = date.toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' });
+  const [y, m, d] = chinaStr.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d));
+}
+
 function getDateRange(period: Period, refDate: Date = new Date()): { start?: Date } {
-  const ref = new Date(refDate);
+  const ref = chinaMidnight(refDate);
 
   switch (period) {
     case 'daily': {
@@ -100,9 +107,8 @@ export async function generateRanking(period: Period): Promise<number> {
 
   if (ranked.length === 0) return 0;
 
-  const now = new Date();
-  const dateKey = new Date(now);
-  dateKey.setHours(0, 0, 0, 0);
+  // Use China timezone for ranking dates regardless of server location
+  const dateKey = new Date(new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' }));
 
   // 清空该周期当日的旧排行数据
   await prisma.ranking.deleteMany({

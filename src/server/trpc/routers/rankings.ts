@@ -22,9 +22,9 @@ export const rankingsRouter = router({
 
       let targetDate: Date | null = null;
       if (date) {
-        // 解析 YYYY-MM-DD 为本地时间（避免 UTC 偏移导致日期错位）
+        // 解析 YYYY-MM-DD 为北京时间（与中国时区存储一致）
         const [y, m, d] = date.split('-').map(Number);
-        targetDate = new Date(y, m - 1, d);
+        targetDate = new Date(Date.UTC(y, m - 1, d));
       }
 
       // 如果指定了日期，查该日期的快照
@@ -96,8 +96,8 @@ export const rankingsRouter = router({
         take: 90,
       });
       return dates.map((d: { date: Date }) => {
-        const date = new Date(d.date);
-        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        // Format in China timezone so LA server shows correct calendar day
+        return new Date(d.date).toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' });
       });
     }),
 });

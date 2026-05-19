@@ -134,30 +134,32 @@ export function startScheduler() {
     return;
   }
 
-  // 采集任务：每 6 小时运行一次（0:00, 6:00, 12:00, 18:00）
+  const TZ = 'Asia/Shanghai';
+
+  // 采集任务：每 6 小时运行一次（北京时间 0:00, 6:00, 12:00, 18:00）
   const crawlJob = cron.schedule('0 */6 * * *', () => {
     runCrawlTask();
-  });
+  }, { timezone: TZ });
 
-  // 排行榜生成：每天 0:30 运行
+  // 排行榜生成：每天北京时间 0:30 运行
   const rankJob = cron.schedule('30 0 * * *', () => {
     runRankingTask();
-  });
+  }, { timezone: TZ });
 
-  // AI 晚报：每天 20:00 运行
+  // AI 晚报：每天北京时间 20:00 运行
   const aiJob = cron.schedule('0 20 * * *', () => {
     runAiDailySummary();
-  });
+  }, { timezone: TZ });
 
-  // 里程碑扫描：每小时检查
+  // 里程碑扫描：每小时
   const milestoneJob = cron.schedule('0 * * * *', () => {
     runMilestoneScan();
-  });
+  }, { timezone: TZ });
 
-  // 全量刷新：每天 3:00 运行
+  // 全量刷新：每天北京时间 3:00 运行
   const refreshJob = cron.schedule('0 3 * * *', () => {
     runRefreshTask();
-  });
+  }, { timezone: TZ });
 
   initialized = true;
   console.log('[Scheduler] 定时任务已启动');
