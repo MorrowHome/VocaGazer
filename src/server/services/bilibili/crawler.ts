@@ -89,6 +89,15 @@ const HARD_EXCLUDE = [
   // 纯演奏/纯音乐
   '纯音乐', 'instrumental', 'BGM',
   '原声', '原声带', '配乐',
+  // 非音乐场景：游戏/电竞/品牌
+  '安徽星尘', '星尘希儿', '星尘十字军', '星尘列车',
+  '测试服', '体验服',
+  '卡面剧情',
+  '全连', '存活所有',
+  '电竞', '纪录片',
+  '吸尘器', '扭腰舞',
+  'WOTA艺', 'wota艺',
+  '明末', 'PS5PRO',
 ].sort((a, b) => b.length - a.length); // 长词优先
 
 /**
@@ -131,7 +140,9 @@ const DESC_ORIGINAL_SIGNALS = [
   'producer', 'produced by',
   'music by', 'lyrics by',
   'VOCALOID', 'vocaloid',
-  '调教',
+  '调教', '演唱', '歌手', 'vocal', 'feat',
+  'vo:', 'vo：', 'vo。', 'vo.',
+  '音楽', '作詞', '編曲',
 ];
 
 /** 已知非音乐的媒体/品牌名（含 V 角色名关键词时的误判防护） */
@@ -261,7 +272,7 @@ function judgeOriginality(
     || combined.includes('VOCALOID')
     || combined.includes('歌');
   if (!hasAnyMusicSignal) {
-    score -= 10;
+    score -= 30;
   }
 
   // ── 决策 ──

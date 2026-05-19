@@ -19,7 +19,7 @@ const verbose = process.argv.includes('--verbose');
 const HARD_EXCLUDE = [
   '入驻B站', '入驻b站', '入驻 b站',
   '大家好', '自我介绍', '个人介绍',
-  '翻调', '翻配', '翻唱', '翻填', '翻作',
+  '翻调', '翻配', '翻唱', '翻填', '翻作', '翻跳',
   'remaster', 'カバー',
   '开箱', '联名', '首发',
   '手表', '播放器', '耳机',
@@ -35,6 +35,15 @@ const HARD_EXCLUDE = [
   '一小段', '试唱',
   '纯音乐', 'instrumental', 'BGM',
   '原声', '原声带', '配乐',
+  // 非音乐场景：游戏/电竞/商用/品牌
+  '安徽星尘', '星尘希儿', '星尘十字军', '星尘列车',
+  '测试服', '体验服',
+  '卡面剧情',
+  '全连', '存活所有',
+  '电竞', '纪录片',
+  '吸尘器', '扭腰舞',
+  'WOTA艺', 'wota艺',
+  '明末', 'PS5PRO',
 ].sort((a, b) => b.length - a.length);
 
 const SOFT_EXCLUDE = [
@@ -60,6 +69,9 @@ const DESC_ORIGINAL_SIGNALS = [
   'producer', 'produced by',
   'music by', 'lyrics by',
   'VOCALOID', 'vocaloid', '调教',
+  '演唱', '歌手', 'vocal', 'feat',
+  'vo:', 'vo：', 'vo。', 'vo.',
+  '音楽', '作詞', '編曲',
 ];
 
 const KNOWN_NON_MUSIC = ['苍穹', '艾可瑞', '斗破苍穹', '苍穹的法芙娜'];
@@ -124,7 +136,7 @@ function judgeOriginality(
     || DESC_ORIGINAL_SIGNALS.some((s) => combined.includes(s))
     || combined.includes('VOCALOID')
     || combined.includes('歌');
-  if (!hasAnyMusicSignal) score -= 10;
+  if (!hasAnyMusicSignal) score -= 30;
 
   return score >= 25
     ? { isOriginal: true, score, reason: `得分 ${score}` }
