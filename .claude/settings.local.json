@@ -48,7 +48,9 @@
       "Bash(git push *)",
       "Bash(./crawl.sh *)",
       "Bash(ipconfig getifaddr *)",
-      "Bash(git status *)"
+      "Bash(git status *)",
+      "Read(//Users/morrow/.ssh/**)",
+      "Bash(ssh *)"
     ]
   }
 }
