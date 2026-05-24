@@ -33,8 +33,8 @@ if [ -n "$PROJECT_DIR" ]; then
   if [ -d ".git" ]; then
     echo -e "${PINK}▶ 拉取最新代码 ...${RESET}"
     git stash 2>/dev/null || true        # 暂存本地改动（如 dev.db）
-    git pull
-    echo -e "  ${CYAN}✓${RESET} 代码已更新"
+    git fetch --all && git checkout planA 2>/dev/null || git checkout -b planA origin/planA 2>/dev/null || true && git pull
+    echo -e "  ${CYAN}✓${RESET} 代码已更新 (分支: planA)"
   fi
 else
   echo -e "${PINK}▶ 未找到项目，开始克隆 ...${RESET}"
@@ -42,6 +42,7 @@ else
   cd /opt/vocaloid-hub
   PROJECT_DIR="/opt/vocaloid-hub"
   echo -e "  ${CYAN}✓${RESET} 代码已克隆到 ${PURPLE}/opt/vocaloid-hub${RESET}"
+  git checkout planA 2>/dev/null || git checkout -b planA origin/planA 2>/dev/null || true
 fi
 
 # ─── 安装依赖 ───
