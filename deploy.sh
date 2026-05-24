@@ -81,6 +81,7 @@ PM2_NAME="voca-hub"
 if command -v pm2 &>/dev/null; then
   echo -e "  ${YELLOW}▶${RESET} 使用 PM2 守护进程"
   pm2 delete "$PM2_NAME" 2>/dev/null || true
+  pm2 delete vocaloid-hub 2>/dev/null || true
   TZ=Asia/Shanghai pm2 start npm --name "$PM2_NAME" -- start -- --port $PORT
   pm2 save
   echo -e "  ${CYAN}✓${RESET} PM2 已启动 (进程名: $PM2_NAME)"
