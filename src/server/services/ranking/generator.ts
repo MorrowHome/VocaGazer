@@ -80,12 +80,14 @@ async function getPrisma() {
 
 /**
  * 生成指定周期的排行榜
+ * @param period  周期
+ * @param refDate 参考日期（可选），用于生成历史快照
  */
-export async function generateRanking(period: Period): Promise<number> {
+export async function generateRanking(period: Period, refDate?: Date): Promise<number> {
   const prisma = await getPrisma();
 
   // 根据周期过滤歌曲的发布时间范围
-  const { start } = getDateRange(period);
+  const { start } = getDateRange(period, refDate);
   const where = start ? { publishTime: { gte: start } } : {};
 
   const songs = await prisma.song.findMany({ where });
@@ -107,12 +109,14 @@ export async function generateRanking(period: Period): Promise<number> {
 
   if (ranked.length === 0) return 0;
 
-  // Use China timezone for ranking dates regardless of server location
-  const dateKey = new Date(new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' }));
+  // 快照日期：中国时区的 refDate 当天（或今天）
+  const snapDate = refDate ? chinaMidnight(refDate) : new Date(
+    new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' })
+  );
 
-  // 清空该周期当日的旧排行数据
+  // 只清空该日期的旧排行数据（保留其他日期的历史快照）
   await prisma.ranking.deleteMany({
-    where: { period, date: { gte: dateKey } },
+    where: { period, date: snapDate },
   });
 
   // 批量插入新排行
@@ -121,7 +125,7 @@ export async function generateRanking(period: Period): Promise<number> {
     period,
     rank: i + 1,
     score: r.score,
-    date: dateKey,
+    date: snapDate,
   }));
 
   await prisma.ranking.createMany({ data });
@@ -130,13 +134,14 @@ export async function generateRanking(period: Period): Promise<number> {
 
 /**
  * 生成所有周期的排行榜
+ * @param refDate 参考日期（可选）
  */
-export async function generateAllRankings(): Promise<Record<Period, number>> {
+export async function generateAllRankings(refDate?: Date): Promise<Record<Period, number>> {
   const periods: Period[] = ['daily', 'weekly', 'monthly', 'yearly', 'alltime'];
   const results: Record<Period, number> = { daily: 0, weekly: 0, monthly: 0, yearly: 0, alltime: 0 };
 
   for (const period of periods) {
-    results[period] = await generateRanking(period);
+    results[period] = await generateRanking(period, refDate);
   }
 
   return results;
