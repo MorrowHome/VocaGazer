@@ -169,13 +169,16 @@ export default function RankingPage() {
                 {period === 'daily' ? '日' : period === 'weekly' ? '周' : period === 'monthly' ? '月' : '年'}
               </span>
               {period === 'daily' && (
-                <input
-                  type="date"
+                <select
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="bg-transparent text-xs text-kawaii-text outline-none font-medium [color-scheme:light]"
-                  max={new Date().toISOString().slice(0, 10)}
-                />
+                  className="bg-transparent text-xs text-kawaii-text outline-none font-medium max-w-[8rem]"
+                >
+                  <option value="">最新</option>
+                  {(availableDates as string[] | undefined)?.map((d) => (
+                    <option key={d} value={d}>{d.slice(5)}</option>
+                  ))}
+                </select>
               )}
               {period === 'weekly' && (
                 <input
