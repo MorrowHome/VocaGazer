@@ -56,8 +56,9 @@ npx prisma db push --accept-data-loss 2>/dev/null
 echo -e "  ${CYAN}✓${RESET} 数据库同步完成"
 
 # ─── 构建 ───
-echo -e "${PINK}▶ 构建生产版本 ...${RESET}"
-npm run build 2>&1 | tail -3
+echo -e "${PINK}▶ 构建生产版本（可能需要几分钟，请耐心等待）...${RESET}"
+echo -e "  ${YELLOW}▶${RESET} 内存限制: NODE_OPTIONS=${NODE_OPTIONS:- --max-old-space-size=2048}"
+NODE_OPTIONS="${NODE_OPTIONS:- --max-old-space-size=2048}" npm run build
 echo -e "  ${CYAN}✓${RESET} 构建完成"
 
 # ─── 释放端口 ───
