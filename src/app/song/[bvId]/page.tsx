@@ -85,7 +85,83 @@ function CommentSection({ bvId }: { bvId: string }) {
   );
 }
 
-// ─── 播放趋势图 ───
+// ─── 播放趋势图（SVG 折线图） ───
+
+function LineChart({ data, height, color, gradientId, maxValue, formatter, label }
+: {
+  data: Array<{ date: string; value: number }>;
+  height: number;
+  color: string;
+  gradientId: string;
+  maxValue: number;
+  formatter: (v: number) => string;
+  label: string;
+}) {
+  if (data.length < 2) return null;
+
+  const W = 800;
+  const H = height;
+  const P = { top: 20, right: 8, bottom: 24, left: 52 };
+  const iw = W - P.left - P.right;
+  const ih = H - P.top - P.bottom;
+
+  const mapX = (i: number) => P.left + (i / (data.length - 1)) * iw;
+  const mapY = (v: number) => P.top + ih - (v / maxValue) * ih;
+
+  // 平滑曲线路径（Catmull-Rom → 三次贝塞尔）
+  const pts = data.map((d, i) => ({ x: mapX(i), y: mapY(d.value) }));
+  let lineD = `M${pts[0].x},${pts[0].y}`;
+  for (let i = 1; i < pts.length; i++) {
+    const cpx = (pts[i - 1].x + pts[i].x) / 2;
+    lineD += ` C${cpx},${pts[i - 1].y} ${cpx},${pts[i].y} ${pts[i].x},${pts[i].y}`;
+  }
+  const areaD = lineD + ` L${pts[pts.length - 1].x},${P.top + ih} L${pts[0].x},${P.top + ih} Z`;
+
+  // X 轴标签密度
+  const labelStep = Math.max(1, Math.floor(data.length / 6));
+
+  return (
+    <div>
+      <p className="text-[10px] text-kawaii-muted font-bold mb-2">{label}</p>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto overflow-visible">
+        <defs>
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity="0.3" />
+            <stop offset="100%" stopColor={color} stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+
+        {/* 网格 + Y 轴标签 */}
+        {[0, 0.25, 0.5, 0.75, 1].map((pct) => {
+          const yy = P.top + ih * pct;
+          return (
+            <g key={pct}>
+              <line x1={P.left} y1={yy} x2={P.left + iw} y2={yy} stroke="#ECECF0" strokeWidth="1" strokeDasharray="3 3" />
+              <text x={P.left - 6} y={yy + 3} textAnchor="end" fill="#B0A8C0" fontSize="9" fontFamily="system-ui">{formatter(maxValue * (1 - pct))}</text>
+            </g>
+          );
+        })}
+
+        {/* 渐变面积 */}
+        <path d={areaD} fill={`url(#${gradientId})`} />
+
+        {/* 折线 */}
+        <path d={lineD} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+
+        {/* 数据点 */}
+        {data.map((_, i) => (
+          <circle key={i} cx={pts[i].x} cy={pts[i].y} r="2.5" fill="#fff" stroke={color} strokeWidth="1.5" />
+        ))}
+
+        {/* X 轴标签 */}
+        {data.map((d, i) => {
+          if (i % labelStep !== 0 && i !== data.length - 1) return null;
+          return <text key={i} x={pts[i].x} y={H - 4} textAnchor="middle" fill="#B0A8C0" fontSize="9" fontFamily="system-ui">{d.date.slice(5)}</text>;
+        })}
+      </svg>
+    </div>
+  );
+}
 
 function TrendChart({ dailyStats }: { dailyStats: Array<{ date: string | Date; playCount: number }> }) {
   const sorted = [...dailyStats]
@@ -98,55 +174,37 @@ function TrendChart({ dailyStats }: { dailyStats: Array<{ date: string | Date; p
     return { date: d.date, delta: d.playCount - prev, total: d.playCount };
   });
 
-  const maxDelta = Math.max(...deltas.map((d) => d.delta), 1);
   const maxTotal = Math.max(...deltas.map((d) => d.total), 1);
+  const maxDelta = Math.max(...deltas.map((d) => d.delta), 1);
 
   return (
     <div className="card !p-6">
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-5">
         <span className="text-lg text-kawaii-cyan" aria-hidden="true">◈</span>
         <h2 className="text-xs font-black text-kawaii-muted tracking-wider uppercase">播放趋势</h2>
-        <span className="text-[10px] text-kawaii-muted font-medium ml-auto">
-          {sorted.length} 天
-        </span>
+        <span className="text-[10px] text-kawaii-muted font-medium ml-auto">{sorted.length} 天</span>
       </div>
 
-      {/* 累计播放曲线（柱状） */}
-      <div className="mb-4">
-        <p className="text-[10px] text-kawaii-muted font-bold mb-2">累计播放</p>
-        <div className="flex items-end gap-[2px] h-24 overflow-x-auto pb-1">
-          {deltas.map((d) => (
-            <div
-              key={d.date}
-              className="flex-1 min-w-[8px] rounded-t-sm transition-all hover:opacity-80"
-              style={{
-                height: `${(d.total / maxTotal) * 100}%`,
-                background: 'linear-gradient(to top, #39BEB9, #7EDDD9)',
-              }}
-              title={`${d.date.slice(5)}: ${(d.total / 10000).toFixed(1)}万`}
-            />
-          ))}
-        </div>
-      </div>
+      <LineChart
+        data={deltas.map((d) => ({ date: d.date, value: d.total }))}
+        height={200}
+        color="#39BEB9"
+        gradientId="totalGrad"
+        maxValue={maxTotal}
+        formatter={(v) => `${(v / 10000).toFixed(1)}万`}
+        label="累计播放"
+      />
 
-      {/* 每日增量（柱状） */}
-      <div>
-        <p className="text-[10px] text-kawaii-muted font-bold mb-2">单日增量</p>
-        <div className="flex items-end gap-[2px] h-16 overflow-x-auto pb-1">
-          {deltas.map((d) => (
-            <div
-              key={d.date}
-              className="flex-1 min-w-[8px] rounded-t-sm transition-all hover:opacity-80"
-              style={{
-                height: `${(d.delta / maxDelta) * 100}%`,
-                background: d.delta > 0
-                  ? 'linear-gradient(to top, #B388FF, #D4B8FF)'
-                  : '#E8E0F0',
-              }}
-              title={`${d.date.slice(5)}: +${d.delta.toLocaleString()}`}
-            />
-          ))}
-        </div>
+      <div className="mt-6">
+        <LineChart
+          data={deltas.map((d) => ({ date: d.date, value: d.delta }))}
+          height={160}
+          color="#B388FF"
+          gradientId="deltaGrad"
+          maxValue={maxDelta}
+          formatter={(v) => v >= 10000 ? `${(v / 10000).toFixed(1)}万` : v.toLocaleString()}
+          label="单日增量"
+        />
       </div>
     </div>
   );

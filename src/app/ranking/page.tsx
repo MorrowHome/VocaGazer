@@ -100,6 +100,16 @@ function RankCard({ song, rank, entryScore }: { song: any; rank: number; entrySc
   );
 }
 
+/** 获取本周的 ISO 周字符串 */
+function getCurrentWeekISO(): string {
+  const now = new Date();
+  const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
+}
+
 // ─── 页面 ───
 export default function RankingPage() {
   const [period, setPeriod] = useState<Period>('daily');
@@ -155,13 +165,48 @@ export default function RankingPage() {
           {period !== 'alltime' && (
             <div className="flex items-center gap-2 bg-white/70 px-3 py-1.5 rounded-full border border-kawaii-border">
               <span>📅</span>
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="bg-transparent text-xs text-kawaii-text outline-none font-medium [color-scheme:light]"
-                max={new Date().toISOString().slice(0, 10)}
-              />
+              <span className="text-kawaii-muted/60 mr-0.5">
+                {period === 'daily' ? '日' : period === 'weekly' ? '周' : period === 'monthly' ? '月' : '年'}
+              </span>
+              {period === 'daily' && (
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="bg-transparent text-xs text-kawaii-text outline-none font-medium [color-scheme:light]"
+                  max={new Date().toISOString().slice(0, 10)}
+                />
+              )}
+              {period === 'weekly' && (
+                <input
+                  type="week"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="bg-transparent text-xs text-kawaii-text outline-none font-medium [color-scheme:light]"
+                  max={getCurrentWeekISO()}
+                />
+              )}
+              {period === 'monthly' && (
+                <input
+                  type="month"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="bg-transparent text-xs text-kawaii-text outline-none font-medium [color-scheme:light]"
+                  max={new Date().toISOString().slice(0, 7)}
+                />
+              )}
+              {period === 'yearly' && (
+                <select
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="bg-transparent text-xs text-kawaii-text outline-none font-medium max-w-[7rem]"
+                >
+                  <option value="">选择年份</option>
+                  {(availableDates as string[] | undefined)?.map((year) => (
+                    <option key={year} value={year}>{year}年</option>
+                  ))}
+                </select>
+              )}
               {selectedDate && (
                 <button
                   onClick={() => setSelectedDate('')}
