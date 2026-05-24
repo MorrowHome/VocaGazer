@@ -34,32 +34,30 @@ function chinaMidnight(date: Date): Date {
   return new Date(Date.UTC(y, m - 1, d));
 }
 
-function getDateRange(period: Period, refDate: Date = new Date()): { start?: Date } {
+function getDateRange(period: Period, refDate: Date = new Date()): { start?: Date; end?: Date } {
   const ref = chinaMidnight(refDate);
+  // 截止日期统一为 ref 次日凌晨（不包含），确保不把 ref 之后发布的歌算进来
+  const end = new Date(ref);
+  end.setUTCDate(end.getUTCDate() + 1);
 
   switch (period) {
     case 'daily': {
-      const start = new Date(ref);
-      start.setHours(0, 0, 0, 0);
-      return { start };
+      return { start: ref, end };
     }
     case 'weekly': {
       const start = new Date(ref);
-      start.setHours(0, 0, 0, 0);
-      start.setDate(start.getDate() - 7);
-      return { start };
+      start.setUTCDate(start.getUTCDate() - 7);
+      return { start, end };
     }
     case 'monthly': {
       const start = new Date(ref);
-      start.setHours(0, 0, 0, 0);
-      start.setMonth(start.getMonth() - 1);
-      return { start };
+      start.setUTCMonth(start.getUTCMonth() - 1);
+      return { start, end };
     }
     case 'yearly': {
       const start = new Date(ref);
-      start.setHours(0, 0, 0, 0);
-      start.setFullYear(start.getFullYear() - 1);
-      return { start };
+      start.setUTCFullYear(start.getUTCFullYear() - 1);
+      return { start, end };
     }
     case 'alltime':
       return {};
@@ -87,8 +85,10 @@ export async function generateRanking(period: Period, refDate?: Date): Promise<n
   const prisma = await getPrisma();
 
   // 根据周期过滤歌曲的发布时间范围
-  const { start } = getDateRange(period, refDate);
-  const where = start ? { publishTime: { gte: start } } : {};
+  const { start, end } = getDateRange(period, refDate);
+  const where: any = {};
+  if (start) where.publishTime = { gte: start };
+  if (end) where.publishTime = { ...where.publishTime, lt: end };
 
   const songs = await prisma.song.findMany({ where });
 
