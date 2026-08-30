@@ -1,8 +1,42 @@
 # 部署指南
 
-## 方案一：VPS 直接部署（推荐）
+当前生产站：[https://morrowhome.site/](https://morrowhome.site/)  
+VPS 目录：`/opt/vocaloid-hub`　进程：PM2 `voca-hub`　分支：**main**
 
-最直接的方式，适合有 Linux 基础的用户。
+## 自动部署（推荐）
+
+推送到 GitHub 的 `main` 后，[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) 会先跑单测，再 SSH 到 VPS 执行 [`deploy.sh`](deploy.sh)：拉 `main` → `npm ci` → `prisma db push`（不加 `--accept-data-loss`）→ `next build`（堆上限 768MB）→ `pm2 restart voca-hub`。
+
+手动再跑一次：GitHub → Actions → **Deploy** → **Run workflow**（`workflow_dispatch`）。
+
+仓库 Secrets（Settings → Secrets and variables → Actions）：
+
+| Secret | 含义 |
+|--------|------|
+| `VPS_HOST` | 服务器 IP 或域名 |
+| `VPS_USER` | SSH 用户（现为 `root`） |
+| `SSH_PRIVATE_KEY` | 仅给 Actions 用的 ed25519 私钥全文 |
+
+VPS 上 `.env` 必填（文件在服务器本地，不要提交到 Git）：
+
+```env
+DATABASE_URL="file:./prisma/dev.db"
+NEXT_PUBLIC_APP_URL="https://morrowhome.site"
+JWT_SECRET="至少16位随机串"
+CRON_SECRET="至少16位随机串"
+```
+
+Prisma 会把相对路径解析到 **`/opt/vocaloid-hub/prisma/prisma/dev.db`**（现网 4000+ 首歌那份）。不要改成别的路径，否则会连到空库。`ANTHROPIC_*` 可选，不配则用模板晚报。
+
+采集口：`curl -H "x-cron-secret: $CRON_SECRET" https://morrowhome.site/api/crawl/trigger?type=ranking`
+
+机器只有约 1GB 内存，构建依赖 2GB swap。`deploy.sh` 不要把 `NODE_OPTIONS` 设回 2048。
+
+---
+
+## 方案一：VPS 首次手工部署
+
+适合还没有 GitHub Actions 的新机器。
 
 ### 1. 买一台 VPS
 
@@ -55,10 +89,12 @@ nano .env
 
 ```env
 DATABASE_URL="file:./prisma/dev.db"
+NEXT_PUBLIC_APP_URL="https://morrowhome.site"
+JWT_SECRET="生成一个随机字符串至少16位"
+CRON_SECRET="生成一个随机字符串至少16位"
 ANTHROPIC_API_KEY="sk-你的DeepSeek密钥"
 ANTHROPIC_BASE_URL="https://api.deepseek.com/anthropic"
 AI_MODEL="deepseek-v4-flash"
-JWT_SECRET="生成一个随机字符串"
 ```
 
 ```bash
@@ -173,13 +209,14 @@ certbot --nginx -d 你的域名.com
 ### 9. SQLite 数据库备份
 
 ```bash
-# 简单备份脚本
-cp /opt/vocaloid-hub/prisma/dev.db /opt/backups/dev-$(date +%Y%m%d).db
+mkdir -p /opt/backups
+# 活库在 prisma/prisma/dev.db（Prisma 相对 schema 目录解析）
+cp /opt/vocaloid-hub/prisma/prisma/dev.db /opt/backups/dev-$(date +%Y%m%d).db
 
 # 建议加个 cron 每天自动备份
 crontab -e
 # 添加这行（每天凌晨 3 点备份）：
-0 3 * * * cp /opt/vocaloid-hub/prisma/dev.db /opt/backups/dev-$(date +\%Y\%m\%d).db
+0 3 * * * cp /opt/vocaloid-hub/prisma/prisma/dev.db /opt/backups/dev-$(date +\%Y\%m\%d).db
 ```
 
 ---
@@ -267,8 +304,8 @@ Railway 对有 Docker 的项目很方便，但 SQLite 不推荐。
 | 事项 | 说明 |
 |------|------|
 | **.env 文件** | 首次部署后不要提交到 Git，服务器上单独创建 |
-| **SQLite 文件** | `/opt/vocaloid-hub/prisma/dev.db` — 定期备份这个文件 |
+| **SQLite 文件** | `/opt/vocaloid-hub/prisma/prisma/dev.db` — 定期备份这份，不要用旁边 1.2MB 的旧库 |
 | **PM2 开机自启** | `pm2 startup && pm2 save` |
 | **端口** | Next.js 默认 3000，Nginx 监听 80/443 |
-| **日志** | `pm2 logs vocaloid-hub` 查看实时日志 |
-| **更新** | `git pull && npm install && npm run build && pm2 restart vocaloid-hub` |
+| **日志** | `pm2 logs voca-hub` |
+| **更新** | 推 `main` 即可；紧急时在 VPS 上跑 `bash /opt/vocaloid-hub/deploy.sh` |
