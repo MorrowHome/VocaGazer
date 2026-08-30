@@ -18,4 +18,21 @@ export const aiRouter = router({
     });
     return report;
   }),
+
+  getLatestBundle: publicProcedure.query(async ({ ctx }) => {
+    const types = ['daily_summary', 'trend_analysis', 'anomaly_detection'] as const;
+    const reports = await Promise.all(
+      types.map((type) =>
+        ctx.prisma.aiReport.findFirst({
+          where: { type },
+          orderBy: { createdAt: 'desc' },
+        }),
+      ),
+    );
+    return {
+      daily: reports[0],
+      trend: reports[1],
+      anomaly: reports[2],
+    };
+  }),
 });

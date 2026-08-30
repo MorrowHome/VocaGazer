@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
-import { formatCount, timeAgo } from '@/lib/utils';
+import { formatCount } from '@/lib/utils';
 
 type Range = '7d' | '30d' | '90d' | 'all';
 const RANGES: { key: Range; label: string }[] = [
@@ -337,14 +337,20 @@ function EngCard({ label, value, color }: { label: string; value: string; color:
 
 // ─── AI 晚报 ───
 function AiReportsSection() {
-  const { data: report, isLoading } = trpc.ai.getLatestReport.useQuery();
+  const { data: bundle, isLoading } = trpc.ai.getLatestBundle.useQuery();
   const { data: config } = trpc.ai.getConfig.useQuery();
+
+  const cards = [
+    { key: 'daily', title: '晚报', report: bundle?.daily },
+    { key: 'trend', title: '趋势', report: bundle?.trend },
+    { key: 'anomaly', title: '异常', report: bundle?.anomaly },
+  ];
 
   return (
     <section>
-      <div className="flex items-center gap-3 mb-5">
+      <div className="flex items-center gap-3 mb-5 flex-wrap">
         <span aria-hidden="true" className="text-kawaii-purple text-lg">✦</span>
-        <h2 className="section-title text-kawaii-text">VOCALOID 晚报</h2>
+        <h2 className="section-title text-kawaii-text">AI 观察</h2>
         <span className="text-[10px] text-kawaii-muted bg-white/70 px-2.5 py-1 rounded-full border border-kawaii-border/50 font-medium">
           每日 20:00 更新
         </span>
@@ -356,30 +362,28 @@ function AiReportsSection() {
       </div>
 
       {isLoading ? (
-        <div className="card p-5 space-y-3">
-          <div className="h-5 w-40 rounded-lg bg-white/60 animate-pulse" />
-          <div className="h-4 w-full rounded-lg bg-white/60 animate-pulse" />
-          <div className="h-4 w-3/4 rounded-lg bg-white/60 animate-pulse" />
-          <div className="h-4 w-2/3 rounded-lg bg-white/60 animate-pulse" />
-        </div>
-      ) : !report ? (
-        <div className="card p-8 text-center">
-          <p className="text-lg mb-2 text-kawaii-purple" aria-hidden="true">✦</p>
-          <p className="text-sm text-kawaii-muted font-medium">晚报会在每天 20:00 自动生成</p>
+        <div className="grid md:grid-cols-3 gap-4">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="card p-5 h-40 animate-pulse bg-white/60" />
+          ))}
         </div>
       ) : (
-        <div className="card p-5">
-          <div className="flex items-start justify-between gap-3 mb-3">
-            <div>
-              <h3 className="text-sm font-black text-kawaii-text">{report.title}</h3>
-              <p className="text-[10px] text-kawaii-muted font-medium mt-0.5">
-                {timeAgo(report.createdAt)}
-              </p>
+        <div className="grid md:grid-cols-3 gap-4">
+          {cards.map((c) => (
+            <div key={c.key} className="card p-5">
+              <p className="text-[10px] font-bold text-kawaii-muted tracking-wider uppercase mb-2">{c.title}</p>
+              {c.report ? (
+                <>
+                  <h3 className="text-sm font-black text-kawaii-text mb-2">{c.report.title}</h3>
+                  <p className="text-xs text-kawaii-text/70 font-medium leading-relaxed whitespace-pre-wrap">
+                    {c.report.content}
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm text-kawaii-muted font-medium">尚无报告，等到 20:00 或在管理台手动生成</p>
+              )}
             </div>
-          </div>
-          <p className="text-sm text-kawaii-text/70 font-medium leading-relaxed whitespace-pre-wrap">
-            {report.content}
-          </p>
+          ))}
         </div>
       )}
     </section>

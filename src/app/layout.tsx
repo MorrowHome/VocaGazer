@@ -5,6 +5,7 @@ import { AuthProvider } from '@/components/AuthContext';
 import { BackgroundLayers } from '@/components/BackgroundLayers';
 import { ClickFireworks } from '@/components/ClickFireworks';
 import { SiteHeader } from '@/components/SiteHeader';
+import { SiteFooter } from '@/components/SiteFooter';
 
 export const metadata: Metadata = {
   title: 'VOCALOID Music Hub',
@@ -24,7 +25,10 @@ export default function RootLayout({
             <BackgroundLayers />
             <ClickFireworks />
             <SiteHeader />
-            <div className="pb-16 lg:pb-0">{children}</div>
+            <div className="pb-16 lg:pb-0 min-h-[calc(100vh-3.5rem)] flex flex-col">
+              <div className="flex-1">{children}</div>
+              <SiteFooter />
+            </div>
           </AuthProvider>
         </TRPCProvider>
       </body>

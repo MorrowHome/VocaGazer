@@ -65,50 +65,74 @@ async function runRefreshTask() {
   }
 }
 
-/** 生成每日 AI 数据摘要 */
-async function runAiDailySummary() {
-  console.log('[Scheduler] 开始生成 AI 数据摘要...');
+/** 生成 AI 晚报 / 趋势 / 异常（同日同类型默认不重复写） */
+export async function runAiDailySummary(opts?: { force?: boolean }) {
+  console.log('[Scheduler] 开始生成 AI 报告...');
   try {
-    const { generateReport } = await import('./ai');
+    const { generateReport, detectAnomalies } = await import('./ai');
     const { prisma } = await import('@/lib/prisma');
+    const { chinaCalendarDay, shiftChinaDays } = await import('../../lib/time');
 
     const allSongs = await prisma.song.findMany({ orderBy: { publishTime: 'desc' } });
+    const { start: todayStart } = chinaCalendarDay();
+    const weekStart = chinaCalendarDay(shiftChinaDays(new Date(), -7)).start;
+    const prevWeekStart = chinaCalendarDay(shiftChinaDays(new Date(), -14)).start;
 
     const artistMap = new Map<string, { count: number; totalPlays: number }>();
     const monthMap = new Map<string, number>();
-    const topSongs: Array<{ title: string; author: string; score: number; plays: number }> = [];
+    const scored: Array<{ title: string; author: string; score: number; plays: number; likes: number; publishTime: Date }> = [];
 
     for (const song of allSongs) {
-      let stats: any = {};
-      try { stats = JSON.parse(song.statistics); } catch {}
+      let stats: { playCount?: number; likes?: number } = {};
+      try { stats = JSON.parse(song.statistics); } catch { /* skip */ }
       const plays = stats.playCount || 0;
+      const likes = stats.likes || 0;
       const artist = song.author || '未知';
       const a = artistMap.get(artist) || { count: 0, totalPlays: 0 };
       artistMap.set(artist, { count: a.count + 1, totalPlays: a.totalPlays + plays });
       const monthKey = new Date(song.publishTime).toISOString().slice(0, 7);
       monthMap.set(monthKey, (monthMap.get(monthKey) || 0) + 1);
-      topSongs.push({ title: song.title, author: song.author || '未知', score: song.score, plays });
+      scored.push({
+        title: song.title,
+        author: song.author || '未知',
+        score: song.score,
+        plays,
+        likes,
+        publishTime: song.publishTime,
+      });
     }
-    topSongs.sort((a, b) => b.score - a.score);
+    scored.sort((a, b) => b.score - a.score);
 
     const data = {
       totalSongs: allSongs.length,
       totalArtists: artistMap.size,
-      totalPlayCount: topSongs.reduce((s, x) => s + x.plays, 0),
-      topSongs: topSongs.slice(0, 10).map(({ title, author, score, plays }) => ({ title, author, score, plays })),
+      totalPlayCount: scored.reduce((s, x) => s + x.plays, 0),
+      todaySongs: scored.filter((s) => s.publishTime >= todayStart).length,
+      weekSongs: scored.filter((s) => s.publishTime >= weekStart).length,
+      prevWeekSongs: scored.filter((s) => s.publishTime >= prevWeekStart && s.publishTime < weekStart).length,
+      topSongs: scored.slice(0, 10).map(({ title, author, score, plays }) => ({ title, author, score, plays })),
       topArtists: Array.from(artistMap.entries())
         .map(([name, d]) => ({ name, count: d.count, totalPlays: d.totalPlays }))
         .sort((a, b) => b.totalPlays - a.totalPlays).slice(0, 10),
       songsByMonth: Array.from(monthMap.entries())
         .map(([month, count]) => ({ month, count }))
         .sort((a, b) => a.month.localeCompare(b.month)),
+      anomalies: detectAnomalies(scored),
     };
 
-    const { title, content } = await generateReport({ type: 'daily_summary', data });
-
-    await prisma.aiReport.create({
-      data: {
-        type: 'daily_summary',
+    const types = ['daily_summary', 'trend_analysis', 'anomaly_detection'] as const;
+    for (const type of types) {
+      const existed = await prisma.aiReport.findFirst({
+        where: { type, createdAt: { gte: todayStart } },
+        select: { id: true },
+      });
+      if (existed && !opts?.force) {
+        console.log(`[Scheduler] 今日已有 ${type}，跳过`);
+        continue;
+      }
+      const { title, content } = await generateReport({ type, data });
+      const payload = {
+        type,
         title,
         content,
         metadata: JSON.stringify({
@@ -116,12 +140,17 @@ async function runAiDailySummary() {
           artistCount: data.totalArtists,
           totalPlays: data.totalPlayCount,
         }),
-      },
-    });
+      };
+      if (existed) {
+        await prisma.aiReport.update({ where: { id: existed.id }, data: payload });
+      } else {
+        await prisma.aiReport.create({ data: payload });
+      }
+    }
 
-    console.log('[Scheduler] AI 数据摘要生成完成');
+    console.log('[Scheduler] AI 报告生成完成');
   } catch (err) {
-    console.error('[Scheduler] AI 数据摘要生成失败:', err);
+    console.error('[Scheduler] AI 报告生成失败:', err);
   }
 }
 

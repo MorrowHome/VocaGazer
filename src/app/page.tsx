@@ -127,6 +127,7 @@ function StatCard({ label, value }: { label: string; value: string }) {
 
 export default function HomePage() {
   const { data: pageData, isLoading } = trpc.analytics.getHomepage.useQuery();
+  const { data: aiDaily } = trpc.ai.getLatestReport.useQuery();
   const stats = pageData?.stats;
   const latestSong = pageData?.latestSong;
   const weeklyHotSong = pageData?.weeklyHotSong;
@@ -195,6 +196,23 @@ export default function HomePage() {
             </div>
           )}
         </section>
+
+        {aiDaily && (
+          <section className="card !p-6">
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-kawaii-purple text-lg" aria-hidden="true">✦</span>
+                <h2 className="text-sm font-black text-kawaii-text">{aiDaily.title}</h2>
+              </div>
+              <a href="/analytics" className="text-xs font-bold text-kawaii-pink hover:underline shrink-0">
+                更多观察 →
+              </a>
+            </div>
+            <p className="text-sm text-kawaii-text/75 font-medium leading-relaxed line-clamp-4 whitespace-pre-wrap">
+              {aiDaily.content}
+            </p>
+          </section>
+        )}
 
         {/* ─── 排行榜 ─── */}
         <section>

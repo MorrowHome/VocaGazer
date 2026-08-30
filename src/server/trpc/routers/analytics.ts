@@ -150,13 +150,25 @@ export const analyticsRouter = router({
         const as = artistScoreMap.get(artist) || { sum: 0, count: 0 };
         artistScoreMap.set(artist, { sum: as.sum + song.score, count: as.count + 1 });
 
-        // 标签
+        const title = song.title || '';
+        let tags: string[] = [];
         try {
-          const tags: string[] = JSON.parse(song.tags);
-          for (const tag of tags) {
-            tagMap.set(tag, (tagMap.get(tag) || 0) + 1);
-          }
-        } catch {}
+          const parsed = JSON.parse(song.tags);
+          if (Array.isArray(parsed)) tags = parsed;
+        } catch {
+          /* ignore */
+        }
+        const HINTS = [
+          '初音', '镜音', '巡音', 'MEIKO', 'KAITO', '洛天依', '言和', '乐正',
+          '星尘', 'GUMI', 'flower', '重音テト', '音街', 'VOCALOID', '术力口', '诗岸', '海伊',
+        ];
+        for (const h of HINTS) {
+          if (title.includes(h) && !tags.some((t) => t.includes(h))) tags.push(h);
+        }
+        for (const tag of tags) {
+          if (!tag) continue;
+          tagMap.set(tag, (tagMap.get(tag) || 0) + 1);
+        }
 
         // 月份
         const monthKey = new Date(song.publishTime).toISOString().slice(0, 7);

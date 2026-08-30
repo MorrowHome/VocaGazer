@@ -15,6 +15,9 @@ export default function AdminPage() {
     onSuccess: () => utils.crawl.status.invalidate(),
   });
   const ranks = trpc.crawl.generateRanks.useMutation();
+  const ai = trpc.crawl.generateAi.useMutation({
+    onSuccess: () => utils.ai.getLatestBundle.invalidate(),
+  });
   const pin = trpc.posts.pin.useMutation({
     onSuccess: () => utils.posts.getLatest.invalidate(),
   });
@@ -64,6 +67,14 @@ export default function AdminPage() {
             >
               {ranks.isLoading ? '生成中…' : '生成排行榜'}
             </button>
+            <button
+              type="button"
+              className="btn btn-ghost !py-1.5 !px-4 text-xs"
+              disabled={ai.isLoading}
+              onClick={() => ai.mutate({ force: true })}
+            >
+              {ai.isLoading ? '生成中…' : '生成 AI 报告'}
+            </button>
           </div>
           {trigger.data && !trigger.data.skipped && (
             <p className="text-xs text-kawaii-muted">采集完成：入库 {trigger.data.savedCount} 首</p>
@@ -71,8 +82,9 @@ export default function AdminPage() {
           {ranks.data && (
             <p className="text-xs text-kawaii-muted">排行：日 {ranks.data.daily} / 周 {ranks.data.weekly} / 总 {ranks.data.alltime}</p>
           )}
-          {(trigger.error || ranks.error) && (
-            <p className="text-xs text-kawaii-pink">{trigger.error?.message || ranks.error?.message}</p>
+          {ai.data && <p className="text-xs text-kawaii-muted">AI 报告已写入（管理台会覆盖当日旧稿，定时任务仍去重）</p>}
+          {(trigger.error || ranks.error || ai.error) && (
+            <p className="text-xs text-kawaii-pink">{trigger.error?.message || ranks.error?.message || ai.error?.message}</p>
           )}
         </section>
 

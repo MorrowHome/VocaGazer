@@ -30,6 +30,14 @@ export const crawlRouter = router({
     return await generateAllRankings();
   }),
 
+  generateAi: adminProcedure
+    .input(z.object({ force: z.boolean().optional() }).optional())
+    .mutation(async ({ input }) => {
+      const { runAiDailySummary } = await import('@/server/services/scheduler');
+      await runAiDailySummary({ force: input?.force ?? true });
+      return { ok: true };
+    }),
+
   // 获取爬虫状态
   status: adminProcedure.query(async ({ ctx }) => {
     const settings = await ctx.prisma.setting.findMany({

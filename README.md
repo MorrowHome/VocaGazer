@@ -42,6 +42,7 @@ npm install
 # 2. 初始化数据库
 npx prisma generate
 npx prisma db push
+npx prisma db seed   # 默认管理员 admin@localhost / changeme-admin
 
 # 3. 启动开发服务器
 npm run dev
