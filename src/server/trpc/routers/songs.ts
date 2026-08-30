@@ -69,7 +69,7 @@ export const songsRouter = router({
       const { author, page, limit } = input;
       const skip = (page - 1) * limit;
 
-      const [songs, total] = await Promise.all([
+      const [songs, total, allStats] = await Promise.all([
         ctx.prisma.song.findMany({
           where: { author },
           orderBy: { publishTime: 'desc' },
@@ -77,9 +77,31 @@ export const songsRouter = router({
           take: limit,
         }),
         ctx.prisma.song.count({ where: { author } }),
+        ctx.prisma.song.findMany({
+          where: { author },
+          select: { statistics: true, score: true },
+        }),
       ]);
 
-      return { songs, total };
+      let totalPlays = 0;
+      let totalScore = 0;
+      for (const s of allStats) {
+        try {
+          totalPlays += JSON.parse(s.statistics).playCount || 0;
+        } catch {
+          /* skip */
+        }
+        totalScore += s.score;
+      }
+
+      return {
+        songs,
+        total,
+        stats: {
+          totalPlays,
+          avgScore: total > 0 ? Math.round((totalScore / total) * 10) / 10 : 0,
+        },
+      };
     }),
 
   // 获取所有作者列表（按歌曲数排序）

@@ -44,6 +44,8 @@ temp/
 
 # Prisma
 prisma/migrations/
+**/*.db
+**/*.db-journal
 
 # TypeScript
 *.tsbuildinfo

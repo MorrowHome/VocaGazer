@@ -23,12 +23,16 @@ export default function ForumPage() {
   const { user } = useAuth();
   const [type, setType] = useState<string | undefined>(undefined);
   const [page, setPage] = useState(1);
+  const [sort, setSort] = useState<'latest' | 'hottest'>('latest');
+  const [q, setQ] = useState('');
+  const [qDraft, setQDraft] = useState('');
 
   const { data, isLoading } = trpc.posts.getLatest.useQuery({
     page,
     limit: 20,
     type: type as any,
-    sort: 'latest',
+    sort,
+    q: q || undefined,
   });
 
   return (
@@ -44,6 +48,34 @@ export default function ForumPage() {
             <a href="/login" className="text-xs font-bold text-kawaii-muted hover:text-kawaii-pink">登录后发帖</a>
           )}
         </div>
+        <div className="flex gap-2 mb-4 flex-wrap">
+          {(['latest', 'hottest'] as const).map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => { setSort(s); setPage(1); }}
+              className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${
+                sort === s
+                  ? 'bg-kawaii-cyan text-white shadow-md'
+                  : 'bg-white/70 text-kawaii-muted border border-kawaii-border'
+              }`}
+            >
+              {s === 'latest' ? '最新' : '最热'}
+            </button>
+          ))}
+          <form
+            className="flex-1 min-w-[12rem]"
+            onSubmit={(e) => { e.preventDefault(); setQ(qDraft.trim()); setPage(1); }}
+          >
+            <input
+              value={qDraft}
+              onChange={(e) => setQDraft(e.target.value)}
+              placeholder="搜索帖子…"
+              className="w-full px-4 py-2 rounded-full bg-white/80 border border-kawaii-border/50 text-xs outline-none"
+            />
+          </form>
+        </div>
+
         {/* 分类筛选 */}
         <div className="flex gap-2 mb-6 flex-wrap">
           <button

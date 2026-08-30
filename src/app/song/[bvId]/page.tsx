@@ -3,6 +3,7 @@
 import { useParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
 import { formatCount, parseStats, coverImgProps } from '@/lib/utils';
+import { useAuth } from '@/components/AuthContext';
 
 const STAT_COLORS: Record<string, { label: string; color: string }> = {
   playCount:   { label: '播放', color: '#39BEB9' },
@@ -210,6 +211,8 @@ function TrendChart({ dailyStats }: { dailyStats: Array<{ date: string | Date; p
 
 export default function SongDetailPage() {
   const { bvId } = useParams<{ bvId: string }>();
+  const { user } = useAuth();
+  const utils = trpc.useUtils();
   const { data: song, isLoading, error } = trpc.songs.getByBvId.useQuery(
     decodeURIComponent(bvId),
   );
@@ -217,6 +220,16 @@ export default function SongDetailPage() {
     song?.id ?? '',
     { enabled: !!song },
   );
+  const { data: favorited } = trpc.favorites.isFavorited.useQuery(
+    song?.id ?? '',
+    { enabled: !!song?.id && !!user },
+  );
+  const toggleFav = trpc.favorites.toggle.useMutation({
+    onSuccess: () => {
+      if (song) utils.favorites.isFavorited.invalidate(song.id);
+      utils.favorites.list.invalidate();
+    },
+  });
 
   if (isLoading) {
     return (
@@ -291,16 +304,18 @@ export default function SongDetailPage() {
             {tags.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {tags.slice(0, 12).map((tag) => (
-                  <span
+                  <a
                     key={tag}
+                    href={`/tag/${encodeURIComponent(tag)}`}
                     className="text-[11px] font-bold px-3 py-1 rounded-full bg-kawaii-surface text-kawaii-muted border border-kawaii-border/30 hover:border-kawaii-pink/30 hover:text-kawaii-pink transition-all"
                   >
                     #{tag}
-                  </span>
+                  </a>
                 ))}
               </div>
             )}
 
+            <div className="flex flex-wrap gap-2">
             <a
               href={biliUrl}
               target="_blank"
@@ -315,6 +330,19 @@ export default function SongDetailPage() {
                 <path d="M7 17l9.2-9.2M17 17V7H7"/>
               </svg>
             </a>
+            {user ? (
+              <button
+                type="button"
+                className="btn btn-cyan inline-flex items-center gap-2"
+                disabled={toggleFav.isLoading}
+                onClick={() => toggleFav.mutate(song.id)}
+              >
+                {favorited ? '已收藏' : '收藏'}
+              </button>
+            ) : (
+              <a href="/login" className="btn btn-cyan inline-flex items-center gap-2">登录后收藏</a>
+            )}
+            </div>
           </div>
         </div>
 

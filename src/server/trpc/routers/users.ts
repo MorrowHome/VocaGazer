@@ -19,6 +19,7 @@ export const usersRouter = router({
         role: true,
         createdAt: true,
         lastLogin: true,
+        _count: { select: { posts: true, favorites: true } },
       },
     });
 
@@ -27,6 +28,14 @@ export const usersRouter = router({
     }
 
     return user;
+  }),
+
+  myPosts: protectedProcedure.query(async ({ ctx }) => {
+    return ctx.prisma.post.findMany({
+      where: { authorId: ctx.user.id, isDeleted: false },
+      orderBy: { createdAt: 'desc' },
+      take: 30,
+    });
   }),
 
   // 注册

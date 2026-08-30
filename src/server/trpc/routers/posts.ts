@@ -15,15 +15,24 @@ export const postsRouter = router({
         limit: z.number().min(1).max(50).default(20),
         type: z.enum(POST_TYPES).optional(),
         sort: z.enum(['latest', 'hottest']).default('latest'),
+        q: z.string().max(80).optional(),
       })
     )
     .query(async ({ ctx, input }) => {
-      const { page, limit, type, sort } = input;
+      const { page, limit, type, sort, q } = input;
       const skip = (page - 1) * limit;
 
-      const where = {
+      const where: Record<string, unknown> = {
         isDeleted: false,
         ...(type ? { type } : {}),
+        ...(q
+          ? {
+              OR: [
+                { title: { contains: q } },
+                { content: { contains: q } },
+              ],
+            }
+          : {}),
       };
 
       const orderBy =
@@ -33,7 +42,7 @@ export const postsRouter = router({
 
       const [posts, total] = await Promise.all([
         ctx.prisma.post.findMany({
-          where,
+          where: where as any,
           orderBy,
           skip,
           take: limit,
@@ -46,7 +55,7 @@ export const postsRouter = router({
             },
           },
         }),
-        ctx.prisma.post.count({ where }),
+        ctx.prisma.post.count({ where: where as any }),
       ]);
 
       return {
@@ -89,7 +98,15 @@ export const postsRouter = router({
         data: { views: { increment: 1 } },
       });
 
-      return post;
+      const likedByMe = ctx.user
+        ? Boolean(
+            await ctx.prisma.postLike.findUnique({
+              where: { postId_userId: { postId: post.id, userId: ctx.user.id } },
+            }),
+          )
+        : false;
+
+      return { ...post, likedByMe };
     }),
 
   // 创建帖子（需登录）
@@ -119,6 +136,25 @@ export const postsRouter = router({
       });
 
       return post;
+    }),
+
+  // 编辑自己的帖子
+  update: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        title: z.string().min(2).max(100).optional(),
+        content: z.string().min(10).max(10000).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const post = await ctx.prisma.post.findUnique({ where: { id: input.id } });
+      if (!post || post.isDeleted) throw new Error('帖子未找到');
+      if (post.authorId !== ctx.user.id && ctx.user.role !== 'admin') {
+        throw new Error('无权限编辑此帖子');
+      }
+      const { id, ...data } = input;
+      return ctx.prisma.post.update({ where: { id }, data });
     }),
 
   // 删除帖子（管理员或本人）
@@ -182,15 +218,36 @@ export const postsRouter = router({
       return reply;
     }),
 
-  // 点赞帖子
+  // 点赞 / 取消点赞帖子
   like: protectedProcedure
     .input(z.string())
     .mutation(async ({ ctx, input }) => {
-      const post = await ctx.prisma.post.update({
-        where: { id: input },
-        data: { likes: { increment: 1 } },
+      const existing = await ctx.prisma.postLike.findUnique({
+        where: { postId_userId: { postId: input, userId: ctx.user.id } },
       });
 
-      return post;
+      if (existing) {
+        await ctx.prisma.$transaction([
+          ctx.prisma.postLike.delete({ where: { id: existing.id } }),
+          ctx.prisma.post.update({
+            where: { id: input },
+            data: { likes: { decrement: 1 } },
+          }),
+        ]);
+        const post = await ctx.prisma.post.findUnique({ where: { id: input } });
+        if (post && post.likes < 0) {
+          await ctx.prisma.post.update({ where: { id: input }, data: { likes: 0 } });
+        }
+        return { liked: false };
+      }
+
+      await ctx.prisma.$transaction([
+        ctx.prisma.postLike.create({ data: { postId: input, userId: ctx.user.id } }),
+        ctx.prisma.post.update({
+          where: { id: input },
+          data: { likes: { increment: 1 } },
+        }),
+      ]);
+      return { liked: true };
     }),
 });

@@ -2,7 +2,7 @@
 
 import { useParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
-import { formatCount, parseStats, timeAgo } from '@/lib/utils';
+import { formatCount, parseStats, timeAgo, coverImgProps } from '@/lib/utils';
 
 export default function AuthorPage() {
   const { name } = useParams<{ name: string }>();
@@ -23,7 +23,9 @@ export default function AuthorPage() {
           <div>
             <h1 className="text-lg font-black tracking-wide text-gradient-flow">{author}</h1>
             {data && (
-              <p className="text-xs text-kawaii-muted font-bold">{data.total} 首歌曲</p>
+              <p className="text-xs text-kawaii-muted font-bold">
+                {data.total} 首 · {formatCount(data.stats?.totalPlays ?? 0)} 播放 · 均分 {data.stats?.avgScore ?? 0}
+              </p>
             )}
           </div>
         </div>
@@ -52,7 +54,7 @@ export default function AuthorPage() {
                 >
                   <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-kawaii-surface ring-1 ring-kawaii-border/30">
                     {song.picUrl ? (
-                      <img src={song.picUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
+                      <img {...coverImgProps(song.picUrl)} alt="" className="w-full h-full object-cover" loading="lazy" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-kawaii-muted">♪</div>
                     )}

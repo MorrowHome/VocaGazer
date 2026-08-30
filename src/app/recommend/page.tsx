@@ -65,8 +65,8 @@ export default function RecommendPage() {
         <section>
           <div className="flex items-center gap-3 mb-5">
             <span className="text-lg text-kawaii-pink" aria-hidden="true">◆</span>
-            <h2 className="section-title text-kawaii-text">编辑推荐</h2>
-            <span className="text-xs text-kawaii-muted font-medium ml-auto">评分最高的歌曲</span>
+            <h2 className="section-title text-kawaii-text">高分精选</h2>
+            <span className="text-xs text-kawaii-muted font-medium ml-auto">按综合评分排序</span>
           </div>
           {isLoading ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">

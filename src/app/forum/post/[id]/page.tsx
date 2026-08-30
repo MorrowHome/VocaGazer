@@ -107,7 +107,7 @@ export default function PostDetailPage() {
                 onClick={() => likeMutation.mutate(postId)}
                 className="btn btn-pink !py-1.5 !px-4 text-xs"
               >
-                ♡ 点赞
+                ♡ {post.likedByMe ? '已赞' : '点赞'}
               </button>
             )}
             {user?.id === post.authorId && (
