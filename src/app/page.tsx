@@ -2,9 +2,6 @@
 
 import { trpc } from '@/lib/trpc';
 import { formatCount, parseStats, timeAgo, coverImgProps } from '@/lib/utils';
-import { BackgroundLayers } from '@/components/BackgroundLayers';
-import { ClickFireworks } from '@/components/ClickFireworks';
-import { useAuth } from '@/components/AuthContext';
 
 // ─── 排行榜条目 ───
 
@@ -129,7 +126,6 @@ function StatCard({ label, value }: { label: string; value: string }) {
 // ─── 页面 ───
 
 export default function HomePage() {
-  const { user, logout } = useAuth();
   const { data: pageData, isLoading } = trpc.analytics.getHomepage.useQuery();
   const stats = pageData?.stats;
   const latestSong = pageData?.latestSong;
@@ -140,40 +136,6 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen relative">
-      <ClickFireworks />
-      <BackgroundLayers />
-
-      {/* ─── 顶栏 ─── */}
-      <header className="sticky top-0 z-50 backdrop-blur-lg bg-white/70 border-b border-kawaii-border/50">
-        <div className="max-w-7xl mx-auto px-4 md:px-8 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-lg text-kawaii-pink" aria-hidden="true">♪</span>
-            <h1 className="text-lg font-black tracking-wide text-gradient-flow">
-              VOCALOID HUB
-            </h1>
-          </div>
-          <nav className="flex items-center gap-5 text-sm font-bold text-kawaii-muted">
-            <a href="/recommend" className="hover:text-kawaii-pink transition-colors">推荐</a>
-            <a href="/search" className="hover:text-kawaii-pink transition-colors">搜索</a>
-            <a href="/ranking" className="hover:text-kawaii-cyan transition-colors">排行榜</a>
-            <a href="/tags" className="hover:text-kawaii-purple transition-colors">标签</a>
-            <a href="/milestones" className="hover:text-kawaii-yellow transition-colors">里程碑</a>
-            <a href="/authors" className="hover:text-kawaii-cyan transition-colors">创作者</a>
-            <a href="/analytics" className="hover:text-kawaii-purple transition-colors">数据分析</a>
-            <a href="/forum" className="hover:text-kawaii-pink transition-colors">论坛</a>
-            <a href="/about" className="hover:text-kawaii-cyan transition-colors">关于</a>
-            {user ? (
-              <div className="flex items-center gap-3 pl-4 border-l border-kawaii-border">
-                <span className="text-sm text-kawaii-muted">{user.username}</span>
-                <button onClick={logout} className="text-sm text-kawaii-muted hover:text-kawaii-pink transition-colors">退出</button>
-              </div>
-            ) : (
-              <a href="/login" className="btn btn-pink !py-1.5 !px-4 text-xs">登录</a>
-            )}
-          </nav>
-        </div>
-      </header>
-
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 space-y-14 relative z-10">
         {/* ─── HERO ─── */}
         <section className="py-10">

@@ -3,8 +3,6 @@
 import { useParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
 import { formatCount, parseStats, coverImgProps } from '@/lib/utils';
-import { BackgroundLayers } from '@/components/BackgroundLayers';
-import { ClickFireworks } from '@/components/ClickFireworks';
 
 const STAT_COLORS: Record<string, { label: string; color: string }> = {
   playCount:   { label: '播放', color: '#39BEB9' },
@@ -223,7 +221,6 @@ export default function SongDetailPage() {
   if (isLoading) {
     return (
       <main className="min-h-screen relative">
-        <BackgroundLayers />
         <div className="max-w-3xl mx-auto px-4 md:px-8 py-8 space-y-4 relative z-10">
           <div className="h-6 w-20 rounded-lg bg-white/60 animate-pulse" />
           <div className="h-10 w-2/3 rounded-xl bg-white/60 animate-pulse" />
@@ -237,7 +234,6 @@ export default function SongDetailPage() {
   if (error || !song) {
     return (
       <main className="min-h-screen relative">
-        <BackgroundLayers />
         <div className="max-w-3xl mx-auto px-4 md:px-8 py-8 relative z-10">
           <a href="/" className="text-sm text-kawaii-muted hover:text-kawaii-pink transition-colors font-medium">&larr; 返回首页</a>
           <p className="text-kawaii-muted font-medium mt-8">歌曲未找到或加载失败</p>
@@ -256,16 +252,7 @@ export default function SongDetailPage() {
 
   return (
     <main className="min-h-screen relative">
-      <ClickFireworks />
-      <BackgroundLayers />
 
-      <header className="sticky top-0 z-50 backdrop-blur-lg bg-white/70 border-b border-kawaii-border/50">
-        <div className="max-w-3xl mx-auto px-4 md:px-8 h-14 flex items-center justify-between">
-          <a href="/" className="text-sm text-kawaii-muted hover:text-kawaii-pink transition-colors font-medium flex items-center gap-2">
-            &larr; 返回
-          </a>
-        </div>
-      </header>
 
       <div className="max-w-3xl mx-auto px-4 md:px-8 py-8 space-y-8 relative z-10">
         {/* ─── 标题区 ─── */}

@@ -3,8 +3,6 @@
 import { useParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
 import { formatCount, parseStats, timeAgo } from '@/lib/utils';
-import { BackgroundLayers } from '@/components/BackgroundLayers';
-import { ClickFireworks } from '@/components/ClickFireworks';
 
 export default function AuthorPage() {
   const { name } = useParams<{ name: string }>();
@@ -13,31 +11,22 @@ export default function AuthorPage() {
 
   return (
     <main className="min-h-screen relative">
-      <ClickFireworks />
-      <BackgroundLayers />
 
-      <header className="sticky top-0 z-50 backdrop-blur-lg bg-white/70 border-b border-kawaii-border/50">
-        <div className="max-w-4xl mx-auto px-4 md:px-8 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <a href="/" className="text-sm text-kawaii-muted hover:text-kawaii-pink transition-colors font-medium">&larr; 返回</a>
-            {data && data.songs[0]?.authorAvatar ? (
-              <img src={data.songs[0].authorAvatar} alt="" className="w-8 h-8 rounded-full object-cover ring-2 ring-kawaii-border/30 shrink-0" />
-            ) : (
-              <span aria-hidden="true" className="text-kawaii-cyan">♫</span>
-            )}
-            <h1 className="text-lg font-black tracking-wide text-gradient-flow truncate max-w-[200px] md:max-w-md">
-              {author}
-            </h1>
-          </div>
-          {data && (
-            <span className="text-xs text-kawaii-muted font-bold px-3 py-1 rounded-full bg-white/70 border border-kawaii-border/50">
-              {data.total} 首歌曲
-            </span>
-          )}
-        </div>
-      </header>
 
       <div className="max-w-4xl mx-auto px-4 md:px-8 py-8 relative z-10">
+        <div className="flex items-center gap-3 mb-6">
+          {data?.songs[0]?.authorAvatar ? (
+            <img src={data.songs[0].authorAvatar} alt="" className="w-10 h-10 rounded-full object-cover ring-2 ring-kawaii-border/30" />
+          ) : (
+            <span className="text-kawaii-cyan text-xl" aria-hidden="true">♫</span>
+          )}
+          <div>
+            <h1 className="text-lg font-black tracking-wide text-gradient-flow">{author}</h1>
+            {data && (
+              <p className="text-xs text-kawaii-muted font-bold">{data.total} 首歌曲</p>
+            )}
+          </div>
+        </div>
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[...Array(6)].map((_, i) => (

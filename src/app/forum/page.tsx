@@ -3,8 +3,6 @@
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/components/AuthContext';
-import { BackgroundLayers } from '@/components/BackgroundLayers';
-import { ClickFireworks } from '@/components/ClickFireworks';
 import { timeAgo } from '@/lib/utils';
 
 const TYPE_LABELS: Record<string, string> = {
@@ -35,30 +33,17 @@ export default function ForumPage() {
 
   return (
     <main className="min-h-screen relative">
-      <ClickFireworks />
-      <BackgroundLayers />
 
-      <header className="sticky top-0 z-50 backdrop-blur-lg bg-white/70 border-b border-kawaii-border/50">
-        <div className="max-w-5xl mx-auto px-4 md:px-8 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <a href="/" className="text-sm text-kawaii-muted hover:text-kawaii-pink transition-colors font-medium">&larr; 返回</a>
-            <span className="text-kawaii-pink text-lg" aria-hidden="true">◈</span>
-            <h1 className="text-lg font-black tracking-wide text-gradient-flow">社区论坛</h1>
-          </div>
-          <div className="flex items-center gap-3">
-            {user ? (
-              <div className="flex items-center gap-3">
-                <a href="/forum/new" className="btn btn-pink !py-1.5 !px-4 text-xs">+ 发帖</a>
-                <span className="text-sm text-kawaii-muted font-bold">{user.username}</span>
-              </div>
-            ) : (
-              <a href="/login" className="btn btn-pink !py-1.5 !px-4 text-xs">登录</a>
-            )}
-          </div>
-        </div>
-      </header>
 
       <div className="max-w-5xl mx-auto px-4 md:px-8 py-8 relative z-10">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-lg font-black tracking-wide text-gradient-flow">社区论坛</h1>
+          {user ? (
+            <a href="/forum/new" className="btn btn-pink !py-1.5 !px-4 text-xs">+ 发帖</a>
+          ) : (
+            <a href="/login" className="text-xs font-bold text-kawaii-muted hover:text-kawaii-pink">登录后发帖</a>
+          )}
+        </div>
         {/* 分类筛选 */}
         <div className="flex gap-2 mb-6 flex-wrap">
           <button

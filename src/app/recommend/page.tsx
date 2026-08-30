@@ -2,8 +2,6 @@
 
 import { trpc } from '@/lib/trpc';
 import { formatCount, parseStats, timeAgo, coverImgProps } from '@/lib/utils';
-import { BackgroundLayers } from '@/components/BackgroundLayers';
-import { ClickFireworks } from '@/components/ClickFireworks';
 
 // ─── 推荐歌曲卡片 ───
 function RecSongCard({ song, rank }: { song: any; rank?: number }) {
@@ -60,18 +58,7 @@ export default function RecommendPage() {
 
   return (
     <main className="min-h-screen relative">
-      <ClickFireworks />
-      <BackgroundLayers />
 
-      <header className="sticky top-0 z-50 backdrop-blur-lg bg-white/70 border-b border-kawaii-border/50">
-        <div className="max-w-7xl mx-auto px-4 md:px-8 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <a href="/" className="text-sm text-kawaii-muted hover:text-kawaii-pink transition-colors font-medium">&larr; 返回</a>
-            <span className="text-lg text-kawaii-pink" aria-hidden="true">✦</span>
-            <h1 className="text-lg font-black tracking-wide text-gradient-flow">特别推荐</h1>
-          </div>
-        </div>
-      </header>
 
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 space-y-10 relative z-10">
         {/* 编辑推荐 */}

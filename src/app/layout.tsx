@@ -2,6 +2,9 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { TRPCProvider } from '@/components/TRPCProvider';
 import { AuthProvider } from '@/components/AuthContext';
+import { BackgroundLayers } from '@/components/BackgroundLayers';
+import { ClickFireworks } from '@/components/ClickFireworks';
+import { SiteHeader } from '@/components/SiteHeader';
 
 export const metadata: Metadata = {
   title: 'VOCALOID Music Hub',
@@ -17,7 +20,12 @@ export default function RootLayout({
     <html lang="zh-CN">
       <body className="antialiased">
         <TRPCProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <BackgroundLayers />
+            <ClickFireworks />
+            <SiteHeader />
+            <div className="pb-16 lg:pb-0">{children}</div>
+          </AuthProvider>
         </TRPCProvider>
       </body>
     </html>

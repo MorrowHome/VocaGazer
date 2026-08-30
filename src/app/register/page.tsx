@@ -4,8 +4,6 @@ import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/components/AuthContext';
-import { BackgroundLayers } from '@/components/BackgroundLayers';
-import { ClickFireworks } from '@/components/ClickFireworks';
 
 export default function RegisterPage() {
   const [username, setUsername] = useState('');
@@ -30,8 +28,6 @@ export default function RegisterPage() {
 
   return (
     <main className="min-h-screen relative flex items-center justify-center">
-      <ClickFireworks />
-      <BackgroundLayers />
 
       <div className="relative z-10 w-full max-w-md mx-4">
         <div className="card !p-8">

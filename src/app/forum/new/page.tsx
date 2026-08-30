@@ -4,8 +4,6 @@ import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/components/AuthContext';
-import { BackgroundLayers } from '@/components/BackgroundLayers';
-import { ClickFireworks } from '@/components/ClickFireworks';
 
 const POST_TYPES = [
   { key: 'review', label: '评测', icon: '◇' },
@@ -44,7 +42,6 @@ export default function NewPostPage() {
   if (!user) {
     return (
       <main className="min-h-screen relative flex items-center justify-center">
-        <BackgroundLayers />
         <div className="relative z-10 text-center">
           <p className="text-kawaii-muted mb-4 font-bold">请先登录 ⋆</p>
           <a href="/login" className="btn btn-pink">去登录</a>
@@ -55,18 +52,7 @@ export default function NewPostPage() {
 
   return (
     <main className="min-h-screen relative">
-      <ClickFireworks />
-      <BackgroundLayers />
 
-      <header className="sticky top-0 z-50 backdrop-blur-lg bg-white/70 border-b border-kawaii-border/50">
-        <div className="max-w-4xl mx-auto px-4 md:px-8 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <a href="/forum" className="text-sm text-kawaii-muted hover:text-kawaii-pink transition-colors font-medium">&larr; 论坛</a>
-            <span aria-hidden="true" className="text-kawaii-pink text-lg">✦</span>
-            <h1 className="text-lg font-black tracking-wide text-gradient-flow">发布新帖</h1>
-          </div>
-        </div>
-      </header>
 
       <div className="max-w-4xl mx-auto px-4 md:px-8 py-8 relative z-10">
         <div className="card !p-8">

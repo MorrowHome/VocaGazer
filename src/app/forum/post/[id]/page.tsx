@@ -4,8 +4,6 @@ import { useState, FormEvent } from 'react';
 import { useParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/components/AuthContext';
-import { BackgroundLayers } from '@/components/BackgroundLayers';
-import { ClickFireworks } from '@/components/ClickFireworks';
 import { timeAgo } from '@/lib/utils';
 
 const TYPE_LABELS: Record<string, string> = {
@@ -48,7 +46,6 @@ export default function PostDetailPage() {
   if (isLoading) {
     return (
       <main className="min-h-screen relative flex items-center justify-center">
-        <BackgroundLayers />
         <div className="relative z-10 text-kawaii-muted font-medium">加载中...</div>
       </main>
     );
@@ -57,7 +54,6 @@ export default function PostDetailPage() {
   if (!post) {
     return (
       <main className="min-h-screen relative flex items-center justify-center">
-        <BackgroundLayers />
         <div className="relative z-10 text-kawaii-muted font-medium">帖子不存在</div>
       </main>
     );
@@ -70,29 +66,7 @@ export default function PostDetailPage() {
 
   return (
     <main className="min-h-screen relative">
-      <ClickFireworks />
-      <BackgroundLayers />
 
-      <header className="sticky top-0 z-50 backdrop-blur-lg bg-white/70 border-b border-kawaii-border/50">
-        <div className="max-w-4xl mx-auto px-4 md:px-8 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <a href="/forum" className="text-sm text-kawaii-muted hover:text-kawaii-pink transition-colors font-medium">&larr; 论坛</a>
-            <h1 className="text-base font-black text-gradient-flow truncate max-w-md">
-              {post.title}
-            </h1>
-          </div>
-          <div className="flex items-center gap-3">
-            {user?.role === 'admin' && (
-              <button
-                onClick={() => deleteMutation.mutate(postId)}
-                className="text-xs text-kawaii-muted hover:text-kawaii-pink transition-colors font-bold"
-              >
-                删除
-              </button>
-            )}
-          </div>
-        </div>
-      </header>
 
       <div className="max-w-4xl mx-auto px-4 md:px-8 py-8 relative z-10 space-y-6">
         {/* 主帖 */}
