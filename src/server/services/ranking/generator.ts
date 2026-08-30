@@ -2,14 +2,15 @@
  * 排行榜生成服务
  * 基于歌曲发布时间过滤 + 当前评分生成排行榜快照
  *
- * 周期含义：
- * - daily:   发布在最近 1  天内的歌曲参与排名
- * - weekly:  发布在最近 7  天内的歌曲参与排名
- * - monthly: 发布在最近 30 天内的歌曲参与排名
- * - yearly:  发布在最近 365 天内的歌曲参与排名
- * - alltime: 所有歌曲参与排名
+ * 周期含义（中国日历）：
+ * - daily:   参考日当天 00:00–24:00 发布的歌曲
+ * - weekly:  参考日前 7 天（含当天）
+ * - monthly: 参考日前 30 天
+ * - yearly:  参考日前 365 天
+ * - alltime: 所有歌曲
  */
 import { calculateScore } from './scorer';
+import { chinaCalendarDay, shiftChinaDays } from '../../../lib/time';
 
 interface Stats {
   playCount: number;
@@ -27,40 +28,26 @@ type Period = 'daily' | 'weekly' | 'monthly' | 'yearly' | 'alltime';
  * @param period  排名周期
  * @param refDate 参考日期（默认当前时间），用于"当年某月某日的排行"查询
  */
-/** Convert a Date to China-timezone midnight UTC */
-function chinaMidnight(date: Date): Date {
-  const chinaStr = date.toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' });
-  const [y, m, d] = chinaStr.split('-').map(Number);
-  return new Date(Date.UTC(y, m - 1, d));
-}
-
-function getDateRange(period: Period, refDate: Date = new Date()): { start?: Date; end?: Date } {
-  const ref = chinaMidnight(refDate);
-  // 截止日期统一为 ref 次日凌晨（不包含），确保不把 ref 之后发布的歌算进来
-  const end = new Date(ref);
-  end.setUTCDate(end.getUTCDate() + 1);
+function getDateRange(period: Period, refDate: Date = new Date()): { start?: Date; end?: Date; snapDate: Date } {
+  const day = chinaCalendarDay(refDate);
 
   switch (period) {
-    case 'daily': {
-      return { start: ref, end };
-    }
+    case 'daily':
+      return { start: day.start, end: day.end, snapDate: day.snapDate };
     case 'weekly': {
-      const start = new Date(ref);
-      start.setUTCDate(start.getUTCDate() - 7);
-      return { start, end };
+      const from = chinaCalendarDay(shiftChinaDays(refDate, -7));
+      return { start: from.start, end: day.end, snapDate: day.snapDate };
     }
     case 'monthly': {
-      const start = new Date(ref);
-      start.setUTCMonth(start.getUTCMonth() - 1);
-      return { start, end };
+      const from = chinaCalendarDay(shiftChinaDays(refDate, -30));
+      return { start: from.start, end: day.end, snapDate: day.snapDate };
     }
     case 'yearly': {
-      const start = new Date(ref);
-      start.setUTCFullYear(start.getUTCFullYear() - 1);
-      return { start, end };
+      const from = chinaCalendarDay(shiftChinaDays(refDate, -365));
+      return { start: from.start, end: day.end, snapDate: day.snapDate };
     }
     case 'alltime':
-      return {};
+      return { snapDate: day.snapDate };
   }
 }
 
@@ -85,7 +72,7 @@ export async function generateRanking(period: Period, refDate?: Date): Promise<n
   const prisma = await getPrisma();
 
   // 根据周期过滤歌曲的发布时间范围
-  const { start, end } = getDateRange(period, refDate);
+  const { start, end, snapDate } = getDateRange(period, refDate ?? new Date());
   const where: any = {};
   if (start) where.publishTime = { gte: start };
   if (end) where.publishTime = { ...where.publishTime, lt: end };
@@ -108,11 +95,6 @@ export async function generateRanking(period: Period, refDate?: Date): Promise<n
     .slice(0, 100);
 
   if (ranked.length === 0) return 0;
-
-  // 快照日期：中国时区的 refDate 当天（或今天）
-  const snapDate = refDate ? chinaMidnight(refDate) : new Date(
-    new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' })
-  );
 
   // 只清空该日期的旧排行数据（保留其他日期的历史快照）
   await prisma.ranking.deleteMany({

@@ -101,5 +101,5 @@ const result = await generateAllRankings();
 
 ```bash
 # 通过 API 触发
-curl http://localhost:3000/api/crawl/trigger?type=ranking
+curl -H "x-cron-secret: 你的密钥" http://localhost:3000/api/crawl/trigger?type=ranking
 ```

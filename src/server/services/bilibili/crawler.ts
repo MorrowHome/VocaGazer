@@ -176,13 +176,8 @@ const VOCALOID_TAGS = [
 /**
  * 评分制原创判定
  * 返回 { isOriginal: boolean, score: number, reason: string }
- *
- * 评分规则:
- * - 硬排除关键词 → 直接排除 (score = -100)
- * - 强原创关键词 → 直接接受 (score = +100)
- * - 其余按信号正负分累计
  */
-function judgeOriginality(
+export function judgeOriginality(
   title: string,
   description: string,
   duration?: number,
@@ -311,6 +306,7 @@ export interface CrawlResult {
   originalCount: number;
   savedCount: number;
   errors: string[];
+  skipped?: boolean;
 }
 
 /**
@@ -329,6 +325,13 @@ export async function runCrawl(
 
   const log = verbose ? console.log : () => {};
   const errors: string[] = [];
+  const prisma = getPrisma();
+
+  const enabled = await prisma.setting.findUnique({ where: { key: 'crawl_enabled' } });
+  if (enabled?.value === 'false') {
+    log('采集已关闭（crawl_enabled=false），跳过');
+    return { totalVideos: 0, originalCount: 0, savedCount: 0, errors: [], skipped: true };
+  }
 
   // 时间过滤：只保留最近 N 小时的视频
   const since = Date.now() / 1000 - withinHours * 3600;
@@ -388,7 +391,6 @@ export async function runCrawl(
 
   // 阶段 3：获取详情并入库
   let savedCount = 0;
-  const prisma = getPrisma();
 
   for (const v of originalVideos) {
     try {
@@ -512,6 +514,13 @@ export async function runCrawl(
   }
 
   log(`入库完成，成功保存 ${savedCount} 首，失败 ${errors.length} 首`);
+
+  await prisma.setting.upsert({
+    where: { key: 'last_crawl_time' },
+    update: { value: new Date().toISOString() },
+    create: { key: 'last_crawl_time', value: new Date().toISOString() },
+  });
+
   return { totalVideos, originalCount: originalVideos.length, savedCount, errors };
 }
 
@@ -550,7 +559,7 @@ export async function refreshAllSongs(
       if (!detail) {
         // 视频已删除或下架
         deletedBvIds.push(song.bvId);
-        console.log(`[Refresh] ${song.title} ($song.bvId) 已无法访问，跳过`);
+        console.log(`[Refresh] ${song.title} (${song.bvId}) 已无法访问，跳过`);
         failed++;
         continue;
       }

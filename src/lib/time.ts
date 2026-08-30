@@ -20,6 +20,28 @@ export function chinaDateKey(date?: Date): Date {
 /**
  * Format a UTC Date as YYYY-MM-DD in China timezone.
  */
-export function chinaDateStr(date: Date): string {
+export function chinaDateStr(date: Date = new Date()): string {
   return date.toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' });
+}
+
+/**
+ * 中国日历日的真实时间范围 [start, end)，以及用于 Ranking.date 的快照键
+ * （UTC 零点，与历史快照存储格式兼容）。
+ */
+export function chinaCalendarDay(date: Date = new Date()): {
+  start: Date;
+  end: Date;
+  snapDate: Date;
+  key: string;
+} {
+  const key = chinaDateStr(date);
+  const start = new Date(`${key}T00:00:00+08:00`);
+  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+  return { start, end, snapDate: chinaDateKey(date), key };
+}
+
+/** 中国时区下偏移若干天（正负均可） */
+export function shiftChinaDays(date: Date, days: number): Date {
+  const noon = new Date(`${chinaDateStr(date)}T12:00:00+08:00`);
+  return new Date(noon.getTime() + days * 24 * 60 * 60 * 1000);
 }

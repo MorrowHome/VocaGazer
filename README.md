@@ -43,11 +43,11 @@ npm install
 npx prisma generate
 npx prisma db push
 
-# 3. 可选：采集歌曲数据
-curl http://localhost:3000/api/crawl/trigger
-
-# 4. 启动开发服务器
+# 3. 启动开发服务器
 npm run dev
+
+# 4. 可选：采集歌曲数据（开发环境未配 CRON_SECRET 时可直接调用）
+curl http://localhost:3000/api/crawl/trigger
 ```
 
 打开 http://localhost:3000 即可访问。
@@ -64,8 +64,8 @@ npm start
 # 查看数据库
 npx prisma studio
 
-# 手动触发采集（需要服务运行中）
-curl http://localhost:3000/api/crawl/trigger
+# 手动触发采集（需要服务运行中，且配置 CRON_SECRET）
+curl -H "x-cron-secret: 你的密钥" http://localhost:3000/api/crawl/trigger?type=ranking
 ```
 
 ## 项目结构

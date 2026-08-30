@@ -3,6 +3,7 @@
  */
 import { z } from 'zod';
 import { router, publicProcedure } from '../trpc';
+import { chinaCalendarDay, shiftChinaDays } from '@/lib/time';
 
 function parseStats(s: string) {
   try { return JSON.parse(s); } catch { return {}; }
@@ -21,41 +22,61 @@ function getDateRange(range: string): Date | null {
 export const analyticsRouter = router({
   // 获取首页全量数据
   getHomepage: publicProcedure.query(async ({ ctx }) => {
-    const now = new Date();
-    const todayStart = new Date(now);
-    todayStart.setHours(0, 0, 0, 0);
+    const { start: todayStart } = chinaCalendarDay();
+    const weekStart = chinaCalendarDay(shiftChinaDays(new Date(), -7)).start;
 
-    const weekAgo = new Date(now);
-    weekAgo.setDate(weekAgo.getDate() - 7);
-
-    const [totalSongs, todaySongs, weekSongs, latestSongs, dailyRanking, weeklyRanking, topSongs] =
+    const [totalSongs, todaySongs, weekSongs, latestSongs, dailySnap, weeklySnap, statsRows] =
       await Promise.all([
         ctx.prisma.song.count(),
         ctx.prisma.song.count({ where: { publishTime: { gte: todayStart } } }),
-        ctx.prisma.song.count({ where: { publishTime: { gte: weekAgo } } }),
+        ctx.prisma.song.count({ where: { publishTime: { gte: weekStart } } }),
         ctx.prisma.song.findMany({ orderBy: { publishTime: 'desc' }, take: 20 }),
-        ctx.prisma.song.findMany({
-          where: { publishTime: { gte: todayStart } },
-          orderBy: { score: 'desc' },
-          take: 10,
+        ctx.prisma.ranking.findFirst({
+          where: { period: 'daily' },
+          orderBy: { date: 'desc' },
+          select: { date: true },
         }),
-        ctx.prisma.song.findMany({
-          where: { publishTime: { gte: weekAgo } },
-          orderBy: { score: 'desc' },
-          take: 10,
+        ctx.prisma.ranking.findFirst({
+          where: { period: 'weekly' },
+          orderBy: { date: 'desc' },
+          select: { date: true },
         }),
-        ctx.prisma.song.findMany({ orderBy: { score: 'desc' }, take: 10 }),
+        ctx.prisma.song.findMany({ select: { statistics: true } }),
       ]);
+
+    const [dailyEntries, weeklyEntries] = await Promise.all([
+      dailySnap
+        ? ctx.prisma.ranking.findMany({
+            where: { period: 'daily', date: dailySnap.date },
+            orderBy: { rank: 'asc' },
+            take: 10,
+            include: { song: true },
+          })
+        : Promise.resolve([]),
+      weeklySnap
+        ? ctx.prisma.ranking.findMany({
+            where: { period: 'weekly', date: weeklySnap.date },
+            orderBy: { rank: 'asc' },
+            take: 10,
+            include: { song: true },
+          })
+        : Promise.resolve([]),
+    ]);
+
+    const dailyRanking = dailyEntries.map((e) => e.song).filter(Boolean);
+    const weeklyRanking = weeklyEntries.map((e) => e.song).filter(Boolean);
 
     const latestSong = latestSongs.length > 0 ? latestSongs[0] : null;
     const weeklyHotSong = weeklyRanking.length > 0 ? weeklyRanking[0] : null;
 
     let totalPlayCount = 0;
-    for (const song of latestSongs) {
+    for (const row of statsRows) {
       try {
-        const s = JSON.parse(song.statistics);
+        const s = JSON.parse(row.statistics);
         totalPlayCount += s.playCount || 0;
-      } catch {}
+      } catch {
+        /* skip */
+      }
     }
 
     return {
@@ -65,7 +86,6 @@ export const analyticsRouter = router({
       latestSongs,
       dailyRanking,
       weeklyRanking,
-      topSongs,
     };
   }),
 

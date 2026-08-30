@@ -17,9 +17,21 @@ async function runCrawlTask() {
       requestDelay: 800,
       verbose: false,
     });
+    if (result.skipped) {
+      console.log('[Scheduler] 采集已关闭，跳过');
+      return;
+    }
     console.log(`[Scheduler] 采集完成: ${result.savedCount} 首入库, ${result.errors.length} 错误`);
     if (result.errors.length > 0) {
       console.warn('[Scheduler] 错误:', result.errors.slice(0, 3).join(' | '));
+    }
+    // 采集后立刻刷新快照，避免日榜只在凌晨 0:30 写一次、白天一直空
+    try {
+      const { generateAllRankings } = await import('./ranking/generator');
+      const ranks = await generateAllRankings();
+      console.log('[Scheduler] 采集后排行榜:', JSON.stringify(ranks));
+    } catch (rankErr) {
+      console.error('[Scheduler] 采集后生成排行榜失败:', rankErr);
     }
   } catch (err) {
     console.error('[Scheduler] 采集失败:', err);
@@ -31,8 +43,11 @@ async function runRankingTask() {
   console.log('[Scheduler] 开始生成排行榜...');
   try {
     const { generateAllRankings } = await import('./ranking/generator');
-    const result = await generateAllRankings();
-    console.log('[Scheduler] 排行榜生成结果:', JSON.stringify(result));
+    const { shiftChinaDays } = await import('../../lib/time');
+    const y = await generateAllRankings(shiftChinaDays(new Date(), -1));
+    const t = await generateAllRankings();
+    console.log('[Scheduler] 排行榜(昨日):', JSON.stringify(y));
+    console.log('[Scheduler] 排行榜(今日):', JSON.stringify(t));
   } catch (err) {
     console.error('[Scheduler] 排行榜生成失败:', err);
   }
