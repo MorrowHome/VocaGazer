@@ -13,7 +13,7 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "db:seed": "node prisma/seed.mjs",
-    "test": "npx --yes tsx --test src/server/services/ranking/scorer.test.ts src/server/services/bilibili/originality.test.ts src/server/services/ai/index.test.ts",
+    "test": "npx --yes tsx --test src/server/services/ranking/scorer.test.ts src/server/services/bilibili/originality.test.ts src/server/services/ai/index.test.ts src/server/services/mail.test.ts",
     "postinstall": "prisma generate"
   },
   "prisma": {
@@ -32,6 +32,7 @@
     "jsonwebtoken": "^9.0.3",
     "next": "^14.2.0",
     "node-cron": "^4.2.1",
+    "nodemailer": "^9.0.6",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "superjson": "^2.2.0",
@@ -42,6 +43,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20.17.0",
     "@types/node-cron": "^3.0.11",
+    "@types/nodemailer": "^8.0.1",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.4.20",

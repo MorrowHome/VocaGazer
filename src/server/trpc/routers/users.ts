@@ -120,7 +120,79 @@ export const usersRouter = router({
       };
     }),
 
-  // 根据 ID 获取用户公开信息
+  requestPasswordReset: publicProcedure
+    .input(z.object({ email: z.string().email() }))
+    .mutation(async ({ ctx, input }) => {
+      const email = input.email.trim();
+      const user = await ctx.prisma.user.findUnique({ where: { email } });
+      const generic = { ok: true as const };
+
+      if (!user) return generic;
+
+      const recent = await ctx.prisma.passwordResetToken.findFirst({
+        where: {
+          userId: user.id,
+          createdAt: { gte: new Date(Date.now() - 60_000) },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (recent && !recent.usedAt) return generic;
+
+      const { newResetToken, hashResetToken, appBaseUrl, sendPasswordResetEmail } = await import(
+        '@/server/services/mail'
+      );
+      const token = newResetToken();
+      const tokenHash = hashResetToken(token);
+      await ctx.prisma.passwordResetToken.create({
+        data: {
+          userId: user.id,
+          tokenHash,
+          expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+        },
+      });
+
+      const resetUrl = `${appBaseUrl()}/reset-password?token=${token}`;
+      try {
+        await sendPasswordResetEmail(user.email, resetUrl);
+      } catch (err) {
+        console.error('[mail] 发送重置邮件失败:', err);
+        console.log('[mail] 备用重置链接:', resetUrl);
+      }
+
+      return generic;
+    }),
+
+  resetPassword: publicProcedure
+    .input(
+      z.object({
+        token: z.string().min(16).max(128),
+        password: z.string().min(6).max(100),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { hashResetToken } = await import('@/server/services/mail');
+      const tokenHash = hashResetToken(input.token);
+      const record = await ctx.prisma.passwordResetToken.findUnique({
+        where: { tokenHash },
+      });
+      if (!record || record.usedAt || record.expiresAt < new Date()) {
+        throw new Error('重置链接无效或已过期，请重新申请');
+      }
+
+      const passwordHash = await bcrypt.hash(input.password, 10);
+      await ctx.prisma.$transaction([
+        ctx.prisma.user.update({
+          where: { id: record.userId },
+          data: { passwordHash },
+        }),
+        ctx.prisma.passwordResetToken.update({
+          where: { id: record.id },
+          data: { usedAt: new Date() },
+        }),
+      ]);
+
+      return { ok: true };
+    }),
   getById: publicProcedure
     .input(z.string())
     .query(async ({ ctx, input }) => {

@@ -68,6 +68,12 @@ export default function LoginPage() {
               />
             </div>
 
+            <p className="text-right -mt-3">
+              <a href="/forgot-password" className="text-xs font-bold text-kawaii-muted hover:text-kawaii-pink">
+                忘记密码？
+              </a>
+            </p>
+
             <button
               type="submit"
               className="btn btn-pink w-full justify-center !py-3"
