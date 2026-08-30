@@ -106,7 +106,42 @@ export const postsRouter = router({
           )
         : false;
 
-      return { ...post, likedByMe };
+      const likedReplyIds = ctx.user
+        ? (
+            await ctx.prisma.replyLike.findMany({
+              where: {
+                userId: ctx.user.id,
+                replyId: { in: post.replies.map((r) => r.id) },
+              },
+              select: { replyId: true },
+            })
+          ).map((r) => r.replyId)
+        : [];
+
+      return { ...post, likedByMe, likedReplyIds };
+    }),
+
+  getBySong: publicProcedure
+    .input(z.string().min(3).max(20))
+    .query(async ({ ctx, input }) => {
+      const needle = input.replace(/["%_]/g, '');
+      if (needle.length < 3) return [];
+      return ctx.prisma.post.findMany({
+        where: {
+          isDeleted: false,
+          relatedSongs: { contains: `"${needle}"` },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 8,
+        select: {
+          id: true,
+          title: true,
+          type: true,
+          createdAt: true,
+          author: { select: { username: true } },
+          _count: { select: { replies: true } },
+        },
+      });
     }),
 
   // 创建帖子（需登录）
@@ -245,6 +280,36 @@ export const postsRouter = router({
         ctx.prisma.postLike.create({ data: { postId: input, userId: ctx.user.id } }),
         ctx.prisma.post.update({
           where: { id: input },
+          data: { likes: { increment: 1 } },
+        }),
+      ]);
+      return { liked: true };
+    }),
+
+  likeReply: protectedProcedure
+    .input(z.string())
+    .mutation(async ({ ctx, input: replyId }) => {
+      const existing = await ctx.prisma.replyLike.findUnique({
+        where: { replyId_userId: { replyId, userId: ctx.user.id } },
+      });
+      if (existing) {
+        await ctx.prisma.$transaction([
+          ctx.prisma.replyLike.delete({ where: { id: existing.id } }),
+          ctx.prisma.reply.update({
+            where: { id: replyId },
+            data: { likes: { decrement: 1 } },
+          }),
+        ]);
+        const reply = await ctx.prisma.reply.findUnique({ where: { id: replyId } });
+        if (reply && reply.likes < 0) {
+          await ctx.prisma.reply.update({ where: { id: replyId }, data: { likes: 0 } });
+        }
+        return { liked: false };
+      }
+      await ctx.prisma.$transaction([
+        ctx.prisma.replyLike.create({ data: { replyId, userId: ctx.user.id } }),
+        ctx.prisma.reply.update({
+          where: { id: replyId },
           data: { likes: { increment: 1 } },
         }),
       ]);

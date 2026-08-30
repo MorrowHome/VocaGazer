@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useState, FormEvent, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/components/AuthContext';
 
@@ -12,14 +12,30 @@ const POST_TYPES = [
   { key: 'question', label: '提问', icon: '△' },
 ];
 
-export default function NewPostPage() {
+function NewPostPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [type, setType] = useState<string>('discussion');
   const [tagsStr, setTagsStr] = useState('');
   const [error, setError] = useState('');
+  const [songQ, setSongQ] = useState('');
+  const [related, setRelated] = useState<{ bvId: string; title: string }[]>([]);
+  const presetBv = searchParams.get('song')?.trim() || '';
+  const presetSong = trpc.songs.getByBvIds.useQuery(presetBv ? [presetBv] : [], {
+    enabled: presetBv.length >= 3,
+  });
+  useEffect(() => {
+    const hit = presetSong.data?.[0];
+    if (!hit) return;
+    setRelated((prev) => (prev.some((r) => r.bvId === hit.bvId) ? prev : [{ bvId: hit.bvId, title: hit.title }, ...prev].slice(0, 5)));
+  }, [presetSong.data]);
+  const songSearch = trpc.songs.search.useQuery(
+    { q: songQ, limit: 6 },
+    { enabled: songQ.trim().length >= 2 },
+  );
 
   const createMutation = trpc.posts.create.useMutation({
     onSuccess: (post) => {
@@ -36,7 +52,13 @@ export default function NewPostPage() {
       .map((t) => t.trim())
       .filter(Boolean);
 
-    createMutation.mutate({ title, content, type: type as any, tags });
+    createMutation.mutate({
+      title,
+      content,
+      type: type as any,
+      tags,
+      relatedSongs: related.map((s) => s.bvId),
+    });
   };
 
   if (!user) {
@@ -128,6 +150,49 @@ export default function NewPostPage() {
               />
             </div>
 
+            <div>
+              <label className="block text-xs text-kawaii-muted mb-2 font-bold tracking-wider">关联歌曲（可选）</label>
+              <input
+                type="text"
+                value={songQ}
+                onChange={(e) => setSongQ(e.target.value)}
+                placeholder="搜索歌曲标题或作者"
+                className="w-full"
+              />
+              {songSearch.data?.songs?.length ? (
+                <div className="mt-2 space-y-1">
+                  {songSearch.data.songs.map((s) => (
+                    <button
+                      key={s.bvId}
+                      type="button"
+                      className="block w-full text-left text-xs px-3 py-2 rounded-xl bg-white/70 hover:bg-kawaii-pink-pale"
+                      onClick={() => {
+                        if (related.some((r) => r.bvId === s.bvId) || related.length >= 5) return;
+                        setRelated((prev) => [...prev, { bvId: s.bvId, title: s.title }]);
+                        setSongQ('');
+                      }}
+                    >
+                      {s.title} · {s.author}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              {related.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {related.map((s) => (
+                    <button
+                      key={s.bvId}
+                      type="button"
+                      className="text-[11px] font-bold px-3 py-1 rounded-full bg-kawaii-surface"
+                      onClick={() => setRelated((prev) => prev.filter((x) => x.bvId !== s.bvId))}
+                    >
+                      {s.title} ×
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="flex justify-end gap-3 pt-2">
               <a
                 href="/forum"
@@ -137,15 +202,29 @@ export default function NewPostPage() {
               </a>
               <button
                 type="submit"
-                disabled={createMutation.isPending}
+                disabled={createMutation.isLoading}
                 className="btn btn-pink"
               >
-                {createMutation.isPending ? '发布中...' : '发布 ⋆'}
+                {createMutation.isLoading ? '发布中...' : '发布 ⋆'}
               </button>
             </div>
           </form>
         </div>
       </div>
     </main>
+  );
+}
+
+export default function NewPostPageDefault() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen relative flex items-center justify-center">
+          <div className="text-kawaii-muted font-medium">加载中...</div>
+        </main>
+      }
+    >
+      <NewPostPage />
+    </Suspense>
   );
 }

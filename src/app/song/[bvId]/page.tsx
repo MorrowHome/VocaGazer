@@ -230,6 +230,10 @@ export default function SongDetailPage() {
       utils.favorites.list.invalidate();
     },
   });
+  const { data: relatedPosts } = trpc.posts.getBySong.useQuery(
+    decodeURIComponent(bvId),
+    { enabled: Boolean(bvId) },
+  );
 
   if (isLoading) {
     return (
@@ -342,6 +346,12 @@ export default function SongDetailPage() {
             ) : (
               <a href="/login" className="btn btn-cyan inline-flex items-center gap-2">登录后收藏</a>
             )}
+            <a
+              href={`/forum/new?song=${encodeURIComponent(song.bvId)}`}
+              className="btn btn-ghost inline-flex items-center gap-2"
+            >
+              去论坛讨论
+            </a>
             </div>
           </div>
         </div>
@@ -469,6 +479,40 @@ export default function SongDetailPage() {
             </p>
           </div>
         )}
+
+        {/* ─── 论坛讨论 ─── */}
+        <div className="card !p-6">
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2">
+              <span className="text-lg text-kawaii-pink" aria-hidden="true">○</span>
+              <h2 className="text-xs font-black text-kawaii-muted tracking-wider uppercase">论坛讨论</h2>
+            </div>
+            <a
+              href={`/forum/new?song=${encodeURIComponent(song.bvId)}`}
+              className="text-xs font-bold text-kawaii-pink hover:underline"
+            >
+              写评测
+            </a>
+          </div>
+          {!relatedPosts?.length ? (
+            <p className="text-sm text-kawaii-muted font-medium">还没有人讨论这首歌</p>
+          ) : (
+            <div className="space-y-2">
+              {relatedPosts.map((p) => (
+                <a
+                  key={p.id}
+                  href={`/forum/post/${p.id}`}
+                  className="block text-sm font-bold text-kawaii-text hover:text-kawaii-pink truncate"
+                >
+                  {p.title}
+                  <span className="ml-2 text-xs font-medium text-kawaii-muted">
+                    {p.author.username} · {p._count.replies} 回复
+                  </span>
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* ─── 底部 ─── */}
         <div className="flex flex-col items-center gap-4 pt-4">

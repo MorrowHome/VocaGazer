@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/components/AuthContext';
 import { timeAgo } from '@/lib/utils';
@@ -19,13 +20,15 @@ const TYPE_CATS: Record<string, string> = {
   question: '△',
 };
 
-export default function ForumPage() {
+function ForumPage() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const initialQ = searchParams.get('q')?.trim() ?? '';
   const [type, setType] = useState<string | undefined>(undefined);
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<'latest' | 'hottest'>('latest');
-  const [q, setQ] = useState('');
-  const [qDraft, setQDraft] = useState('');
+  const [q, setQ] = useState(initialQ);
+  const [qDraft, setQDraft] = useState(initialQ);
 
   const { data, isLoading } = trpc.posts.getLatest.useQuery({
     page,
@@ -183,5 +186,23 @@ export default function ForumPage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function ForumPageDefault() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen relative">
+          <div className="max-w-5xl mx-auto px-4 py-8 space-y-3">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="h-20 rounded-2xl bg-white/60 animate-pulse" />
+            ))}
+          </div>
+        </main>
+      }
+    >
+      <ForumPage />
+    </Suspense>
   );
 }

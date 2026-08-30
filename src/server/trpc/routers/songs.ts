@@ -56,6 +56,16 @@ export const songsRouter = router({
       return song;
     }),
 
+  getByBvIds: publicProcedure
+    .input(z.array(z.string()).max(8))
+    .query(async ({ ctx, input }) => {
+      if (input.length === 0) return [];
+      return ctx.prisma.song.findMany({
+        where: { bvId: { in: input } },
+        select: { bvId: true, title: true, author: true, picUrl: true },
+      });
+    }),
+
   // 根据作者获取歌曲
   getByAuthor: publicProcedure
     .input(
