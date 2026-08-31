@@ -73,6 +73,8 @@ export const songsRouter = router({
           likes: true,
           coins: true,
           favorites: true,
+          shares: true,
+          comments: true,
           score: true,
         },
       });

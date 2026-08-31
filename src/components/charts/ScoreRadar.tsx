@@ -53,12 +53,14 @@ export function ScoreRadar({
   baseline,
   raw,
   baselineRaw,
+  className,
 }: {
   mode?: 'counts' | 'rates';
   song: Record<string, number>;
   baseline: Record<string, number> | null;
   raw?: Record<string, number>;
   baselineRaw?: Record<string, number> | null;
+  className?: string;
 }) {
   const axes = mode === 'rates' ? RATE_AXES : COUNT_AXES;
   const labels = mode === 'rates' ? RATE_LABELS : COUNT_LABELS;
@@ -68,7 +70,7 @@ export function ScoreRadar({
   return (
     <svg
       viewBox={`0 0 ${SIZE} ${SIZE}`}
-      className="w-full max-w-[360px] h-auto mx-auto overflow-visible"
+      className={`w-full h-auto mx-auto overflow-visible ${className ?? 'max-w-[360px]'}`}
       role="img"
       aria-label={mode === 'rates' ? '互动率雷达' : '六维数据雷达'}
     >

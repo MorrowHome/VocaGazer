@@ -5,7 +5,7 @@ import { trpc } from '@/lib/trpc';
 import { formatCount, parseStats, coverImgProps } from '@/lib/utils';
 import { useAuth } from '@/components/AuthContext';
 import { useState } from 'react';
-import { SongPowerPanel } from '@/components/SongPowerPanel';
+import { Sparkline } from '@/components/charts/Sparkline';
 
 const STAT_COLORS: Record<string, { label: string; color: string }> = {
   playCount:   { label: '播放', color: '#39C5BB' },
@@ -205,6 +205,12 @@ export default function SongDetailPage() {
                 <a href="/login" className="btn btn-cyan inline-flex items-center gap-2">登录后收藏</a>
               )}
               <a
+                href={`/song/${song.bvId}/stats`}
+                className="btn btn-ghost inline-flex items-center gap-2 md:!bg-white/15 md:!text-white md:!border-white/25"
+              >
+                详细数据
+              </a>
+              <a
                 href={`/forum/new?song=${encodeURIComponent(song.bvId)}`}
                 className="btn btn-ghost inline-flex items-center gap-2 md:!bg-white/15 md:!text-white md:!border-white/25"
               >
@@ -264,7 +270,26 @@ export default function SongDetailPage() {
           </div>
         )}
 
-        <SongPowerPanel bvId={decodeURIComponent(bvId)} dailyStats={song.dailyStats ?? []} />
+        <a href={`/song/${song.bvId}/stats`} className="card !p-6 block group hover:border-kawaii-pink/30 transition-all">
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div>
+              <h2 className="text-xs font-bold text-kawaii-muted tracking-wider uppercase">详细数据</h2>
+              <p className="text-sm text-kawaii-text/80 font-medium mt-1">播放走势、互动率、相对图均雷达和日快照</p>
+            </div>
+            <span className="text-xs font-bold text-kawaii-pink shrink-0 group-hover:translate-x-0.5 transition-transform">
+              打开 →
+            </span>
+          </div>
+          {song.dailyStats && song.dailyStats.length >= 2 ? (
+            <Sparkline
+              values={[...song.dailyStats].reverse().map((d: { playCount: number }) => d.playCount)}
+              color="#39C5BB"
+              className="w-full h-20"
+            />
+          ) : (
+            <p className="text-xs text-kawaii-muted">快照还不够，先看当前统计</p>
+          )}
+        </a>
 
         {song && (
           <CommentSection bvId={bvId} />
