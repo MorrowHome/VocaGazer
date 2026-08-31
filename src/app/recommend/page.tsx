@@ -2,6 +2,7 @@
 
 import { trpc } from '@/lib/trpc';
 import { formatCount, parseStats, timeAgo, coverImgProps } from '@/lib/utils';
+import { useAuth } from '@/components/AuthContext';
 
 // ─── 推荐歌曲卡片 ───
 function RecSongCard({ song, rank }: { song: any; rank?: number }) {
@@ -10,8 +11,6 @@ function RecSongCard({ song, rank }: { song: any; rank?: number }) {
   return (
     <a
       href={`/song/${song.bvId}`}
-      target="_blank"
-      rel="noopener noreferrer"
       className="card overflow-hidden group hover:border-kawaii-pink/20 transition-all"
     >
       <div className="relative aspect-[16/9] bg-kawaii-surface overflow-hidden">
@@ -61,23 +60,28 @@ export default function RecommendPage() {
 
 
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 space-y-10 relative z-10">
-        {/* 编辑推荐 */}
+        {/* 编者推荐 */}
         <section>
           <div className="flex items-center gap-3 mb-5">
             <span className="text-lg text-kawaii-pink" aria-hidden="true">◆</span>
-            <h2 className="section-title text-kawaii-text">高分精选</h2>
-            <span className="text-xs text-kawaii-muted font-medium ml-auto">按综合评分排序</span>
+            <h2 className="section-title text-kawaii-text">编者推送</h2>
+            <span className="text-xs text-kawaii-muted font-medium ml-auto">管理员手动挑选</span>
           </div>
           {isLoading ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {[...Array(8)].map((_, i) => <div key={i} className="rounded-xl bg-white/60 animate-pulse aspect-[4/5]" />)}
             </div>
           ) : !data?.editorPicks?.length ? (
-            <p className="text-kawaii-muted text-sm font-medium">暂无数据</p>
+            <p className="text-kawaii-muted text-sm font-medium">还没有编者推送，去管理台加几首吧</p>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
               {data.editorPicks.map((song: any, i: number) => (
-                <RecSongCard key={song.id} song={song} rank={i + 1} />
+                <div key={song.id}>
+                  <RecSongCard song={song} rank={i + 1} />
+                  {song.editorNote && (
+                    <p className="text-[11px] text-kawaii-muted font-medium mt-1.5 px-1 line-clamp-2">{song.editorNote}</p>
+                  )}
+                </div>
               ))}
             </div>
           )}
@@ -85,22 +89,22 @@ export default function RecommendPage() {
 
         <div className="divider-cute" />
 
-        {/* 热门推荐 */}
+        {/* 本周上升 */}
         <section>
           <div className="flex items-center gap-3 mb-5">
             <span className="text-lg text-kawaii-pink" aria-hidden="true">▶</span>
-            <h2 className="section-title text-kawaii-text">热门推荐</h2>
-            <span className="text-xs text-kawaii-muted font-medium ml-auto">播放量最高的歌曲</span>
+            <h2 className="section-title text-kawaii-text">本周上升</h2>
+            <span className="text-xs text-kawaii-muted font-medium ml-auto">本自然周排行快照</span>
           </div>
           {isLoading ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {[...Array(8)].map((_, i) => <div key={i} className="rounded-xl bg-white/60 animate-pulse aspect-[4/5]" />)}
             </div>
-          ) : !data?.hotSongs?.length ? (
-            <p className="text-kawaii-muted text-sm font-medium">暂无数据</p>
+          ) : !data?.weeklyRising?.length ? (
+            <p className="text-kawaii-muted text-sm font-medium">周榜将在采集后生成</p>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-              {data.hotSongs.map((song: any) => (
+              {data.weeklyRising.map((song: any) => (
                 <RecSongCard key={song.id} song={song} />
               ))}
             </div>
@@ -109,28 +113,67 @@ export default function RecommendPage() {
 
         <div className="divider-cute" />
 
-        {/* 最新发布 */}
+        {/* 今日新曲 */}
         <section>
           <div className="flex items-center gap-3 mb-5">
             <span className="text-lg text-kawaii-cyan" aria-hidden="true">♪</span>
-            <h2 className="section-title text-kawaii-text">最新发布</h2>
-            <span className="text-xs text-kawaii-muted font-medium ml-auto">最新上传的歌曲</span>
+            <h2 className="section-title text-kawaii-text">今日新曲</h2>
+            <span className="text-xs text-kawaii-muted font-medium ml-auto">中国日历今日发布</span>
           </div>
           {isLoading ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {[...Array(8)].map((_, i) => <div key={i} className="rounded-xl bg-white/60 animate-pulse aspect-[4/5]" />)}
             </div>
-          ) : !data?.recentPicks?.length ? (
-            <p className="text-kawaii-muted text-sm font-medium">暂无数据</p>
+          ) : !data?.todayNew?.length ? (
+            <p className="text-kawaii-muted text-sm font-medium">今天还没有新曲入库</p>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-              {data.recentPicks.map((song: any) => (
+              {data.todayNew.map((song: any) => (
                 <RecSongCard key={song.id} song={song} />
               ))}
             </div>
           )}
         </section>
+
+        <ForYouSection />
       </div>
     </main>
+  );
+}
+
+function ForYouSection() {
+  const { user } = useAuth();
+  const { data } = trpc.recommend.forYou.useQuery(undefined, { enabled: !!user, retry: false });
+  if (!user) {
+    return (
+      <>
+        <div className="divider-cute" />
+        <section>
+          <h2 className="section-title text-kawaii-text mb-3">因为你收藏了</h2>
+          <p className="text-sm text-kawaii-muted font-medium">登录后根据收藏来推荐同作者作品</p>
+        </section>
+      </>
+    );
+  }
+  if (!data) return null;
+  return (
+    <>
+      <div className="divider-cute" />
+      <section>
+        <div className="flex items-center gap-3 mb-5">
+          <span className="text-lg text-kawaii-purple" aria-hidden="true">♡</span>
+          <h2 className="section-title text-kawaii-text">因为你收藏了</h2>
+        </div>
+        {data.reason === 'empty' ? (
+          <p className="text-sm text-kawaii-muted font-medium">登录并收藏几首后，这里会按同作者推荐</p>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+            {data.songs.map((song: any) => (
+              <RecSongCard key={song.id} song={song} />
+            ))}
+          </div>
+        )}
+      </section>
+    </>
   );
 }

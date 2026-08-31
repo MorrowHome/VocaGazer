@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useCallback } from 'react';
+import { onSparkles } from '@/components/particleBus';
+import { usePrefersReducedMotion } from '@/components/motion/usePrefersReducedMotion';
 
 interface Particle {
   x: number;
@@ -18,56 +20,41 @@ const COLORS = [
   '#F97316', '#10B981', '#FBBF24', '#EF4444',
 ];
 
-/**
- * 鼠标点击烟花特效
- */
+function burst(particles: Particle[], cx: number, cy: number, count: number) {
+  const color1 = COLORS[Math.floor(Math.random() * COLORS.length)];
+  const color2 = COLORS[Math.floor(Math.random() * COLORS.length)];
+  const n = Math.min(count, 24);
+  for (let i = 0; i < n; i++) {
+    const angle = (Math.PI * 2 * i) / n + (Math.random() - 0.5) * 0.3;
+    const speed = 1.2 + Math.random() * 3;
+    particles.push({
+      x: cx,
+      y: cy,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 0,
+      maxLife: 28 + Math.random() * 22,
+      color: i % 2 === 0 ? color1 : color2,
+      size: 1.5 + Math.random() * 2.5,
+    });
+  }
+}
+
 export function ClickFireworks() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const particlesRef = useRef<Particle[]>([]);
   const rafRef = useRef<number>(0);
+  const reduce = usePrefersReducedMotion();
 
   const handleClick = useCallback((e: MouseEvent) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const rect = canvas.getBoundingClientRect();
-    const cx = e.clientX - rect.left;
-    const cy = e.clientY - rect.top;
-    const color1 = COLORS[Math.floor(Math.random() * COLORS.length)];
-    const color2 = COLORS[Math.floor(Math.random() * COLORS.length)];
-
-    // 第一圈粒子
-    for (let i = 0; i < 40; i++) {
-      const angle = (Math.PI * 2 * i) / 40 + (Math.random() - 0.5) * 0.3;
-      const speed = 3 + Math.random() * 4;
-      particlesRef.current.push({
-        x: cx, y: cy,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        life: 0,
-        maxLife: 40 + Math.random() * 30,
-        color: i % 2 === 0 ? color1 : color2,
-        size: 2 + Math.random() * 3,
-      });
-    }
-
-    // 第二圈小粒子（内圈）
-    for (let i = 0; i < 20; i++) {
-      const angle = (Math.PI * 2 * i) / 20 + Math.random() * 0.5;
-      const speed = 1.5 + Math.random() * 2;
-      particlesRef.current.push({
-        x: cx, y: cy,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        life: 0,
-        maxLife: 25 + Math.random() * 20,
-        color: '#ffffff',
-        size: 1 + Math.random() * 2,
-      });
-    }
+    burst(particlesRef.current, e.clientX - rect.left, e.clientY - rect.top, 48);
   }, []);
 
   useEffect(() => {
+    if (reduce) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -80,6 +67,7 @@ export function ClickFireworks() {
     resize();
     window.addEventListener('resize', resize);
     document.addEventListener('click', handleClick);
+    const unsub = onSparkles((x, y, count) => burst(particlesRef.current, x, y, count));
 
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -94,18 +82,14 @@ export function ClickFireworks() {
         }
         p.x += p.vx;
         p.y += p.vy;
-        p.vy += 0.05; // 重力
-        p.vx *= 0.98; // 阻力
+        p.vy += 0.05;
+        p.vx *= 0.98;
 
         const progress = p.life / p.maxLife;
-        const alpha = 1 - progress;
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size * (1 - progress * 0.5), 0, Math.PI * 2);
         ctx.fillStyle = p.color;
-        ctx.globalAlpha = alpha;
-        ctx.fill();
-
-        // 发光
+        ctx.globalAlpha = 1 - progress;
         ctx.shadowBlur = 10;
         ctx.shadowColor = p.color;
         ctx.fill();
@@ -121,9 +105,12 @@ export function ClickFireworks() {
     return () => {
       window.removeEventListener('resize', resize);
       document.removeEventListener('click', handleClick);
+      unsub();
       cancelAnimationFrame(rafRef.current);
     };
-  }, [handleClick]);
+  }, [handleClick, reduce]);
+
+  if (reduce) return null;
 
   return (
     <canvas

@@ -3,7 +3,7 @@
  * 根据 SPEC.md 3.2 节定义的加权综合评分算法
  */
 
-interface Stats {
+export interface Stats {
   playCount: number;
   likes: number;
   coins: number;
@@ -12,8 +12,20 @@ interface Stats {
   comments: number;
 }
 
+export const SCORE_AXES = ['playCount', 'likes', 'coins', 'favorites', 'shares', 'comments'] as const;
+export type ScoreAxis = (typeof SCORE_AXES)[number];
+
+export const AXIS_LABELS: Record<ScoreAxis, string> = {
+  playCount: '播放',
+  likes: '点赞',
+  coins: '投币',
+  favorites: '收藏',
+  shares: '分享',
+  comments: '评论',
+};
+
 // 权重配置 (SPEC 3.2)
-const WEIGHTS = {
+export const WEIGHTS = {
   playCount: 0.15,
   likes: 0.25,
   coins: 0.25,

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { formatCount } from '@/lib/utils';
+import { Sparkline } from '@/components/charts/Sparkline';
 
 type Range = '7d' | '30d' | '90d' | 'all';
 const RANGES: { key: Range; label: string }[] = [
@@ -79,8 +80,6 @@ function TableRow({ rank, song }: { rank: number; song: any }) {
   return (
     <a
       href={`/song/${song.bvId}`}
-      target="_blank"
-      rel="noopener noreferrer"
       className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-kawaii-surface transition-colors group"
     >
       <span className="text-xs text-kawaii-muted w-6 text-right font-bold">{rank}</span>
@@ -99,7 +98,7 @@ function TableRow({ rank, song }: { rank: number; song: any }) {
 
 // ─── 页面 ───
 export default function AnalyticsPage() {
-  const [range, setRange] = useState<Range>('all');
+  const [range, setRange] = useState<Range>('30d');
   const { data, isLoading } = trpc.analytics.getAnalytics.useQuery({ range });
 
   const o = data?.overview;
@@ -278,7 +277,8 @@ export default function AnalyticsPage() {
               <div className="h-40 rounded-2xl bg-white/60 animate-pulse" />
             ) : !data?.songsByMonth?.length ? <p className="text-kawaii-muted text-sm font-medium">暂无数据</p> : (
               <div className="card p-5">
-                <div className="flex items-end gap-1.5 h-44">
+                <Sparkline values={data.songsByMonth.map((m) => m.count)} color="#B388FF" className="w-full h-32 mb-3" />
+                <div className="flex items-end gap-1.5 h-28">
                   {(() => {
                     const max = Math.max(...(data.songsByMonth?.map((m) => m.count) ?? [1]));
                     return data.songsByMonth?.map((m, i) => {

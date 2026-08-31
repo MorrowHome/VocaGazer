@@ -33,8 +33,6 @@ function RankCard({ song, rank, entryScore }: { song: any; rank: number; entrySc
     <div className="group relative">
       <a
         href={`/song/${song.bvId}`}
-        target="_blank"
-        rel="noopener noreferrer"
         className="flex items-start gap-4 p-4 rounded-xl hover:bg-kawaii-surface transition-all group/card"
       >
         <div className="flex flex-col items-center shrink-0 w-10 mt-1">
@@ -127,7 +125,8 @@ export default function RankingPage() {
 
 
       <div className="max-w-5xl mx-auto px-4 md:px-8 py-8 relative z-10">
-        <h1 className="text-lg font-black tracking-wide text-gradient-flow mb-4">排行榜</h1>
+        <h1 className="text-lg font-black tracking-wide text-gradient-flow mb-1">排行榜</h1>
+        <p className="text-xs text-kawaii-muted font-medium mb-4">周/月/年为自然周期快照；已结束的周期保留封榜数据。</p>
         {/* 标签 */}
         <div className="flex gap-2 mb-4">
           {TABS.map((tab) => (
@@ -229,7 +228,7 @@ export default function RankingPage() {
         ) : !rankings || rankings.length === 0 ? (
           <div className="text-center py-20 space-y-4">
             <p className="text-6xl opacity-20 music-float text-kawaii-pink" aria-hidden="true">♪</p>
-            <p className="text-kawaii-muted font-medium">暂无排行数据</p>
+            <p className="text-kawaii-muted font-medium">该周期排行将在采集后生成</p>
           </div>
         ) : (
           <div className="space-y-2">

@@ -6,6 +6,8 @@ import { searchByKeyword, getVideoDetail, delay } from './client';
 import { calculateScore } from '../ranking/scorer';
 import { checkSongMilestones } from '../milestone';
 import type { SongData } from './types';
+import { chinaDateKey } from '../../../lib/time';
+import { SETTING_KEYS, getSetting, setSetting } from '../settings';
 
 // 避免动态 import('@/lib/prisma') 在 tsx 运行时不解析 @/ 别名
 let _prisma: PrismaClient | null = null;
@@ -472,7 +474,7 @@ export async function runCrawl(
       await checkSongMilestones(song.id, songData.statistics.playCount);
 
       // 保存每日统计快照（按中国时区）
-      const today = new Date(new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' }));
+      const today = chinaDateKey();
       await prisma.songDailyStats.upsert({
         where: { songId_date: { songId: song.id, date: today } },
         update: {
@@ -531,25 +533,49 @@ export async function runCrawl(
  */
 export async function refreshAllSongs(
   options: { requestDelay?: number; batchSize?: number } = {}
-): Promise<{ refreshed: number; failed: number; deletedBvIds: string[] }> {
+): Promise<{ refreshed: number; failed: number; deletedBvIds: string[]; skipped: number }> {
   const { requestDelay = 500, batchSize = 20 } = options;
   const prisma = getPrisma();
+  const today = chinaDateKey();
+  const todayKey = today.toISOString().slice(0, 10);
+
+  const storedDay = await getSetting(prisma, SETTING_KEYS.refreshDay);
+  if (storedDay !== todayKey) {
+    await setSetting(prisma, SETTING_KEYS.refreshDay, todayKey);
+    await setSetting(prisma, SETTING_KEYS.refreshCursor, '');
+  }
+  const cursorId = (await getSetting(prisma, SETTING_KEYS.refreshCursor)) || '';
+
+  const doneRows = await prisma.songDailyStats.findMany({
+    where: { date: today },
+    select: { songId: true },
+  });
+  const done = new Set(doneRows.map((r: { songId: string }) => r.songId));
 
   const allSongs = await prisma.song.findMany({
     select: { id: true, bvId: true, title: true },
-    orderBy: { updatedAt: 'asc' }, // 最后更新的优先刷新
+    orderBy: { id: 'asc' },
   });
 
-  console.log(`[Refresh] 共 ${allSongs.length} 首歌需要刷新`);
+  const startIdx = cursorId ? allSongs.findIndex((s: { id: string }) => s.id === cursorId) + 1 : 0;
+  const queue = allSongs.slice(Math.max(0, startIdx));
+  console.log(`[Refresh] 共 ${allSongs.length} 首，今日已有快照 ${done.size}，从 ${startIdx} 续跑`);
 
   let refreshed = 0;
   let failed = 0;
+  let skipped = 0;
   const deletedBvIds: string[] = [];
 
-  for (let i = 0; i < allSongs.length; i++) {
-    const song = allSongs[i];
+  for (let i = 0; i < queue.length; i++) {
+    const song = queue[i];
     if (i > 0 && i % batchSize === 0) {
-      console.log(`[Refresh] 进度 ${i}/${allSongs.length}`);
+      await setSetting(prisma, SETTING_KEYS.refreshCursor, song.id);
+      console.log(`[Refresh] 进度 ${startIdx + i}/${allSongs.length}`);
+    }
+
+    if (done.has(song.id)) {
+      skipped++;
+      continue;
     }
 
     try {
@@ -557,7 +583,6 @@ export async function refreshAllSongs(
       await delay(requestDelay);
 
       if (!detail) {
-        // 视频已删除或下架
         deletedBvIds.push(song.bvId);
         console.log(`[Refresh] ${song.title} (${song.bvId}) 已无法访问，跳过`);
         failed++;
@@ -584,8 +609,6 @@ export async function refreshAllSongs(
         },
       });
 
-      // 保存每日快照（按中国时区）
-      const today = new Date(new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' }));
       await prisma.songDailyStats.upsert({
         where: { songId_date: { songId: song.id, date: today } },
         update: {
@@ -610,9 +633,7 @@ export async function refreshAllSongs(
         },
       });
 
-      // 检查里程碑
       await checkSongMilestones(song.id, stats.playCount);
-
       refreshed++;
     } catch (err: any) {
       failed++;
@@ -622,6 +643,7 @@ export async function refreshAllSongs(
     }
   }
 
-  console.log(`[Refresh] 完成: ${refreshed} 成功, ${failed} 失败, ${deletedBvIds.length} 已删除`);
-  return { refreshed, failed, deletedBvIds };
+  await setSetting(prisma, SETTING_KEYS.refreshCursor, '');
+  console.log(`[Refresh] 完成: ${refreshed} 成功, ${failed} 失败, ${skipped} 跳过, ${deletedBvIds.length} 已删除`);
+  return { refreshed, failed, deletedBvIds, skipped };
 }

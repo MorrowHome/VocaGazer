@@ -51,8 +51,6 @@ export default function MilestonesPage() {
                   <a
                     key={`${a.song.id}-${a.threshold}`}
                     href={`/song/${a.song.bvId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
                     className="card flex items-center gap-3 p-3 hover:border-kawaii-cyan/30 transition-all group"
                   >
                     <span className="text-sm shrink-0 text-kawaii-muted/40" aria-hidden="true">{info.symbol}</span>
@@ -104,8 +102,6 @@ export default function MilestonesPage() {
                   <a
                     key={m.id}
                     href={`/song/${m.song.bvId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
                     className="card flex items-center gap-4 p-4 hover:border-kawaii-pink/30 transition-all group"
                   >
                     <span
@@ -126,6 +122,7 @@ export default function MilestonesPage() {
                         {info.label}
                       </p>
                       <p className="text-[10px] text-kawaii-muted font-medium">
+                        {(m as { isEstimated?: boolean }).isEstimated ? '补记 · ' : ''}
                         {timeAgo(m.achievedAt)}
                       </p>
                     </div>

@@ -4,6 +4,8 @@ import { useParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
 import { formatCount, parseStats, coverImgProps } from '@/lib/utils';
 import { useAuth } from '@/components/AuthContext';
+import { useState } from 'react';
+import { SongPowerPanel, SongRelated } from '@/components/SongPowerPanel';
 
 const STAT_COLORS: Record<string, { label: string; color: string }> = {
   playCount:   { label: '播放', color: '#39BEB9' },
@@ -17,8 +19,9 @@ const STAT_COLORS: Record<string, { label: string; color: string }> = {
 // ─── 热评组件 ───
 
 function CommentSection({ bvId }: { bvId: string }) {
-  const { data: hot, isLoading } = trpc.comments.getTop.useQuery(
+  const { data: hot, isLoading, isError } = trpc.comments.getTop.useQuery(
     decodeURIComponent(bvId),
+    { retry: false, staleTime: 30 * 60 * 1000 },
   );
 
   if (isLoading) {
@@ -34,7 +37,7 @@ function CommentSection({ bvId }: { bvId: string }) {
     );
   }
 
-  if (!hot || hot.comments.length === 0) return null;
+  if (isError || !hot || hot.comments.length === 0) return null;
 
   return (
     <div className="card !p-6">
@@ -53,13 +56,6 @@ function CommentSection({ bvId }: { bvId: string }) {
             key={c.rpid}
             className="flex gap-3 p-3 rounded-xl bg-white/70 border border-kawaii-border/30"
           >
-            <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-kawaii-surface ring-1 ring-kawaii-border/30">
-              {c.avatar ? (
-                <img src={c.avatar} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-xs text-kawaii-muted">♪</div>
-              )}
-            </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-xs font-bold text-kawaii-text truncate">{c.uname}</span>
@@ -79,131 +75,6 @@ function CommentSection({ bvId }: { bvId: string }) {
             </div>
           </div>
         ))}
-      </div>
-    </div>
-  );
-}
-
-// ─── 播放趋势图（SVG 折线图） ───
-
-function LineChart({ data, height, color, gradientId, maxValue, formatter, label }
-: {
-  data: Array<{ date: string; value: number }>;
-  height: number;
-  color: string;
-  gradientId: string;
-  maxValue: number;
-  formatter: (v: number) => string;
-  label: string;
-}) {
-  if (data.length < 2) return null;
-
-  const W = 800;
-  const H = height;
-  const P = { top: 20, right: 8, bottom: 24, left: 52 };
-  const iw = W - P.left - P.right;
-  const ih = H - P.top - P.bottom;
-
-  const mapX = (i: number) => P.left + (i / (data.length - 1)) * iw;
-  const mapY = (v: number) => P.top + ih - (v / maxValue) * ih;
-
-  // 平滑曲线路径（Catmull-Rom → 三次贝塞尔）
-  const pts = data.map((d, i) => ({ x: mapX(i), y: mapY(d.value) }));
-  let lineD = `M${pts[0].x},${pts[0].y}`;
-  for (let i = 1; i < pts.length; i++) {
-    const cpx = (pts[i - 1].x + pts[i].x) / 2;
-    lineD += ` C${cpx},${pts[i - 1].y} ${cpx},${pts[i].y} ${pts[i].x},${pts[i].y}`;
-  }
-  const areaD = lineD + ` L${pts[pts.length - 1].x},${P.top + ih} L${pts[0].x},${P.top + ih} Z`;
-
-  // X 轴标签密度
-  const labelStep = Math.max(1, Math.floor(data.length / 6));
-
-  return (
-    <div>
-      <p className="text-[10px] text-kawaii-muted font-bold mb-2">{label}</p>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto overflow-visible">
-        <defs>
-          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={color} stopOpacity="0.3" />
-            <stop offset="100%" stopColor={color} stopOpacity="0.02" />
-          </linearGradient>
-        </defs>
-
-        {/* 网格 + Y 轴标签 */}
-        {[0, 0.25, 0.5, 0.75, 1].map((pct) => {
-          const yy = P.top + ih * pct;
-          return (
-            <g key={pct}>
-              <line x1={P.left} y1={yy} x2={P.left + iw} y2={yy} stroke="#ECECF0" strokeWidth="1" strokeDasharray="3 3" />
-              <text x={P.left - 6} y={yy + 3} textAnchor="end" fill="#B0A8C0" fontSize="9" fontFamily="system-ui">{formatter(maxValue * (1 - pct))}</text>
-            </g>
-          );
-        })}
-
-        {/* 渐变面积 */}
-        <path d={areaD} fill={`url(#${gradientId})`} />
-
-        {/* 折线 */}
-        <path d={lineD} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-
-        {/* 数据点 */}
-        {data.map((_, i) => (
-          <circle key={i} cx={pts[i].x} cy={pts[i].y} r="2.5" fill="#fff" stroke={color} strokeWidth="1.5" />
-        ))}
-
-        {/* X 轴标签 */}
-        {data.map((d, i) => {
-          if (i % labelStep !== 0 && i !== data.length - 1) return null;
-          return <text key={i} x={pts[i].x} y={H - 4} textAnchor="middle" fill="#B0A8C0" fontSize="9" fontFamily="system-ui">{d.date.slice(5)}</text>;
-        })}
-      </svg>
-    </div>
-  );
-}
-
-function TrendChart({ dailyStats }: { dailyStats: Array<{ date: string | Date; playCount: number }> }) {
-  const sorted = [...dailyStats]
-    .map((d) => ({ ...d, date: typeof d.date === 'string' ? d.date : d.date.toISOString().slice(0, 10) }))
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-  // 计算每日增量
-  const deltas = sorted.map((d, i) => {
-    const prev = i > 0 ? sorted[i - 1].playCount : d.playCount;
-    return { date: d.date, delta: d.playCount - prev, total: d.playCount };
-  });
-
-  const maxTotal = Math.max(...deltas.map((d) => d.total), 1);
-  const maxDelta = Math.max(...deltas.map((d) => d.delta), 1);
-
-  return (
-    <div className="card !p-6">
-      <div className="flex items-center gap-2 mb-5">
-        <span className="text-lg text-kawaii-cyan" aria-hidden="true">◈</span>
-        <h2 className="text-xs font-black text-kawaii-muted tracking-wider uppercase">播放趋势</h2>
-        <span className="text-[10px] text-kawaii-muted font-medium ml-auto">{sorted.length} 天</span>
-      </div>
-
-      <LineChart
-        data={deltas.map((d) => ({ date: d.date, value: d.total }))}
-        height={200}
-        color="#39BEB9"
-        gradientId="totalGrad"
-        maxValue={maxTotal}
-        formatter={(v) => `${(v / 10000).toFixed(1)}万`}
-        label="累计播放"
-      />
-
-      <div className="mt-6">
-        <LineChart
-          data={deltas.map((d) => ({ date: d.date, value: d.delta }))}
-          height={160}
-          color="#B388FF"
-          gradientId="deltaGrad"
-          maxValue={maxDelta}
-          formatter={(v) => v >= 10000 ? `${(v / 10000).toFixed(1)}万` : v.toLocaleString()}
-          label="单日增量"
-        />
       </div>
     </div>
   );
@@ -288,8 +159,6 @@ export default function SongDetailPage() {
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-kawaii-muted font-medium">
               <a
                 href={`/author/${encodeURIComponent(song.author)}`}
-                target="_blank"
-                rel="noopener noreferrer"
                 className="text-kawaii-pink font-black flex items-center gap-1 hover:text-kawaii-cyan transition-colors"
               >
                 <span aria-hidden="true" className="text-lg">♪</span>
@@ -419,7 +288,10 @@ export default function SongDetailPage() {
                       播放达成
                     </p>
                     <p className="text-[10px] text-kawaii-muted font-medium">
-                      {new Date(m.achievedAt).toLocaleDateString('zh-CN')} · 精确值 {m.playCount.toLocaleString()}
+                      {new Date(m.achievedAt).toLocaleDateString('zh-CN')}
+                      {' · '}
+                      {(m as { isEstimated?: boolean }).isEstimated ? '补记' : '精确'}
+                      {' '}{m.playCount.toLocaleString()}
                     </p>
                   </div>
                 </div>
@@ -428,12 +300,8 @@ export default function SongDetailPage() {
           </div>
         )}
 
-        {/* ─── 播放趋势 ─── */}
-        {song && song.dailyStats && song.dailyStats.length > 2 && (
-          <TrendChart dailyStats={song.dailyStats} />
-        )}
+        <SongPowerPanel bvId={decodeURIComponent(bvId)} dailyStats={song.dailyStats ?? []} />
 
-        {/* ─── 热评 ─── */}
         {song && (
           <CommentSection bvId={bvId} />
         )}
@@ -469,16 +337,10 @@ export default function SongDetailPage() {
 
         {/* ─── 简介 ─── */}
         {song.description && (
-          <div className="card !p-6">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-lg" aria-hidden="true">♪</span>
-              <h2 className="text-xs font-black text-kawaii-muted tracking-wider uppercase">歌曲简介</h2>
-            </div>
-            <p className="text-sm text-kawaii-text/80 font-medium leading-relaxed whitespace-pre-wrap">
-              {song.description}
-            </p>
-          </div>
+          <DescriptionBlock text={song.description} />
         )}
+
+        <SongRelated bvId={decodeURIComponent(bvId)} />
 
         {/* ─── 论坛讨论 ─── */}
         <div className="card !p-6">
@@ -523,5 +385,26 @@ export default function SongDetailPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+function DescriptionBlock({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  const long = text.length > 280;
+  return (
+    <div className="card !p-6">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-lg" aria-hidden="true">♪</span>
+        <h2 className="text-xs font-black text-kawaii-muted tracking-wider uppercase">歌曲简介</h2>
+      </div>
+      <p className={`text-sm text-kawaii-text/80 font-medium leading-relaxed whitespace-pre-wrap ${!open && long ? 'line-clamp-8' : ''}`}>
+        {text}
+      </p>
+      {long && (
+        <button type="button" className="mt-2 text-xs font-bold text-kawaii-pink" onClick={() => setOpen((v) => !v)}>
+          {open ? '收起' : '展开全部'}
+        </button>
+      )}
+    </div>
   );
 }

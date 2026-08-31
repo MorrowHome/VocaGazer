@@ -26,10 +26,11 @@ model Song {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  dailyStats SongDailyStats[]
-  rankings   Ranking[]
-  milestones SongMilestone[]
-  favorites  Favorite[]
+  dailyStats  SongDailyStats[]
+  rankings    Ranking[]
+  milestones  SongMilestone[]
+  favorites   Favorite[]
+  editorPicks EditorPick[]
 
   @@index([publishTime])
   @@index([score])
@@ -57,13 +58,15 @@ model Ranking {
   id        String   @id @default(cuid())
   songId    String
   song      Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
-  period    String   // 'daily' | 'weekly' | 'monthly' | 'alltime'
+  period    String   // 'daily' | 'weekly' | 'monthly' | 'yearly' | 'alltime'
   rank      Int
   score     Float
   date      DateTime
+  isFinal   Boolean  @default(false)
   createdAt DateTime @default(now())
 
   @@index([period, date, rank])
+  @@index([period, isFinal, date])
 }
 
 // ========== 论坛相关 ==========
@@ -155,16 +158,29 @@ model AiReport {
 // ========== 里程碑追踪 ==========
 
 model SongMilestone {
-  id         String   @id @default(cuid())
-  songId     String
-  song       Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
-  threshold  Int      // 100000, 1000000, etc.
-  achievedAt DateTime // 达成时的精确时间
-  playCount  Int      // 达成时的精确播放数
-  createdAt  DateTime @default(now())
+  id          String   @id @default(cuid())
+  songId      String
+  song        Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+  threshold   Int      // 100000, 1000000, etc.
+  achievedAt  DateTime // 达成时的精确时间；补记时为估计
+  playCount   Int      // 达成时的精确播放数
+  isEstimated Boolean  @default(false)
+  createdAt   DateTime @default(now())
 
   @@unique([songId, threshold])
   @@index([threshold, achievedAt])
+}
+
+model EditorPick {
+  id        String   @id @default(cuid())
+  songId    String
+  song      Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+  note      String   @default("")
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@unique([songId])
+  @@index([sortOrder])
 }
 
 // ========== 系统设置 ==========

@@ -127,13 +127,13 @@ body {
    ================================ */
 
 .card {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(var(--border), 0.6);
-  border-radius: 1.25rem;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(var(--border), 0.55);
+  border-radius: 1.35rem;
   transition: all 0.25s ease;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 12px rgba(179, 136, 255, 0.06), 0 1px 0 rgba(255,255,255,0.8) inset;
 }
 
 .card:hover {
@@ -397,6 +397,33 @@ body {
 ::-webkit-scrollbar-thumb:hover { background: rgba(var(--border-hover), 0.6); }
 
 ::selection { background: rgba(var(--pink), 0.2); color: rgb(var(--foreground)); }
+
+.type-caret {
+  display: inline-block;
+  margin-left: 2px;
+  animation: caret-blink 1s steps(1) infinite;
+  color: rgb(var(--pink));
+}
+
+@keyframes caret-blink {
+  50% { opacity: 0; }
+}
+
+.hero-scroll-hint {
+  display: inline-block;
+  animation: float 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .type-caret, .hero-scroll-hint, .floating-star, .soft-glow {
+    animation: none !important;
+  }
+}
 
 /* ================================
    表单元素

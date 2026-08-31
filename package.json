@@ -13,7 +13,7 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "db:seed": "node prisma/seed.mjs",
-    "test": "npx --yes tsx --test src/server/services/ranking/scorer.test.ts src/server/services/bilibili/originality.test.ts src/server/services/ai/index.test.ts src/server/services/mail.test.ts",
+    "test": "npx --yes tsx --test src/server/services/ranking/scorer.test.ts src/server/services/score/breakdown.test.ts src/server/services/bilibili/originality.test.ts src/server/services/ai/index.test.ts src/server/services/mail.test.ts",
     "postinstall": "prisma generate"
   },
   "prisma": {

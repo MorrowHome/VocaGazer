@@ -42,14 +42,15 @@ export async function checkSongMilestones(
         where: { songId_threshold: { songId, threshold } },
       });
       if (!existing) {
-        await prisma.songMilestone.create({
-          data: {
-            songId,
-            threshold,
-            achievedAt: new Date(),
-            playCount,
-          },
-        });
+            await prisma.songMilestone.create({
+              data: {
+                songId,
+                threshold,
+                achievedAt: new Date(),
+                playCount,
+                isEstimated: false,
+              },
+            });
         console.log(`[Milestone] 🎉 Song ${songId} reached ${threshold} plays!`);
       }
     }
@@ -132,6 +133,7 @@ export async function scanMilestones(): Promise<{
                 threshold,
                 achievedAt: new Date(),
                 playCount,
+                isEstimated: true,
               },
             });
             newMilestones++;
@@ -163,6 +165,7 @@ export async function scanMilestones(): Promise<{
                   threshold,
                   achievedAt: new Date(),
                   playCount: freshCount,
+                  isEstimated: false,
                 },
               });
               newMilestones++;

@@ -1,7 +1,7 @@
 'use client';
 
 import { trpc } from '@/lib/trpc';
-import { formatCount } from '@/lib/utils';
+import { Avatar } from '@/components/Avatar';
 
 export default function AuthorsPage() {
   const { data, isLoading } = trpc.songs.getAuthors.useQuery({ limit: 200 });
@@ -25,13 +25,7 @@ export default function AuthorsPage() {
                 href={`/author/${encodeURIComponent(a.author)}`}
                 className="card flex items-center gap-4 p-4 hover:border-kawaii-cyan/30 transition-all group"
               >
-                <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 bg-gradient-to-br from-kawaii-cyan/20 to-kawaii-pink/20 ring-1 ring-kawaii-border/30">
-                  {(a as any).avatar ? (
-                    <img src={(a as any).avatar} alt="" className="w-full h-full object-cover" loading="lazy" />
-                  ) : (
-                    <span className="w-full h-full flex items-center justify-center text-lg text-kawaii-cyan" aria-hidden="true">♫</span>
-                  )}
-                </div>
+                <Avatar src={(a as { avatar?: string }).avatar} name={a.author} size={40} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-black text-kawaii-text truncate group-hover:text-kawaii-cyan transition-colors">
                     {a.author}

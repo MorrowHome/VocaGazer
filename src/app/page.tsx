@@ -2,6 +2,7 @@
 
 import { trpc } from '@/lib/trpc';
 import { formatCount, parseStats, timeAgo, coverImgProps } from '@/lib/utils';
+import { HomeHero } from '@/components/HomeHero';
 
 // ─── 排行榜条目 ───
 
@@ -10,7 +11,7 @@ function RankEntry({ song, rank }: { song: any; rank: number }) {
   const rankClass = rank <= 3 ? `rank-${rank}` : 'rank-other';
 
   return (
-    <a href={`/song/${song.bvId}`} target="_blank" rel="noopener noreferrer" className="rank-item group">
+    <a href={`/song/${song.bvId}`} className="rank-item group">
       <span className={`rank-number ${rankClass}`}>{rank}</span>
       <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 bg-white ring-1 ring-kawaii-border/50">
         {song.picUrl ? (
@@ -45,7 +46,7 @@ function SongCard({ song }: { song: any }) {
   const img = coverImgProps(song.picUrl);
 
   return (
-    <a href={`/song/${song.bvId}`} target="_blank" rel="noopener noreferrer" className="song-card group">
+    <a href={`/song/${song.bvId}`} className="song-card group">
       <div className="relative aspect-[16/9] bg-kawaii-pink-pale overflow-hidden rounded-t-xl">
         {img.src ? (
           <img
@@ -131,42 +132,22 @@ export default function HomePage() {
   const stats = pageData?.stats;
   const latestSong = pageData?.latestSong;
   const weeklyHotSong = pageData?.weeklyHotSong;
+  const dailyHotSong = pageData?.dailyHotSong;
+  const risingSong = pageData?.risingSong;
   const dailyRanking = pageData?.dailyRanking ?? [];
   const weeklyRanking = pageData?.weeklyRanking ?? [];
   const latestSongs = pageData?.latestSongs ?? [];
 
   return (
-    <main className="min-h-screen relative">
-      <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 space-y-14 relative z-10">
-        {/* ─── HERO ─── */}
-        <section className="py-10">
-          <div className="text-center relative">
-            <div className="flex justify-center gap-2 mb-4" aria-hidden="true">
-              <span className="float-element text-2xl opacity-40">✧</span>
-              <span className="music-float text-2xl opacity-40">♫</span>
-              <span className="float-element-delay text-2xl opacity-40">⋆</span>
-              <span className="music-float-delay text-2xl opacity-40">♩</span>
-              <span className="float-element text-2xl opacity-40" style={{animationDelay: '0.5s'}}>✦</span>
-            </div>
+    <main className="relative">
+      <HomeHero
+        heroImageUrl={pageData?.heroImageUrl}
+        weeklyHot={weeklyHotSong}
+        dailyHot={dailyHotSong}
+        rising={risingSong}
+      />
 
-            <h2 className="text-5xl md:text-7xl font-black tracking-tight text-kawaii-text mb-2">
-              VOCALOID
-            </h2>
-            <p className="text-sm text-kawaii-muted tracking-[0.25em] uppercase mb-4 font-medium">
-              虚拟歌手原创音乐平台
-            </p>
-            <p className="text-base text-kawaii-text/60 font-medium">
-              探索初音未来 · 洛天依 · 众多虚拟歌手的原创音乐
-            </p>
-
-            <div className="flex justify-center gap-3 mt-6" aria-hidden="true">
-              <span className="px-4 py-2 rounded-full bg-white/60 text-kawaii-pink text-xs font-bold shadow-sm">♪ 初音ミク</span>
-              <span className="px-4 py-2 rounded-full bg-white/60 text-kawaii-cyan text-xs font-bold shadow-sm">♪ 洛天依</span>
-              <span className="px-4 py-2 rounded-full bg-white/60 text-kawaii-purple text-xs font-bold shadow-sm">♪ 鏡音リン</span>
-            </div>
-          </div>
-        </section>
-
+      <div id="hub-main" className="max-w-7xl mx-auto px-4 md:px-8 py-8 space-y-14 relative z-10">
         {/* ─── 顶部概览卡片：4列 ─── */}
         <section>
           {isLoading ? (
@@ -179,14 +160,14 @@ export default function HomePage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <StatCard label="本日新曲" value={formatCount(stats?.todaySongs ?? 0)} />
               {latestSong ? (
-                <a href={`/song/${latestSong.bvId}`} target="_blank" rel="noopener noreferrer" className="group">
+                <a href={`/song/${latestSong.bvId}`} className="group">
                   <MiniSongCard song={latestSong} label="最新投稿" />
                 </a>
               ) : (
                 <StatCard label="最新投稿" value="暂无" />
               )}
               {weeklyHotSong ? (
-                <a href={`/song/${weeklyHotSong.bvId}`} target="_blank" rel="noopener noreferrer" className="group">
+                <a href={`/song/${weeklyHotSong.bvId}`} className="group">
                   <MiniSongCard song={weeklyHotSong} label="本周最热" />
                 </a>
               ) : (
@@ -240,7 +221,7 @@ export default function HomePage() {
                     ))}
                   </div>
                 ) : dailyRanking.length === 0 ? (
-                  <p className="text-kawaii-muted text-sm font-medium">暂无数据</p>
+                  <p className="text-kawaii-muted text-sm font-medium">日榜将在采集后生成</p>
                 ) : (
                   <div className="space-y-0.5">
                     {dailyRanking.slice(0, 8).map((song: any, i: number) => (
@@ -268,7 +249,7 @@ export default function HomePage() {
                     ))}
                   </div>
                 ) : weeklyRanking.length === 0 ? (
-                  <p className="text-kawaii-muted text-sm font-medium">暂无数据</p>
+                  <p className="text-kawaii-muted text-sm font-medium">周榜将在采集后生成</p>
                 ) : (
                   <div className="space-y-0.5">
                     {weeklyRanking.slice(0, 8).map((song: any, i: number) => (
@@ -296,7 +277,7 @@ export default function HomePage() {
               ))}
             </div>
           ) : latestSongs.length === 0 ? (
-            <p className="text-kawaii-muted font-medium">暂无数据</p>
+            <p className="text-kawaii-muted font-medium">最新发布将在采集后出现</p>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               {latestSongs.map((song: any) => (

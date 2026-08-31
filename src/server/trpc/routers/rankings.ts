@@ -1,152 +1,153 @@
 /**
- * 排行榜 tRPC 路由
+ * 排行榜 tRPC 路由 — 只读 Ranking 快照 + 短 TTL
  */
 import { z } from 'zod';
 import { router, publicProcedure } from '../trpc';
+import { RANKING_CACHE_TTL_MS, cacheGet, cacheSet } from '../../cache/memory';
+import {
+  chinaCalendarDay,
+  chinaISOWeek,
+  chinaMonthRange,
+  chinaYearRange,
+  parseChinaISOWeek,
+} from '@/lib/time';
 
 const PERIODS = ['daily', 'weekly', 'monthly', 'yearly', 'alltime'] as const;
+type Period = (typeof PERIODS)[number];
 
-/** 将 Date 转为 ISO 周字符串，格式如 "2026-W20" */
-function toISOWeek(date: Date): string {
-  const d = new Date(date.getTime());
-  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-  return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
-}
+const SONG_INCLUDE = {
+  song: true,
+} as const;
 
-/**
- * 根据周期和日期字符串查找该范围内最新的排名快照，
- * 返回快照日期（用于后续查询具体排名条目）。
- */
-async function findSnapshotDateInRange(
+async function findFinalOrLatest(
   prisma: any,
   period: string,
-  date: string,
-): Promise<Date | null> {
-  let start: Date;
-  let end: Date;
+  snapDate: Date,
+) {
+  const finalRows = await prisma.ranking.findMany({
+    where: { period, date: snapDate, isFinal: true },
+    orderBy: { rank: 'asc' },
+    include: SONG_INCLUDE,
+  });
+  if (finalRows.length) return finalRows;
 
-  if (period === 'weekly') {
-    // date format: "YYYY-Www"
-    const [y, w] = date.split('-W').map(Number);
-    const jan4 = new Date(Date.UTC(y, 0, 4));
-    const dow = jan4.getUTCDay() || 7;
-    const week1Mon = new Date(jan4);
-    week1Mon.setUTCDate(jan4.getUTCDate() - (dow - 1));
-    start = new Date(week1Mon);
-    start.setUTCDate(start.getUTCDate() + (w - 1) * 7);
-    end = new Date(start);
-    end.setUTCDate(end.getUTCDate() + 7);
-  } else if (period === 'monthly') {
-    const [y, m] = date.split('-').map(Number);
-    start = new Date(Date.UTC(y, m - 1, 1));
-    end = new Date(Date.UTC(y, m, 1));
-  } else {
-    // yearly: "YYYY"
-    const y = parseInt(date);
-    start = new Date(Date.UTC(y, 0, 1));
-    end = new Date(Date.UTC(y + 1, 0, 1));
+  return prisma.ranking.findMany({
+    where: { period, date: snapDate },
+    orderBy: { rank: 'asc' },
+    include: SONG_INCLUDE,
+  });
+}
+
+async function latestSnapshot(prisma: any, period: string, preferFinal: boolean) {
+  if (preferFinal) {
+    const finalDate = await prisma.ranking.findFirst({
+      where: { period, isFinal: true },
+      orderBy: { date: 'desc' },
+      select: { date: true },
+    });
+    if (finalDate) {
+      return prisma.ranking.findMany({
+        where: { period, date: finalDate.date, isFinal: true },
+        orderBy: { rank: 'asc' },
+        include: SONG_INCLUDE,
+      });
+    }
   }
-
-  const snapshot = await prisma.ranking.findFirst({
-    where: { period, date: { gte: start, lt: end } },
+  const liveDate = await prisma.ranking.findFirst({
+    where: { period, isFinal: false },
     orderBy: { date: 'desc' },
     select: { date: true },
   });
-
-  return snapshot ? snapshot.date : null;
+  if (liveDate) {
+    return prisma.ranking.findMany({
+      where: { period, date: liveDate.date, isFinal: false },
+      orderBy: { rank: 'asc' },
+      include: SONG_INCLUDE,
+    });
+  }
+  const anyDate = await prisma.ranking.findFirst({
+    where: { period },
+    orderBy: { date: 'desc' },
+    select: { date: true },
+  });
+  if (!anyDate) return [];
+  return prisma.ranking.findMany({
+    where: { period, date: anyDate.date },
+    orderBy: { rank: 'asc' },
+    include: SONG_INCLUDE,
+  });
 }
 
 export const rankingsRouter = router({
-  // 获取排行榜（支持指定日期查看历史排行）
   get: publicProcedure
     .input(
       z.object({
         period: z.enum(PERIODS).default('daily'),
         limit: z.number().min(1).max(100).default(100),
-        /** 日期字符串，周期不同格式不同：
-         *  daily → 'YYYY-MM-DD', weekly → 'YYYY-Www', monthly → 'YYYY-MM', yearly → 'YYYY' */
         date: z.string().nullable().optional(),
-      })
+      }),
     )
     .query(async ({ ctx, input }) => {
       const { period, limit, date } = input;
+      const cacheKey = `rankings:get:${period}:${date ?? 'latest'}:${limit}`;
+      const cached = cacheGet<unknown[]>(cacheKey);
+      if (cached) return cached;
 
-      // 周／月／年榜：按时间段查找快照
-      if (date && period !== 'daily') {
-        const snapshotDate = await findSnapshotDateInRange(ctx.prisma, period, date);
-        if (!snapshotDate) return [];
-        return ctx.prisma.ranking.findMany({
-          where: { period, date: snapshotDate },
-          orderBy: { rank: 'asc' },
-          take: limit,
-          include: { song: true },
-        });
-      }
+      let rows: unknown[] = [];
 
-      // 日榜：精确匹配日期
-      if (date) {
+      if (date && period === 'weekly') {
+        const parsed = parseChinaISOWeek(date);
+        if (parsed) {
+          rows = await findFinalOrLatest(ctx.prisma, period, parsed.snapDate);
+        }
+      } else if (date && period === 'monthly') {
+        const [y, m] = date.split('-').map(Number);
+        if (y && m) {
+          const snap = chinaMonthRange(new Date(Date.UTC(y, m - 1, 15)));
+          rows = await findFinalOrLatest(ctx.prisma, period, snap.snapDate);
+        }
+      } else if (date && period === 'yearly') {
+        const y = parseInt(date, 10);
+        if (y) {
+          const snap = chinaYearRange(new Date(Date.UTC(y, 6, 1)));
+          rows = await findFinalOrLatest(ctx.prisma, period, snap.snapDate);
+        }
+      } else if (date && period === 'daily') {
         const [y, m, d] = date.split('-').map(Number);
-        const targetDate = new Date(Date.UTC(y, m - 1, d));
-        return ctx.prisma.ranking.findMany({
-          where: { period, date: targetDate },
-          orderBy: { rank: 'asc' },
-          take: limit,
-          include: { song: true },
-        });
+        const target = chinaCalendarDay(new Date(Date.UTC(y, m - 1, d)));
+        rows = await findFinalOrLatest(ctx.prisma, period, target.snapDate);
+      } else {
+        rows = await latestSnapshot(ctx.prisma, period, false);
       }
 
-      // 未指定日期：返回最新一期
-      const latestDate = await ctx.prisma.ranking.findFirst({
-        where: { period },
-        orderBy: { date: 'desc' },
-        select: { date: true },
-      });
-      if (!latestDate) return [];
-
-      return ctx.prisma.ranking.findMany({
-        where: { period, date: latestDate.date },
-        orderBy: { rank: 'asc' },
-        take: limit,
-        include: { song: true },
-      });
+      const sliced = (rows as unknown[]).slice(0, limit);
+      cacheSet(cacheKey, sliced, RANKING_CACHE_TTL_MS);
+      return sliced;
     }),
 
-  // 获取排行榜摘要（用于首页展示）
   getSummary: publicProcedure.query(async ({ ctx }) => {
+    const cacheKey = 'rankings:summary';
+    const cached = cacheGet<Record<string, unknown[]>>(cacheKey);
+    if (cached) return cached;
+
     const periods = ['daily', 'weekly', 'monthly'] as const;
-    const result: Record<string, any[]> = {};
-
+    const result: Record<string, unknown[]> = {};
     for (const period of periods) {
-      const latestDate = await ctx.prisma.ranking.findFirst({
-        where: { period },
-        orderBy: { date: 'desc' },
-        select: { date: true },
-      });
-
-      result[period] = latestDate
-        ? await ctx.prisma.ranking.findMany({
-            where: { period, date: latestDate.date },
-            orderBy: { rank: 'asc' },
-            take: 10,
-            include: { song: true },
-          })
-        : [];
+      const rows = await latestSnapshot(ctx.prisma, period, false);
+      result[period] = (rows as unknown[]).slice(0, 10);
     }
-
+    cacheSet(cacheKey, result, RANKING_CACHE_TTL_MS);
     return result as { daily: any[]; weekly: any[]; monthly: any[] };
   }),
 
-  // 获取指定周期有快照的日期列表（用于日期选择器）
   getAvailableDates: publicProcedure
-    .input(
-      z.object({
-        period: z.enum(PERIODS).default('daily'),
-      })
-    )
+    .input(z.object({ period: z.enum(PERIODS).default('daily') }))
     .query(async ({ ctx, input }) => {
       const { period } = input;
+      const cacheKey = `rankings:dates:${period}`;
+      const cached = cacheGet<string[]>(cacheKey);
+      if (cached) return cached;
+
       const dates = await ctx.prisma.ranking.findMany({
         where: { period },
         orderBy: { date: 'desc' },
@@ -155,18 +156,19 @@ export const rankingsRouter = router({
         take: 90,
       });
 
+      let out: string[];
       if (period === 'weekly') {
-        return Array.from(new Set(dates.map((d: { date: Date }) => toISOWeek(d.date))));
+        out = Array.from(new Set(dates.map((d) => chinaISOWeek(d.date))));
+      } else if (period === 'monthly') {
+        out = Array.from(new Set(dates.map((d) => d.date.toISOString().slice(0, 7))));
+      } else if (period === 'yearly') {
+        out = Array.from(new Set(dates.map((d) => String(d.date.getUTCFullYear()))));
+      } else {
+        out = dates.map((d) =>
+          new Date(d.date).toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' }),
+        );
       }
-      if (period === 'monthly') {
-        return Array.from(new Set(dates.map((d: { date: Date }) => d.date.toISOString().slice(0, 7))));
-      }
-      if (period === 'yearly') {
-        return Array.from(new Set(dates.map((d: { date: Date }) => d.date.getFullYear().toString())));
-      }
-      // daily：保留原逻辑（中国时区）
-      return dates.map((d: { date: Date }) =>
-        new Date(d.date).toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' })
-      );
+      cacheSet(cacheKey, out, RANKING_CACHE_TTL_MS);
+      return out;
     }),
 });

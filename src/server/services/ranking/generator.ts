@@ -1,130 +1,136 @@
 /**
- * 排行榜生成服务
- * 基于歌曲发布时间过滤 + 当前评分生成排行榜快照
+ * 排行榜生成：只读 Song.score，写入 Ranking 快照。
  *
- * 周期含义（中国日历）：
- * - daily:   参考日当天 00:00–24:00 发布的歌曲
- * - weekly:  参考日前 7 天（含当天）
- * - monthly: 参考日前 30 天
- * - yearly:  参考日前 365 天
- * - alltime: 所有歌曲
+ * - live：当期可覆盖（自然日/周/月/年 + 总榜）
+ * - final：周期结束后写入，之后不再 deleteMany
  */
-import { calculateScore } from './scorer';
-import { chinaCalendarDay, shiftChinaDays } from '../../../lib/time';
+import { chinaCalendarDay, chinaMonthRange, chinaWeekRange, chinaYearRange, shiftChinaDays } from '../../../lib/time';
+import { cacheInvalidate } from '../../cache/memory';
+import { prisma as sharedPrisma } from '../../../lib/prisma';
 
-interface Stats {
-  playCount: number;
-  likes: number;
-  coins: number;
-  favorites: number;
-  shares: number;
-  comments: number;
+export type Period = 'daily' | 'weekly' | 'monthly' | 'yearly' | 'alltime';
+
+const PERIODS: Period[] = ['daily', 'weekly', 'monthly', 'yearly', 'alltime'];
+const TOP_N = 100;
+
+function getPrisma() {
+  return sharedPrisma;
 }
 
-type Period = 'daily' | 'weekly' | 'monthly' | 'yearly' | 'alltime';
-
-/**
- * 根据周期和参考日期计算歌曲的发布时间过滤范围
- * @param period  排名周期
- * @param refDate 参考日期（默认当前时间），用于"当年某月某日的排行"查询
- */
-function getDateRange(period: Period, refDate: Date = new Date()): { start?: Date; end?: Date; snapDate: Date } {
-  const day = chinaCalendarDay(refDate);
-
+function periodRange(period: Period, refDate: Date): { start?: Date; end?: Date; snapDate: Date } {
   switch (period) {
-    case 'daily':
-      return { start: day.start, end: day.end, snapDate: day.snapDate };
+    case 'daily': {
+      const d = chinaCalendarDay(refDate);
+      return { start: d.start, end: d.end, snapDate: d.snapDate };
+    }
     case 'weekly': {
-      const from = chinaCalendarDay(shiftChinaDays(refDate, -7));
-      return { start: from.start, end: day.end, snapDate: day.snapDate };
+      const w = chinaWeekRange(refDate);
+      return { start: w.start, end: w.end, snapDate: w.snapDate };
     }
     case 'monthly': {
-      const from = chinaCalendarDay(shiftChinaDays(refDate, -30));
-      return { start: from.start, end: day.end, snapDate: day.snapDate };
+      const m = chinaMonthRange(refDate);
+      return { start: m.start, end: m.end, snapDate: m.snapDate };
     }
     case 'yearly': {
-      const from = chinaCalendarDay(shiftChinaDays(refDate, -365));
-      return { start: from.start, end: day.end, snapDate: day.snapDate };
+      const y = chinaYearRange(refDate);
+      return { start: y.start, end: y.end, snapDate: y.snapDate };
     }
     case 'alltime':
-      return { snapDate: day.snapDate };
+      return { snapDate: chinaCalendarDay(refDate).snapDate };
   }
 }
 
-/**
- * 获取 Prisma 实例（避免 @/ 别名在 tsx 下不解析）
- */
-let _prisma: any = null;
-async function getPrisma() {
-  if (!_prisma) {
-    const { PrismaClient } = await import('@prisma/client');
-    _prisma = new PrismaClient();
+export async function generateRanking(
+  period: Period,
+  opts: Date | { refDate?: Date; isFinal?: boolean } = {},
+): Promise<number> {
+  const prisma = getPrisma();
+  const normalized = opts instanceof Date ? { refDate: opts, isFinal: false } : opts;
+  const isFinal = normalized.isFinal ?? false;
+  const refDate = normalized.refDate ?? new Date();
+  const { start, end, snapDate } = periodRange(period, refDate);
+
+  if (isFinal) {
+    const existing = await prisma.ranking.findFirst({
+      where: { period, date: snapDate, isFinal: true },
+      select: { id: true },
+    });
+    if (existing) return 0;
   }
-  return _prisma;
-}
 
-/**
- * 生成指定周期的排行榜
- * @param period  周期
- * @param refDate 参考日期（可选），用于生成历史快照
- */
-export async function generateRanking(period: Period, refDate?: Date): Promise<number> {
-  const prisma = await getPrisma();
-
-  // 根据周期过滤歌曲的发布时间范围
-  const { start, end, snapDate } = getDateRange(period, refDate ?? new Date());
-  const where: any = {};
+  const where: { publishTime?: { gte?: Date; lt?: Date } } = {};
   if (start) where.publishTime = { gte: start };
   if (end) where.publishTime = { ...where.publishTime, lt: end };
 
-  const songs = await prisma.song.findMany({ where });
-
-  // 计算每首歌的当前评分
-  const ranked = songs
-    .map((song: any) => {
-      try {
-        const stats = JSON.parse(song.statistics) as Stats;
-        const score = calculateScore(stats);
-        return { songId: song.id, score, bvId: song.bvId };
-      } catch {
-        return null;
-      }
-    })
-    .filter((s: any): s is NonNullable<any> => s !== null)
-    .sort((a: any, b: any) => b.score - a.score)
-    .slice(0, 100);
-
-  if (ranked.length === 0) return 0;
-
-  // 只清空该日期的旧排行数据（保留其他日期的历史快照）
-  await prisma.ranking.deleteMany({
-    where: { period, date: snapDate },
+  const songs = await prisma.song.findMany({
+    where,
+    select: { id: true, score: true },
+    orderBy: { score: 'desc' },
+    take: TOP_N,
   });
 
-  // 批量插入新排行
-  const data = ranked.map((r: any, i: number) => ({
-    songId: r.songId,
-    period,
-    rank: i + 1,
-    score: r.score,
-    date: snapDate,
-  }));
+  if (songs.length === 0) return 0;
 
-  await prisma.ranking.createMany({ data });
-  return data.length;
+  await prisma.ranking.deleteMany({
+    where: { period, date: snapDate, isFinal },
+  });
+
+  await prisma.ranking.createMany({
+    data: songs.map((s: { id: string; score: number }, i: number) => ({
+      songId: s.id,
+      period,
+      rank: i + 1,
+      score: s.score,
+      date: snapDate,
+      isFinal,
+    })),
+  });
+
+  cacheInvalidate('rankings:');
+  cacheInvalidate('homepage:');
+  return songs.length;
+}
+
+export async function generateLiveRankings(refDate?: Date): Promise<Record<Period, number>> {
+  const results: Record<Period, number> = { daily: 0, weekly: 0, monthly: 0, yearly: 0, alltime: 0 };
+  for (const period of PERIODS) {
+    results[period] = await generateRanking(period, { refDate, isFinal: false });
+  }
+  return results;
+}
+
+/** 兼容旧调用：生成当期 live 快照 */
+export async function generateAllRankings(refDate?: Date): Promise<Record<Period, number>> {
+  return generateLiveRankings(refDate);
 }
 
 /**
- * 生成所有周期的排行榜
- * @param refDate 参考日期（可选）
+ * 封榜：昨日日榜、上一自然周/月/年（若已到周期结束且尚无 final）。
+ * 在每天 0:30 调用。
  */
-export async function generateAllRankings(refDate?: Date): Promise<Record<Period, number>> {
-  const periods: Period[] = ['daily', 'weekly', 'monthly', 'yearly', 'alltime'];
-  const results: Record<Period, number> = { daily: 0, weekly: 0, monthly: 0, yearly: 0, alltime: 0 };
+export async function generateFinalRankings(now: Date = new Date()): Promise<Record<string, number>> {
+  const out: Record<string, number> = {};
+  const yesterday = shiftChinaDays(now, -1);
+  out.daily = await generateRanking('daily', { refDate: yesterday, isFinal: true });
 
-  for (const period of periods) {
-    results[period] = await generateRanking(period, refDate);
+  const todayWeekday = chinaCalendarDay(now);
+  const week = chinaWeekRange(now);
+  if (todayWeekday.snapDate.getTime() === week.snapDate.getTime()) {
+    const prevWeek = shiftChinaDays(week.snapDate, -7);
+    out.weekly = await generateRanking('weekly', { refDate: prevWeek, isFinal: true });
   }
 
-  return results;
+  const month = chinaMonthRange(now);
+  if (todayWeekday.snapDate.getTime() === month.snapDate.getTime()) {
+    const prevMonth = shiftChinaDays(month.snapDate, -1);
+    out.monthly = await generateRanking('monthly', { refDate: prevMonth, isFinal: true });
+  }
+
+  const year = chinaYearRange(now);
+  if (todayWeekday.snapDate.getTime() === year.snapDate.getTime()) {
+    const prevYear = shiftChinaDays(year.snapDate, -1);
+    out.yearly = await generateRanking('yearly', { refDate: prevYear, isFinal: true });
+  }
+
+  return out;
 }

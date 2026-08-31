@@ -4,92 +4,161 @@
 import { z } from 'zod';
 import { router, publicProcedure } from '../trpc';
 import { chinaCalendarDay, shiftChinaDays } from '@/lib/time';
+import { HOMEPAGE_CACHE_TTL_MS, cacheGet, cacheSet } from '../../cache/memory';
+import { getSiteStats } from '@/server/services/site-stats';
+import { SETTING_KEYS, getSetting } from '@/server/services/settings';
+import { BASELINE_FLAT, emptyAxes, normalizeRadar, parseSongStats, scoreBreakdown, type AxisVector } from '@/server/services/score/breakdown';
 
 function parseStats(s: string) {
   try { return JSON.parse(s); } catch { return {}; }
 }
 
-const rangeSchema = z.enum(['7d', '30d', '90d', 'all']).default('all');
+const rangeSchema = z.enum(['7d', '30d', '90d', 'all']).default('30d');
 
 function getDateRange(range: string): Date | null {
   if (range === 'all') return null;
-  const days = { '7d': 7, '30d': 30, '90d': 90 }[range] ?? 7;
+  const days = { '7d': 7, '30d': 30, '90d': 90 }[range] ?? 30;
   const d = new Date();
   d.setDate(d.getDate() - days);
   return d;
 }
 
+async function rankingSongs(prisma: any, period: 'daily' | 'weekly', take: number) {
+  const snap = await prisma.ranking.findFirst({
+    where: { period, isFinal: false },
+    orderBy: { date: 'desc' },
+    select: { date: true },
+  });
+  const date = snap?.date
+    ?? (await prisma.ranking.findFirst({
+      where: { period },
+      orderBy: { date: 'desc' },
+      select: { date: true },
+    }))?.date;
+  if (!date) return [];
+  const entries = await prisma.ranking.findMany({
+    where: { period, date },
+    orderBy: { rank: 'asc' },
+    take,
+    include: { song: true },
+  });
+  return entries.map((e: { song: unknown }) => e.song).filter(Boolean);
+}
+
+async function findRisingSong(prisma: any) {
+  const today = chinaCalendarDay();
+  const yesterday = chinaCalendarDay(shiftChinaDays(new Date(), -1));
+  const [todayRows, ydayRows] = await Promise.all([
+    prisma.songDailyStats.findMany({
+      where: { date: today.snapDate },
+      select: { songId: true, score: true },
+    }),
+    prisma.songDailyStats.findMany({
+      where: { date: yesterday.snapDate },
+      select: { songId: true, score: true },
+    }),
+  ]);
+  const yMap = new Map<string, number>(
+    (ydayRows as Array<{ songId: string; score: number }>).map((r) => [r.songId, r.score]),
+  );
+  let best: { songId: string; delta: number } | null = null;
+  for (const row of todayRows as Array<{ songId: string; score: number }>) {
+    const prev = yMap.get(row.songId);
+    if (prev == null) continue;
+    const delta = row.score - prev;
+    if (!best || delta > best.delta) best = { songId: row.songId, delta };
+  }
+  if (!best || best.delta <= 0) return null;
+  const song = await prisma.song.findUnique({ where: { id: best.songId } });
+  return song ? { ...song, scoreDelta: best.delta } : null;
+}
+
 export const analyticsRouter = router({
-  // 获取首页全量数据
   getHomepage: publicProcedure.query(async ({ ctx }) => {
+    const cached = cacheGet<{
+      stats: { totalSongs: number; todaySongs: number; totalPlayCount: number; weekSongs: number };
+      latestSong: any;
+      weeklyHotSong: any;
+      dailyHotSong: any;
+      risingSong: any;
+      heroImageUrl: string | null;
+      latestSongs: any[];
+      dailyRanking: any[];
+      weeklyRanking: any[];
+    }>('homepage:v1');
+    if (cached) return cached;
+
     const { start: todayStart } = chinaCalendarDay();
     const weekStart = chinaCalendarDay(shiftChinaDays(new Date(), -7)).start;
+    const site = await getSiteStats(ctx.prisma);
 
-    const [totalSongs, todaySongs, weekSongs, latestSongs, dailySnap, weeklySnap, statsRows] =
+    const [todaySongs, weekSongs, latestSongs, dailyRanking, weeklyRanking, risingSong, heroOverride] =
       await Promise.all([
-        ctx.prisma.song.count(),
         ctx.prisma.song.count({ where: { publishTime: { gte: todayStart } } }),
         ctx.prisma.song.count({ where: { publishTime: { gte: weekStart } } }),
         ctx.prisma.song.findMany({ orderBy: { publishTime: 'desc' }, take: 20 }),
-        ctx.prisma.ranking.findFirst({
-          where: { period: 'daily' },
-          orderBy: { date: 'desc' },
-          select: { date: true },
-        }),
-        ctx.prisma.ranking.findFirst({
-          where: { period: 'weekly' },
-          orderBy: { date: 'desc' },
-          select: { date: true },
-        }),
-        ctx.prisma.song.findMany({ select: { statistics: true } }),
+        rankingSongs(ctx.prisma, 'daily', 10),
+        rankingSongs(ctx.prisma, 'weekly', 10),
+        findRisingSong(ctx.prisma),
+        getSetting(ctx.prisma, SETTING_KEYS.heroImageUrl),
       ]);
 
-    const [dailyEntries, weeklyEntries] = await Promise.all([
-      dailySnap
-        ? ctx.prisma.ranking.findMany({
-            where: { period: 'daily', date: dailySnap.date },
-            orderBy: { rank: 'asc' },
-            take: 10,
-            include: { song: true },
-          })
-        : Promise.resolve([]),
-      weeklySnap
-        ? ctx.prisma.ranking.findMany({
-            where: { period: 'weekly', date: weeklySnap.date },
-            orderBy: { rank: 'asc' },
-            take: 10,
-            include: { song: true },
-          })
-        : Promise.resolve([]),
-    ]);
+    const latestSong = latestSongs[0] ?? null;
+    const weeklyHotSong = weeklyRanking[0] ?? null;
+    const dailyHotSong = dailyRanking[0] ?? null;
 
-    const dailyRanking = dailyEntries.map((e) => e.song).filter(Boolean);
-    const weeklyRanking = weeklyEntries.map((e) => e.song).filter(Boolean);
-
-    const latestSong = latestSongs.length > 0 ? latestSongs[0] : null;
-    const weeklyHotSong = weeklyRanking.length > 0 ? weeklyRanking[0] : null;
-
-    let totalPlayCount = 0;
-    for (const row of statsRows) {
-      try {
-        const s = JSON.parse(row.statistics);
-        totalPlayCount += s.playCount || 0;
-      } catch {
-        /* skip */
-      }
-    }
-
-    return {
-      stats: { totalSongs, todaySongs, totalPlayCount, weekSongs },
+    const payload = {
+      stats: {
+        totalSongs: site.totalSongs,
+        todaySongs,
+        totalPlayCount: site.totalPlays,
+        weekSongs,
+      },
       latestSong,
       weeklyHotSong,
+      dailyHotSong,
+      risingSong,
+      heroImageUrl: heroOverride || weeklyHotSong?.picUrl || dailyHotSong?.picUrl || null,
       latestSongs,
       dailyRanking,
       weeklyRanking,
     };
+    cacheSet('homepage:v1', payload, HOMEPAGE_CACHE_TTL_MS);
+    return payload;
   }),
 
-  // 获取数据分析页数据（支持时间范围过滤）
+  getRadar: publicProcedure
+    .input(
+      z.object({
+        bvId: z.string(),
+        baseline: z.enum(['weekly', 'historical']).default('weekly'),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const song = await ctx.prisma.song.findUnique({
+        where: { bvId: input.bvId },
+        select: { statistics: true, score: true, dailyStats: { orderBy: { date: 'desc' }, take: 1 } },
+      });
+      if (!song) throw new Error('歌曲未找到');
+      const site = await getSiteStats(ctx.prisma);
+      const baselineVec: AxisVector =
+        input.baseline === 'weekly' && site.radarWeekly.playCount > 0
+          ? site.radarWeekly
+          : site.radarHistorical.playCount > 0
+            ? site.radarHistorical
+            : emptyAxes();
+      const breakdown = scoreBreakdown(parseSongStats(song.statistics));
+      const hasBaseline = Object.values(baselineVec).some((v) => v > 0);
+      return {
+        score: song.score,
+        breakdown,
+        normalized: normalizeRadar(breakdown, hasBaseline ? baselineVec : breakdown),
+        baseline: hasBaseline ? BASELINE_FLAT : BASELINE_FLAT,
+        baselineKind: input.baseline,
+        latestSnapshotDate: song.dailyStats[0]?.date ?? null,
+      };
+    }),
+
   getAnalytics: publicProcedure
     .input(z.object({ range: rangeSchema }))
     .query(async ({ ctx, input }) => {
@@ -100,9 +169,18 @@ export const analyticsRouter = router({
       const allSongs = await ctx.prisma.song.findMany({
         where,
         orderBy: { publishTime: 'desc' },
+        select: {
+          id: true,
+          bvId: true,
+          title: true,
+          author: true,
+          score: true,
+          statistics: true,
+          tags: true,
+          publishTime: true,
+        },
       });
 
-      // ── 基础聚合 ──
       let totalPlayCount = 0;
       let totalLikeCount = 0;
       let totalCoinCount = 0;
@@ -117,7 +195,6 @@ export const analyticsRouter = router({
       const scoreDist = [0, 0, 0, 0, 0];
       const artistScoreMap = new Map<string, { sum: number; count: number }>();
 
-      // ── Top 歌曲 ──
       const songStatsList: Array<{
         id: string; bvId: string; title: string; author: string;
         score: number; plays: number; likes: number; coins: number;
@@ -141,12 +218,10 @@ export const analyticsRouter = router({
         totalShareCount += shares;
         totalCommentCount += comments;
 
-        // 艺术家聚合
         const artist = song.author || '未知';
         const a = artistMap.get(artist) || { count: 0, totalPlays: 0, totalLikes: 0 };
         artistMap.set(artist, { count: a.count + 1, totalPlays: a.totalPlays + plays, totalLikes: a.totalLikes + likes });
 
-        // 艺术家评分均值
         const as = artistScoreMap.get(artist) || { sum: 0, count: 0 };
         artistScoreMap.set(artist, { sum: as.sum + song.score, count: as.count + 1 });
 
@@ -155,9 +230,7 @@ export const analyticsRouter = router({
         try {
           const parsed = JSON.parse(song.tags);
           if (Array.isArray(parsed)) tags = parsed;
-        } catch {
-          /* ignore */
-        }
+        } catch { /* ignore */ }
         const HINTS = [
           '初音', '镜音', '巡音', 'MEIKO', 'KAITO', '洛天依', '言和', '乐正',
           '星尘', 'GUMI', 'flower', '重音テト', '音街', 'VOCALOID', '术力口', '诗岸', '海伊',
@@ -170,18 +243,14 @@ export const analyticsRouter = router({
           tagMap.set(tag, (tagMap.get(tag) || 0) + 1);
         }
 
-        // 月份
         const monthKey = new Date(song.publishTime).toISOString().slice(0, 7);
         monthMap.set(monthKey, (monthMap.get(monthKey) || 0) + 1);
 
-        // 周
         const d = new Date(song.publishTime);
         const weekStart = new Date(d);
         weekStart.setDate(d.getDate() - d.getDay());
-        const weekKey = weekStart.toISOString().slice(0, 10);
-        weekMap.set(weekKey, (weekMap.get(weekKey) || 0) + 1);
+        weekMap.set(weekStart.toISOString().slice(0, 10), (weekMap.get(weekStart.toISOString().slice(0, 10)) || 0) + 1);
 
-        // 评分分布
         const sc = song.score;
         if (sc < 20) scoreDist[0]++;
         else if (sc < 40) scoreDist[1]++;
@@ -189,7 +258,6 @@ export const analyticsRouter = router({
         else if (sc < 80) scoreDist[3]++;
         else scoreDist[4]++;
 
-        // 歌曲详情（用于 top songs 表）
         songStatsList.push({
           id: song.id, bvId: song.bvId, title: song.title,
           author: song.author || '未知', score: song.score,
@@ -198,7 +266,6 @@ export const analyticsRouter = router({
         });
       }
 
-      // ── 排序输出 ──
       const topArtists = Array.from(artistMap.entries())
         .map(([name, data]) => ({ name, ...data }))
         .sort((a, b) => b.totalPlays - a.totalPlays)
@@ -217,15 +284,9 @@ export const analyticsRouter = router({
         .map(([week, count]) => ({ week, count }))
         .sort((a, b) => a.week.localeCompare(b.week));
 
-      const topSongs = songStatsList
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 20);
+      const topSongs = [...songStatsList].sort((a, b) => b.score - a.score).slice(0, 20);
+      const mostPlayed = [...songStatsList].sort((a, b) => b.plays - a.plays).slice(0, 10);
 
-      const mostPlayed = songStatsList
-        .sort((a, b) => b.plays - a.plays)
-        .slice(0, 10);
-
-      // 平均分最高的 UP 主
       const topRatedArtists = Array.from(artistScoreMap.entries())
         .map(([name, data]) => ({ name, avgScore: Math.round((data.sum / data.count) * 10) / 10, count: data.count }))
         .filter((a) => a.count >= 2)
@@ -266,7 +327,6 @@ export const analyticsRouter = router({
       };
     }),
 
-  // 获取 AI 报告列表
   getReports: publicProcedure
     .input(
       z.object({

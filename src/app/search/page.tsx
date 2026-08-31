@@ -3,7 +3,8 @@
 import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
-import { formatCount, parseStats, timeAgo } from '@/lib/utils';
+import { formatCount, parseStats, timeAgo, coverImgProps } from '@/lib/utils';
+import { SparkleInput } from '@/components/motion/SparkleInput';
 
 function SearchPageInner() {
   const searchParams = useSearchParams();
@@ -28,14 +29,16 @@ function SearchPageInner() {
       <div className="max-w-4xl mx-auto px-4 md:px-8 py-8 relative z-10">
         <form onSubmit={handleSearch} className="mb-8">
           <div className="flex gap-3">
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="搜索歌曲标题或作者…"
-              className="flex-1 px-5 py-3 rounded-2xl bg-white/80 border border-kawaii-border/50 outline-none text-sm text-kawaii-text font-medium placeholder:text-kawaii-muted/50 focus:border-kawaii-pink/40 focus:shadow-lg focus:shadow-kawaii-pink/5 transition-all"
-              autoFocus
-            />
+            <SparkleInput>
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="搜索歌曲标题或作者…"
+                className="flex-1 px-5 py-3 rounded-2xl bg-white/80 border border-kawaii-border/50 outline-none text-sm text-kawaii-text font-medium placeholder:text-kawaii-muted/50 focus:border-kawaii-pink/40 focus:shadow-lg focus:shadow-kawaii-pink/5 transition-all"
+                autoFocus
+              />
+            </SparkleInput>
             <button
               type="submit"
               className="btn btn-pink !py-3 !px-6 rounded-2xl text-sm"
@@ -75,7 +78,7 @@ function SearchPageInner() {
                     >
                       <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-kawaii-surface ring-1 ring-kawaii-border/30">
                         {song.picUrl ? (
-                          <img src={song.picUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
+                          <img {...coverImgProps(song.picUrl)} alt="" className="w-full h-full object-cover" loading="lazy" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-kawaii-muted">♪</div>
                         )}

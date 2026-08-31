@@ -127,8 +127,6 @@ function ForumPage() {
               <a
                 key={post.id}
                 href={`/forum/post/${post.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
                 className="block card hover:border-kawaii-pink/20"
               >
                 <div className="p-4 flex items-center gap-4">

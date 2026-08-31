@@ -122,23 +122,24 @@ export const songsRouter = router({
       })
     )
     .query(async ({ ctx, input }) => {
-      const songs = await ctx.prisma.song.findMany({
-        select: { author: true, authorAvatar: true, picUrl: true },
+      const grouped = await ctx.prisma.song.groupBy({
+        by: ['author'],
+        _count: { author: true },
+        orderBy: { _count: { author: 'desc' } },
+        take: input.limit,
       });
-
-      const authorMap = new Map<string, { count: number; avatar: string }>();
-      for (const s of songs) {
-        const author = s.author || '未知';
-        const entry = authorMap.get(author) || { count: 0, avatar: '' };
-        entry.count++;
-        if (s.authorAvatar && !entry.avatar) entry.avatar = s.authorAvatar;
-        authorMap.set(author, entry);
-      }
-
-      return Array.from(authorMap.entries())
-        .map(([author, { count, avatar }]) => ({ author, count, avatar }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, input.limit);
+      const names = grouped.map((g) => g.author);
+      const avatars = await ctx.prisma.song.findMany({
+        where: { author: { in: names }, authorAvatar: { not: null } },
+        select: { author: true, authorAvatar: true },
+        distinct: ['author'],
+      });
+      const avatarMap = new Map(avatars.map((s) => [s.author, s.authorAvatar || '']));
+      return grouped.map((g) => ({
+        author: g.author,
+        count: g._count.author,
+        avatar: avatarMap.get(g.author) || '',
+      }));
     }),
 
   // 搜索歌曲
@@ -148,33 +149,35 @@ export const songsRouter = router({
         q: z.string().min(1),
         page: z.number().min(1).default(1),
         limit: z.number().min(1).max(100).default(20),
+        author: z.string().optional(),
+        tag: z.string().optional(),
       })
     )
     .query(async ({ ctx, input }) => {
-      const { q, page, limit } = input;
+      const { q, page, limit, author, tag } = input;
       const skip = (page - 1) * limit;
 
-      // SQLite LIKE 查询
-      const [songs, total] = await Promise.all([
-        ctx.prisma.song.findMany({
-          where: {
+      const where = {
+        AND: [
+          {
             OR: [
               { title: { contains: q } },
               { author: { contains: q } },
             ],
           },
+          ...(author ? [{ author: { contains: author } }] : []),
+          ...(tag ? [{ tags: { contains: tag } }] : []),
+        ],
+      };
+
+      const [songs, total] = await Promise.all([
+        ctx.prisma.song.findMany({
+          where,
           orderBy: { score: 'desc' },
           skip,
           take: limit,
         }),
-        ctx.prisma.song.count({
-          where: {
-            OR: [
-              { title: { contains: q } },
-              { author: { contains: q } },
-            ],
-          },
-        }),
+        ctx.prisma.song.count({ where }),
       ]);
 
       return { songs, total };
@@ -277,5 +280,47 @@ export const songsRouter = router({
         .map(([tag, count]) => ({ tag, count }))
         .sort((a, b) => b.count - a.count)
         .slice(0, input.limit);
+    }),
+
+  similar: publicProcedure
+    .input(z.object({ bvId: z.string(), limit: z.number().min(1).max(12).default(8) }))
+    .query(async ({ ctx, input }) => {
+      const song = await ctx.prisma.song.findUnique({
+        where: { bvId: input.bvId },
+        select: { id: true, author: true, tags: true, score: true },
+      });
+      if (!song) return { sameAuthor: [], similar: [] };
+
+      let tags: string[] = [];
+      try {
+        const parsed = JSON.parse(song.tags);
+        if (Array.isArray(parsed)) tags = parsed.filter(Boolean).slice(0, 8);
+      } catch { /* ignore */ }
+
+      const sameAuthor = await ctx.prisma.song.findMany({
+        where: { author: song.author, id: { not: song.id } },
+        orderBy: { score: 'desc' },
+        take: 4,
+        select: { id: true, bvId: true, title: true, author: true, picUrl: true, score: true, publishTime: true, statistics: true },
+      });
+
+      const tagOr = tags.map((t) => ({ tags: { contains: t } }));
+      const lo = song.score * 0.7;
+      const hi = song.score * 1.3;
+      const excludeIds = [song.id, ...sameAuthor.map((s) => s.id)];
+      const similar = await ctx.prisma.song.findMany({
+        where: {
+          id: { notIn: excludeIds },
+          OR: [
+            ...(tagOr.length ? tagOr : []),
+            { score: { gte: lo, lte: hi } },
+          ],
+        },
+        orderBy: { score: 'desc' },
+        take: input.limit,
+        select: { id: true, bvId: true, title: true, author: true, picUrl: true, score: true, publishTime: true, statistics: true },
+      });
+
+      return { sameAuthor, similar: similar.slice(0, input.limit) };
     }),
 });

@@ -3,6 +3,7 @@
 import { useParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
 import { formatCount, parseStats, timeAgo, coverImgProps } from '@/lib/utils';
+import { Avatar } from '@/components/Avatar';
 
 export default function AuthorPage() {
   const { name } = useParams<{ name: string }>();
@@ -15,11 +16,7 @@ export default function AuthorPage() {
 
       <div className="max-w-4xl mx-auto px-4 md:px-8 py-8 relative z-10">
         <div className="flex items-center gap-3 mb-6">
-          {data?.songs[0]?.authorAvatar ? (
-            <img src={data.songs[0].authorAvatar} alt="" className="w-10 h-10 rounded-full object-cover ring-2 ring-kawaii-border/30" />
-          ) : (
-            <span className="text-kawaii-cyan text-xl" aria-hidden="true">♫</span>
-          )}
+          <Avatar src={data?.songs[0]?.authorAvatar} name={author} size={40} />
           <div>
             <h1 className="text-lg font-black tracking-wide text-gradient-flow">{author}</h1>
             {data && (
@@ -48,8 +45,6 @@ export default function AuthorPage() {
                 <a
                   key={song.id}
                   href={`/song/${song.bvId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
                   className="card flex items-center gap-4 p-4 hover:border-kawaii-cyan/30 transition-all group"
                 >
                   <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-kawaii-surface ring-1 ring-kawaii-border/30">

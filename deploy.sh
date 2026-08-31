@@ -46,6 +46,10 @@ npx prisma db push --skip-generate
 echo "▶ 构建（NODE_OPTIONS=$NODE_OPTIONS）"
 npm run build
 
+if [ -x "$PROJECT_DIR/scripts/ops-retention.sh" ]; then
+  bash "$PROJECT_DIR/scripts/ops-retention.sh" || true
+fi
+
 if ! command -v pm2 >/dev/null 2>&1; then
   echo "✗ 未安装 pm2"
   exit 1

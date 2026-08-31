@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/components/AuthContext';
+import { SparkleInput } from '@/components/motion/SparkleInput';
 
 const LINKS = [
   { href: '/recommend', label: '推荐' },
@@ -34,7 +35,7 @@ export function SiteHeader() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 backdrop-blur-lg bg-white/70 border-b border-kawaii-border/50">
+      <header className="sticky top-0 z-50 backdrop-blur-lg bg-white/55 border-b border-kawaii-border/40">
         <div className="max-w-7xl mx-auto px-4 md:px-8 h-14 flex items-center justify-between gap-3">
           <a href="/" className="flex items-center gap-2 shrink-0">
             <span className="text-lg text-kawaii-pink" aria-hidden="true">♪</span>
@@ -56,12 +57,14 @@ export function SiteHeader() {
           </nav>
 
           <form action="/search" method="get" className="hidden md:block w-40 lg:w-48 xl:w-56">
-            <input
-              type="search"
-              name="q"
-              placeholder="搜歌或作者…"
-              className="w-full h-8 px-3 rounded-full bg-white/80 border border-kawaii-border/50 text-xs outline-none focus:border-kawaii-pink/40"
-            />
+            <SparkleInput>
+              <input
+                type="search"
+                name="q"
+                placeholder="搜歌或作者…"
+                className="w-full h-8 px-3 rounded-full bg-white/80 border border-kawaii-border/50 text-xs outline-none focus:border-kawaii-pink/40"
+              />
+            </SparkleInput>
           </form>
 
           <div className="flex items-center gap-3 shrink-0">

@@ -7,14 +7,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const bvId = decodeURIComponent(params.bvId);
   const song = await prisma.song.findUnique({
     where: { bvId },
-    select: { title: true, author: true, description: true },
+    select: { title: true, author: true, description: true, picUrl: true },
   });
   if (!song) return { title: '歌曲未找到' };
   const desc = (song.description || `${song.author} 的 VOCALOID 原创曲`).slice(0, 120);
+  const cover = song.picUrl ? song.picUrl.replace(/^http:\/\//, 'https://') : undefined;
   return {
     title: song.title,
     description: desc,
-    openGraph: { title: song.title, description: desc },
+    openGraph: {
+      title: song.title,
+      description: desc,
+      images: cover ? [{ url: cover }] : undefined,
+    },
   };
 }
 

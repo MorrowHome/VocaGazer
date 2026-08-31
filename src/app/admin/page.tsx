@@ -89,6 +89,15 @@ export default function AdminPage() {
         </section>
 
         <section className="card !p-6 space-y-3">
+          <h2 className="text-sm font-black text-kawaii-text">编者推送</h2>
+          <EditorPicksAdmin />
+        </section>
+
+        <section className="card !p-6 space-y-3">
+          <h2 className="text-sm font-black text-kawaii-text">欢迎页大图（可选）</h2>
+          <HeroImageAdmin />
+        </section>
+        <section className="card !p-6 space-y-3">
           <h2 className="text-sm font-black text-kawaii-text">帖子置顶</h2>
           {posts.data?.posts.map((post) => (
             <div key={post.id} className="flex items-center gap-3 text-sm">
@@ -107,5 +116,67 @@ export default function AdminPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+function EditorPicksAdmin() {
+  const utils = trpc.useUtils();
+  const { data } = trpc.picks.list.useQuery();
+  const add = trpc.picks.add.useMutation({ onSuccess: () => utils.picks.list.invalidate() });
+  const remove = trpc.picks.remove.useMutation({ onSuccess: () => utils.picks.list.invalidate() });
+  return (
+    <div className="space-y-3">
+      <form
+        className="flex flex-col sm:flex-row gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const form = e.currentTarget;
+          const bvId = (form.elements.namedItem('bvId') as HTMLInputElement).value.trim();
+          const note = (form.elements.namedItem('note') as HTMLInputElement).value.trim();
+          if (!bvId) return;
+          add.mutate({ bvId, note });
+          form.reset();
+        }}
+      >
+        <input name="bvId" placeholder="BV 号或标题" className="flex-1 text-xs" />
+        <input name="note" placeholder="编者短评（可选）" className="flex-1 text-xs" />
+        <button type="submit" className="btn btn-pink !py-1.5 !px-4 text-xs" disabled={add.isLoading}>
+          {add.isLoading ? '添加中…' : '推送'}
+        </button>
+      </form>
+      {add.error && <p className="text-xs text-kawaii-pink">{add.error.message}</p>}
+      <div className="space-y-2">
+        {data?.map((p) => (
+          <div key={p.id} className="flex items-center gap-2 text-xs">
+            <span className="text-kawaii-muted font-bold w-6">{p.sortOrder}</span>
+            <a href={`/song/${p.song.bvId}`} className="flex-1 truncate font-bold hover:text-kawaii-pink">
+              {p.song.title}
+            </a>
+            <button type="button" className="text-kawaii-muted hover:text-kawaii-pink" onClick={() => remove.mutate(p.id)}>
+              下架
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function HeroImageAdmin() {
+  const setHero = trpc.picks.setHeroImage.useMutation();
+  return (
+    <form
+      className="flex gap-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const url = (e.currentTarget.elements.namedItem('url') as HTMLInputElement).value.trim();
+        setHero.mutate({ url });
+      }}
+    >
+      <input name="url" placeholder="封面图 URL，留空则用周榜第一封面" className="flex-1 text-xs" />
+      <button type="submit" className="btn btn-ghost !py-1.5 !px-4 text-xs" disabled={setHero.isLoading}>
+        保存
+      </button>
+    </form>
   );
 }
