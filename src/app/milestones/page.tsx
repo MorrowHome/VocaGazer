@@ -4,9 +4,9 @@ import { trpc } from '@/lib/trpc';
 import { timeAgo } from '@/lib/utils';
 
 const MILESTONE_LABELS: Record<number, { label: string; symbol: string; color: string }> = {
-  100000:    { label: '10 万', symbol: '★', color: '#39BEB9' },
-  1000000:   { label: '100 万', symbol: '◆', color: '#B388FF' },
-  10000000:  { label: '1000 万', symbol: '◈', color: '#FF6B9D' },
+  100000:    { label: '10 万', symbol: '★', color: '#39C5BB' },
+  1000000:   { label: '100 万', symbol: '◆', color: '#B8A0FF' },
+  10000000:  { label: '1000 万', symbol: '◈', color: '#FF8BB8' },
 };
 
 function ProgressBar({ progress, color }: { progress: number; color: string }) {
@@ -85,7 +85,7 @@ export default function MilestonesPage() {
           {isLoading ? (
             <div className="space-y-3">
               {[...Array(8)].map((_, i) => (
-                <div key={i} className="h-16 rounded-2xl bg-white/60 animate-pulse" />
+                <div key={i} className="h-16 rounded-2xl bg-kawaii-surface/50 animate-pulse" />
               ))}
             </div>
           ) : !milestones?.length ? (

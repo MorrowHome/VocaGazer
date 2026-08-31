@@ -17,7 +17,7 @@ export default function TagPage() {
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="h-24 rounded-2xl bg-white/60 animate-pulse" />
+              <div key={i} className="h-24 rounded-2xl bg-kawaii-surface/50 animate-pulse" />
             ))}
           </div>
         ) : !data?.songs.length ? (

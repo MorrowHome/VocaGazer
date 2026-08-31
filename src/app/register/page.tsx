@@ -34,8 +34,8 @@ export default function RegisterPage() {
           <a href="/" className="text-sm text-kawaii-muted hover:text-kawaii-pink transition-colors font-medium">&larr; 返回首页</a>
 
           <div className="text-center mt-6 mb-8">
-            <span className="text-3xl block mb-2 text-kawaii-pink" aria-hidden="true">♪</span>
-            <h1 className="text-2xl font-black text-gradient-flow">注册</h1>
+            <span className="font-display text-3xl block mb-2 text-gradient-flow" aria-hidden="true">歌</span>
+            <h1 className="font-display text-3xl font-bold text-gradient-flow tracking-widest">注册</h1>
           </div>
 
           {error && (

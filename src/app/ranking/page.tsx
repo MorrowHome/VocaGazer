@@ -15,12 +15,12 @@ const TABS = [
 type Period = (typeof TABS)[number]['key'];
 
 const STAT_COLORS: Record<string, { label: string; color: string }> = {
-  playCount:   { label: '播放', color: '#39BEB9' },
-  likes:       { label: '点赞', color: '#FF6B9D' },
-  coins:       { label: '投币', color: '#F7C94C' },
-  favorites:   { label: '收藏', color: '#B388FF' },
-  shares:      { label: '分享', color: '#A8D14B' },
-  comments:    { label: '评论', color: '#FFB08C' },
+  playCount:   { label: '播放', color: '#39C5BB' },
+  likes:       { label: '点赞', color: '#FF8BB8' },
+  coins:       { label: '投币', color: '#E4C56A' },
+  favorites:   { label: '收藏', color: '#B8A0FF' },
+  shares:      { label: '分享', color: '#7DDBA3' },
+  comments:    { label: '评论', color: '#FF9B7A' },
 };
 
 // ─── 排行条目 ───
@@ -44,7 +44,7 @@ function RankCard({ song, rank, entryScore }: { song: any; rank: number; entrySc
           )}
         </div>
 
-        <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 bg-white ring-1 ring-kawaii-border/50">
+        <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 bg-kawaii-surface ring-1 ring-kawaii-border/50">
           {img.src ? (
             <img {...img} alt="" className="w-full h-full object-cover" loading="lazy" />
           ) : (
@@ -64,7 +64,7 @@ function RankCard({ song, rank, entryScore }: { song: any; rank: number; entrySc
               return (
                 <span
                   key={key}
-                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-white/70 border border-kawaii-border/50"
+                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-kawaii-surface/80 border border-kawaii-border/50"
                   style={{ color: cfg.color }}
                 >
                   {cfg.label} {formatCount(val)}
@@ -84,7 +84,7 @@ function RankCard({ song, rank, entryScore }: { song: any; rank: number; entrySc
         href={`https://www.bilibili.com/video/${song.bvId}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-300 text-[11px] font-bold text-kawaii-muted hover:text-kawaii-pink bg-white/80 hover:bg-white px-2.5 py-1 rounded-full border border-kawaii-border hover:border-kawaii-pink/30 flex items-center gap-1.5 shadow-sm"
+        className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-300 text-[11px] font-bold text-kawaii-muted hover:text-kawaii-pink bg-kawaii-hero-void/70 hover:bg-kawaii-surface-hover px-2.5 py-1 rounded-full border border-kawaii-border hover:border-kawaii-pink/30 flex items-center gap-1.5 shadow-sm"
         title="在B站观看原视频"
       >
         <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
@@ -125,7 +125,7 @@ export default function RankingPage() {
 
 
       <div className="max-w-5xl mx-auto px-4 md:px-8 py-8 relative z-10">
-        <h1 className="text-lg font-black tracking-wide text-gradient-flow mb-4">排行榜</h1>
+        <h1 className="font-display text-3xl font-bold tracking-widest text-gradient-flow mb-6">排行榜</h1>
         {/* 标签 */}
         <div className="flex gap-2 mb-4">
           {TABS.map((tab) => (
@@ -138,7 +138,7 @@ export default function RankingPage() {
               className={`px-5 py-2 rounded-full text-sm font-bold transition-all ${
                 period === tab.key
                   ? 'bg-kawaii-pink text-white shadow-md'
-                  : 'bg-white/70 text-kawaii-muted border border-kawaii-border hover:border-kawaii-pink/30'
+                  : 'bg-kawaii-surface/80 text-kawaii-muted border border-kawaii-border hover:border-kawaii-pink/30'
               }`}
             >
               {tab.label}
@@ -149,7 +149,7 @@ export default function RankingPage() {
         {/* 日期选择 + 图例 */}
         <div className="flex flex-wrap items-center gap-3 mb-6 text-xs text-kawaii-muted font-medium">
           {period !== 'alltime' && (
-            <div className="flex items-center gap-2 bg-white/70 px-3 py-1.5 rounded-full border border-kawaii-border">
+            <div className="flex items-center gap-2 bg-kawaii-surface/80 px-3 py-1.5 rounded-full border border-kawaii-border">
               <span>📅</span>
               <span className="text-kawaii-muted/60 mr-0.5">
                 {period === 'daily' ? '日' : period === 'weekly' ? '周' : period === 'monthly' ? '月' : '年'}
@@ -171,7 +171,7 @@ export default function RankingPage() {
                   type="week"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="bg-transparent text-xs text-kawaii-text outline-none font-medium [color-scheme:light]"
+                  className="bg-transparent text-xs text-kawaii-text outline-none font-medium [color-scheme:dark]"
                   max={getCurrentWeekISO()}
                 />
               )}
@@ -180,7 +180,7 @@ export default function RankingPage() {
                   type="month"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="bg-transparent text-xs text-kawaii-text outline-none font-medium [color-scheme:light]"
+                  className="bg-transparent text-xs text-kawaii-text outline-none font-medium [color-scheme:dark]"
                   max={new Date().toISOString().slice(0, 7)}
                 />
               )}
@@ -212,7 +212,7 @@ export default function RankingPage() {
               {cfg.label}
             </span>
           ))}
-          <span className="ml-auto text-kawaii-muted bg-white/70 px-3 py-1 rounded-full text-[11px] font-bold">
+          <span className="ml-auto text-kawaii-muted bg-kawaii-surface/80 px-3 py-1 rounded-full text-[11px] font-bold">
             {rankings?.length ?? 0} 首歌曲
           </span>
         </div>
@@ -221,7 +221,7 @@ export default function RankingPage() {
         {isLoading ? (
           <div className="space-y-2">
             {[...Array(10)].map((_, i) => (
-              <div key={i} className="h-28 rounded-xl bg-white/60 animate-pulse" />
+              <div key={i} className="h-28 rounded-xl bg-kawaii-surface/50 animate-pulse" />
             ))}
           </div>
         ) : !rankings || rankings.length === 0 ? (

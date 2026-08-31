@@ -112,7 +112,7 @@ function NewPostPage() {
                     className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${
                       type === t.key
                         ? 'bg-kawaii-pink text-white shadow-md'
-                        : 'bg-white/70 text-kawaii-muted border border-kawaii-border hover:border-kawaii-pink/30'
+                        : 'bg-kawaii-surface/80 text-kawaii-muted border border-kawaii-border hover:border-kawaii-pink/30'
                     }`}
                   >
                     {t.icon} {t.label}
@@ -165,7 +165,7 @@ function NewPostPage() {
                     <button
                       key={s.bvId}
                       type="button"
-                      className="block w-full text-left text-xs px-3 py-2 rounded-xl bg-white/70 hover:bg-kawaii-pink-pale"
+                      className="block w-full text-left text-xs px-3 py-2 rounded-xl bg-kawaii-surface/80 hover:bg-kawaii-pink-pale"
                       onClick={() => {
                         if (related.some((r) => r.bvId === s.bvId) || related.length >= 5) return;
                         setRelated((prev) => [...prev, { bvId: s.bvId, title: s.title }]);

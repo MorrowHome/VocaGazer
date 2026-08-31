@@ -94,7 +94,7 @@ export default function AdminPage() {
         </section>
 
         <section className="card !p-6 space-y-3">
-          <h2 className="text-sm font-black text-kawaii-text">欢迎页大图（可选）</h2>
+          <h2 className="text-sm font-black text-kawaii-text">雨幕封面</h2>
           <HeroImageAdmin />
         </section>
         <section className="card !p-6 space-y-3">

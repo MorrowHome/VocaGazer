@@ -60,7 +60,7 @@ function ForumPage() {
               className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${
                 sort === s
                   ? 'bg-kawaii-cyan text-white shadow-md'
-                  : 'bg-white/70 text-kawaii-muted border border-kawaii-border'
+                  : 'bg-kawaii-surface/80 text-kawaii-muted border border-kawaii-border'
               }`}
             >
               {s === 'latest' ? '最新' : '最热'}
@@ -74,7 +74,7 @@ function ForumPage() {
               value={qDraft}
               onChange={(e) => setQDraft(e.target.value)}
               placeholder="搜索帖子…"
-              className="w-full px-4 py-2 rounded-full bg-white/80 border border-kawaii-border/50 text-xs outline-none"
+              className="w-full px-4 py-2 rounded-full bg-kawaii-void/70 border border-kawaii-border/50 text-xs outline-none"
             />
           </form>
         </div>
@@ -86,7 +86,7 @@ function ForumPage() {
             className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${
               !type
                 ? 'bg-kawaii-pink text-white shadow-md'
-                : 'bg-white/70 text-kawaii-muted border border-kawaii-border hover:border-kawaii-pink/30'
+                : 'bg-kawaii-surface/80 text-kawaii-muted border border-kawaii-border hover:border-kawaii-pink/30'
             }`}
           >
             全部
@@ -98,7 +98,7 @@ function ForumPage() {
               className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${
                 type === key
                   ? 'bg-kawaii-pink text-white shadow-md'
-                  : 'bg-white/70 text-kawaii-muted border border-kawaii-border hover:border-kawaii-pink/30'
+                  : 'bg-kawaii-surface/80 text-kawaii-muted border border-kawaii-border hover:border-kawaii-pink/30'
               }`}
             >
               {TYPE_CATS[key]} {label}
@@ -110,7 +110,7 @@ function ForumPage() {
         {isLoading ? (
           <div className="space-y-3">
             {[...Array(8)].map((_, i) => (
-              <div key={i} className="h-20 rounded-2xl bg-white/60 animate-pulse" />
+              <div key={i} className="h-20 rounded-2xl bg-kawaii-surface/50 animate-pulse" />
             ))}
           </div>
         ) : !data?.posts?.length ? (
@@ -135,7 +135,7 @@ function ForumPage() {
                     className="text-[11px] font-bold px-3 py-1.5 rounded-full shrink-0"
                     style={{
                       background: type === 'review' ? '#FFF0F5' : type === 'recommend' ? '#E8F8F7' : type === 'discussion' ? '#FFF8F0' : '#F3ECFF',
-                      color: type === 'review' ? '#FF6B9D' : type === 'recommend' ? '#39BEB9' : type === 'discussion' ? '#F7C94C' : '#B388FF',
+                      color: type === 'review' ? '#FF8BB8' : type === 'recommend' ? '#39C5BB' : type === 'discussion' ? '#E4C56A' : '#B8A0FF',
                     }}
                   >
                     {TYPE_CATS[post.type] || '◇'} {TYPE_LABELS[post.type] || post.type}
@@ -174,7 +174,7 @@ function ForumPage() {
                 className={`w-9 h-9 rounded-full text-xs font-bold transition-all ${
                   p === page
                     ? 'bg-kawaii-pink text-white shadow-md'
-                    : 'bg-white/70 text-kawaii-muted border border-kawaii-border hover:border-kawaii-pink/30'
+                    : 'bg-kawaii-surface/80 text-kawaii-muted border border-kawaii-border hover:border-kawaii-pink/30'
                 }`}
               >
                 {p}
@@ -194,7 +194,7 @@ export default function ForumPageDefault() {
         <main className="min-h-screen relative">
           <div className="max-w-5xl mx-auto px-4 py-8 space-y-3">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="h-20 rounded-2xl bg-white/60 animate-pulse" />
+              <div key={i} className="h-20 rounded-2xl bg-kawaii-surface/50 animate-pulse" />
             ))}
           </div>
         </main>

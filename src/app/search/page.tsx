@@ -35,7 +35,7 @@ function SearchPageInner() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="搜索歌曲标题或作者…"
-                className="flex-1 px-5 py-3 rounded-2xl bg-white/80 border border-kawaii-border/50 outline-none text-sm text-kawaii-text font-medium placeholder:text-kawaii-muted/50 focus:border-kawaii-pink/40 focus:shadow-lg focus:shadow-kawaii-pink/5 transition-all"
+                className="flex-1 px-5 py-3 rounded-2xl bg-kawaii-void/70 border border-kawaii-border/50 outline-none text-sm text-kawaii-text font-medium placeholder:text-kawaii-muted/50 focus:border-kawaii-pink/40 focus:shadow-lg focus:shadow-kawaii-pink/5 transition-all"
                 autoFocus
               />
             </SparkleInput>
@@ -51,7 +51,7 @@ function SearchPageInner() {
         {searchTerm && isLoading && (
           <div className="space-y-3">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-16 rounded-xl bg-white/60 animate-pulse" />
+              <div key={i} className="h-16 rounded-xl bg-kawaii-surface/50 animate-pulse" />
             ))}
           </div>
         )}
@@ -123,7 +123,7 @@ export default function SearchPage() {
       fallback={
         <main className="min-h-screen relative">
           <div className="max-w-4xl mx-auto px-4 py-8">
-            <div className="h-12 rounded-2xl bg-white/60 animate-pulse" />
+            <div className="h-12 rounded-2xl bg-kawaii-surface/50 animate-pulse" />
           </div>
         </main>
       }

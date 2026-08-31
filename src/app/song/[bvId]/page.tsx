@@ -8,12 +8,12 @@ import { useState } from 'react';
 import { SongPowerPanel } from '@/components/SongPowerPanel';
 
 const STAT_COLORS: Record<string, { label: string; color: string }> = {
-  playCount:   { label: '播放', color: '#39BEB9' },
-  likes:       { label: '点赞', color: '#FF6B9D' },
-  coins:       { label: '投币', color: '#F7C94C' },
-  favorites:   { label: '收藏', color: '#B388FF' },
-  shares:      { label: '分享', color: '#A8D14B' },
-  comments:    { label: '评论', color: '#FFB08C' },
+  playCount:   { label: '播放', color: '#39C5BB' },
+  likes:       { label: '点赞', color: '#FF8BB8' },
+  coins:       { label: '投币', color: '#E4C56A' },
+  favorites:   { label: '收藏', color: '#B8A0FF' },
+  shares:      { label: '分享', color: '#7DDBA3' },
+  comments:    { label: '评论', color: '#FF9B7A' },
 };
 
 function CommentSection({ bvId }: { bvId: string }) {
@@ -25,10 +25,10 @@ function CommentSection({ bvId }: { bvId: string }) {
   if (isLoading) {
     return (
       <div className="card !p-6 animate-pulse">
-        <div className="h-4 w-20 rounded bg-white/60 mb-4" />
+        <div className="h-4 w-20 rounded bg-kawaii-surface/50 mb-4" />
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-16 rounded-xl bg-white/60" />
+            <div key={i} className="h-16 rounded-xl bg-kawaii-surface/50" />
           ))}
         </div>
       </div>
@@ -51,7 +51,7 @@ function CommentSection({ bvId }: { bvId: string }) {
         {hot.comments.map((c, i) => (
           <div
             key={c.rpid}
-            className="flex gap-3 p-3 rounded-xl bg-white/70 border border-kawaii-border/30"
+            className="flex gap-3 p-3 rounded-xl bg-kawaii-surface/80 border border-kawaii-border/30"
           >
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
@@ -106,10 +106,10 @@ export default function SongDetailPage() {
     return (
       <main className="min-h-screen relative">
         <div className="max-w-3xl mx-auto px-4 md:px-8 py-8 space-y-4 relative z-10">
-          <div className="h-6 w-20 rounded-lg bg-white/60 animate-pulse" />
-          <div className="h-10 w-2/3 rounded-xl bg-white/60 animate-pulse" />
-          <div className="h-4 w-1/3 rounded-lg bg-white/60 animate-pulse" />
-          <div className="h-48 rounded-2xl bg-white/60 animate-pulse" />
+          <div className="h-6 w-20 rounded-lg bg-kawaii-surface/50 animate-pulse" />
+          <div className="h-10 w-2/3 rounded-xl bg-kawaii-surface/50 animate-pulse" />
+          <div className="h-4 w-1/3 rounded-lg bg-kawaii-surface/50 animate-pulse" />
+          <div className="h-48 rounded-2xl bg-kawaii-surface/50 animate-pulse" />
         </div>
       </main>
     );
@@ -220,7 +220,7 @@ export default function SongDetailPage() {
             {Object.entries(STAT_COLORS).map(([key, cfg]) => {
               const val = stats[key] ?? 0;
               return (
-                <div key={key} className="text-center p-4 rounded-xl bg-white/70 border border-kawaii-border/30">
+                <div key={key} className="text-center p-4 rounded-xl bg-kawaii-surface/80 border border-kawaii-border/30">
                   <p className="text-lg md:text-2xl font-black" style={{ color: cfg.color }}>
                     {formatCount(val)}
                   </p>
@@ -240,7 +240,7 @@ export default function SongDetailPage() {
               {milestones.map((m) => (
                 <div
                   key={m.id}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/70 border border-kawaii-border/30"
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-kawaii-surface/80 border border-kawaii-border/30"
                 >
                   <div>
                     <p className="text-sm font-black text-kawaii-text">

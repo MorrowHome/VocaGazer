@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { router, publicProcedure, adminProcedure } from '../trpc';
 import { cacheInvalidate } from '../../cache/memory';
+import { getSceneInfo, parseBgUrl } from '@/server/services/scene';
 
 export const picksRouter = router({
   list: publicProcedure.query(async ({ ctx }) => {
@@ -70,13 +71,31 @@ export const picksRouter = router({
       return { ok: true };
     }),
 
+  scene: publicProcedure.query(async ({ ctx }) => {
+    return getSceneInfo(ctx.prisma);
+  }),
+
   setHeroImage: adminProcedure
     .input(z.object({ url: z.string().max(500) }))
     .mutation(async ({ ctx, input }) => {
+      const url = parseBgUrl(input.url);
       await ctx.prisma.setting.upsert({
         where: { key: 'hero_image_url' },
-        update: { value: input.url },
-        create: { key: 'hero_image_url', value: input.url },
+        update: { value: url },
+        create: { key: 'hero_image_url', value: url },
+      });
+      cacheInvalidate('homepage:');
+      return { ok: true };
+    }),
+
+  setDefaultBg: adminProcedure
+    .input(z.object({ url: z.string().max(500) }))
+    .mutation(async ({ ctx, input }) => {
+      const url = parseBgUrl(input.url);
+      await ctx.prisma.setting.upsert({
+        where: { key: 'default_bg_url' },
+        update: { value: url },
+        create: { key: 'default_bg_url', value: url },
       });
       cacheInvalidate('homepage:');
       return { ok: true };

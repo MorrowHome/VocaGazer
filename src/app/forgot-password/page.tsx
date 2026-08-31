@@ -27,8 +27,8 @@ export default function ForgotPasswordPage() {
           </a>
 
           <div className="text-center mt-6 mb-8">
-            <span className="text-3xl block mb-2 text-kawaii-pink" aria-hidden="true">♪</span>
-            <h1 className="text-2xl font-black text-gradient-flow">找回密码</h1>
+            <span className="font-display text-3xl block mb-2 text-gradient-flow" aria-hidden="true">歌</span>
+            <h1 className="font-display text-3xl font-bold text-gradient-flow tracking-widest">找回密码</h1>
           </div>
 
           {error && (

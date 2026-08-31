@@ -69,8 +69,8 @@ export function LineChart({
           const yy = P.top + ih * pct;
           return (
             <g key={pct}>
-              <line x1={P.left} y1={yy} x2={P.left + iw} y2={yy} stroke="#ECECF0" strokeWidth="1" strokeDasharray="3 3" />
-              <text x={P.left - 6} y={yy + 3} textAnchor="end" fill="#B0A8C0" fontSize="9" fontFamily="system-ui">
+              <line x1={P.left} y1={yy} x2={P.left + iw} y2={yy} stroke="rgba(243,236,255,0.08)" strokeWidth="1" strokeDasharray="3 3" />
+              <text x={P.left - 6} y={yy + 3} textAnchor="end" fill="#9B90B8" fontSize="9" fontFamily="system-ui">
                 {formatter(maxValue * (1 - pct))}
               </text>
             </g>
@@ -95,7 +95,7 @@ export function LineChart({
         {data.map((d, i) => {
           if (i % labelStep !== 0 && i !== data.length - 1) return null;
           return (
-            <text key={i} x={mapX(i)} y={H - 4} textAnchor="middle" fill="#B0A8C0" fontSize="9" fontFamily="system-ui">
+            <text key={i} x={mapX(i)} y={H - 4} textAnchor="middle" fill="#9B90B8" fontSize="9" fontFamily="system-ui">
               {d.date.slice(5)}
             </text>
           );
