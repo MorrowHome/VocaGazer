@@ -221,7 +221,7 @@ export default function HomePage() {
                     ))}
                   </div>
                 ) : dailyRanking.length === 0 ? (
-                  <p className="text-kawaii-muted text-sm font-medium">日榜将在采集后生成</p>
+                  <p className="text-kawaii-muted text-sm font-medium">暂无</p>
                 ) : (
                   <div className="space-y-0.5">
                     {dailyRanking.slice(0, 8).map((song: any, i: number) => (
@@ -249,7 +249,7 @@ export default function HomePage() {
                     ))}
                   </div>
                 ) : weeklyRanking.length === 0 ? (
-                  <p className="text-kawaii-muted text-sm font-medium">周榜将在采集后生成</p>
+                  <p className="text-kawaii-muted text-sm font-medium">暂无</p>
                 ) : (
                   <div className="space-y-0.5">
                     {weeklyRanking.slice(0, 8).map((song: any, i: number) => (
@@ -277,7 +277,7 @@ export default function HomePage() {
               ))}
             </div>
           ) : latestSongs.length === 0 ? (
-            <p className="text-kawaii-muted font-medium">最新发布将在采集后出现</p>
+            <p className="text-kawaii-muted font-medium">暂无</p>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               {latestSongs.map((song: any) => (
@@ -288,18 +288,12 @@ export default function HomePage() {
         </section>
 
         {/* ─── 底部 ─── */}
-        <section className="text-center py-10 space-y-4">
-          <p className="text-xs text-kawaii-muted/50 tracking-widest uppercase font-medium">
-            VOCALOID HUB · Virtual Singer Original Music
-          </p>
+        <section className="text-center py-10">
           <div className="flex justify-center gap-4 text-lg opacity-20" aria-hidden="true">
             <span className="music-float">♫</span>
             <span className="music-float-delay">♩</span>
             <span className="music-float" style={{animationDelay: '0.5s'}}>♬</span>
             <span className="music-float" style={{animationDelay: '1.5s'}}>♪</span>
-          </div>
-          <div className="flex justify-center gap-1 text-xs text-kawaii-muted/30">
-            <span>⋆｡°✩ 用 ♡ 发电 ✩°｡⋆</span>
           </div>
         </section>
       </div>

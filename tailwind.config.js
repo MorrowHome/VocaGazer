@@ -33,6 +33,7 @@ module.exports = {
       },
       fontFamily: {
         rounded: ['"M PLUS Rounded 1c"', 'sans-serif'],
+        display: ['"Noto Serif SC"', '"M PLUS Rounded 1c"', 'serif'],
       },
     },
   },

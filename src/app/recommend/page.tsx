@@ -63,16 +63,14 @@ export default function RecommendPage() {
         {/* 编者推荐 */}
         <section>
           <div className="flex items-center gap-3 mb-5">
-            <span className="text-lg text-kawaii-pink" aria-hidden="true">◆</span>
             <h2 className="section-title text-kawaii-text">编者推送</h2>
-            <span className="text-xs text-kawaii-muted font-medium ml-auto">管理员手动挑选</span>
           </div>
           {isLoading ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {[...Array(8)].map((_, i) => <div key={i} className="rounded-xl bg-white/60 animate-pulse aspect-[4/5]" />)}
             </div>
           ) : !data?.editorPicks?.length ? (
-            <p className="text-kawaii-muted text-sm font-medium">还没有编者推送，去管理台加几首吧</p>
+            <p className="text-kawaii-muted text-sm font-medium">暂无</p>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
               {data.editorPicks.map((song: any, i: number) => (
@@ -92,16 +90,14 @@ export default function RecommendPage() {
         {/* 本周上升 */}
         <section>
           <div className="flex items-center gap-3 mb-5">
-            <span className="text-lg text-kawaii-pink" aria-hidden="true">▶</span>
             <h2 className="section-title text-kawaii-text">本周上升</h2>
-            <span className="text-xs text-kawaii-muted font-medium ml-auto">本自然周排行快照</span>
           </div>
           {isLoading ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {[...Array(8)].map((_, i) => <div key={i} className="rounded-xl bg-white/60 animate-pulse aspect-[4/5]" />)}
             </div>
           ) : !data?.weeklyRising?.length ? (
-            <p className="text-kawaii-muted text-sm font-medium">周榜将在采集后生成</p>
+            <p className="text-kawaii-muted text-sm font-medium">暂无</p>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
               {data.weeklyRising.map((song: any) => (
@@ -116,9 +112,7 @@ export default function RecommendPage() {
         {/* 今日新曲 */}
         <section>
           <div className="flex items-center gap-3 mb-5">
-            <span className="text-lg text-kawaii-cyan" aria-hidden="true">♪</span>
             <h2 className="section-title text-kawaii-text">今日新曲</h2>
-            <span className="text-xs text-kawaii-muted font-medium ml-auto">中国日历今日发布</span>
           </div>
           {isLoading ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -144,35 +138,21 @@ export default function RecommendPage() {
 function ForYouSection() {
   const { user } = useAuth();
   const { data } = trpc.recommend.forYou.useQuery(undefined, { enabled: !!user, retry: false });
-  if (!user) {
-    return (
-      <>
-        <div className="divider-cute" />
-        <section>
-          <h2 className="section-title text-kawaii-text mb-3">因为你收藏了</h2>
-          <p className="text-sm text-kawaii-muted font-medium">登录后根据收藏来推荐同作者作品</p>
-        </section>
-      </>
-    );
-  }
+  if (!user) return null;
   if (!data) return null;
+  if (data.reason === 'empty') return null;
   return (
     <>
       <div className="divider-cute" />
       <section>
         <div className="flex items-center gap-3 mb-5">
-          <span className="text-lg text-kawaii-purple" aria-hidden="true">♡</span>
-          <h2 className="section-title text-kawaii-text">因为你收藏了</h2>
+          <h2 className="section-title text-kawaii-text">收藏相关</h2>
         </div>
-        {data.reason === 'empty' ? (
-          <p className="text-sm text-kawaii-muted font-medium">登录并收藏几首后，这里会按同作者推荐</p>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-            {data.songs.map((song: any) => (
-              <RecSongCard key={song.id} song={song} />
-            ))}
-          </div>
-        )}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+          {data.songs.map((song: any) => (
+            <RecSongCard key={song.id} song={song} />
+          ))}
+        </div>
       </section>
     </>
   );

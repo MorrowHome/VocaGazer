@@ -20,7 +20,7 @@ export function LineChart({
   gaps?: boolean;
 }) {
   if (data.length < 2) {
-    return <p className="text-xs text-kawaii-muted font-medium">数据不足，待夜间刷新后再看生涯曲线</p>;
+    return <p className="text-xs text-kawaii-muted font-medium">暂无</p>;
   }
 
   const W = 800;

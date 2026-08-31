@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     default: 'VOCALOID Music Hub',
     template: '%s · VOCALOID Hub',
   },
-  description: '专注于 VOCALOID 原创曲目的数据收集、分析与展示平台',
+  description: 'B 站 VOCALOID 原创曲排行',
 };
 
 export default function RootLayout({

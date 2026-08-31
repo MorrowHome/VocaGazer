@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@300;400;500;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&family=M+PLUS+Rounded+1c:wght@400;500;700;800&display=swap');
 
 :root {
   --foreground: 45, 45, 58;
@@ -98,7 +98,7 @@ body {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background-image: radial-gradient(rgba(179, 136, 255, 0.08) 1.5px, transparent 1.5px);
+  background-image: radial-gradient(rgba(179, 136, 255, 0.045) 1px, transparent 1px);
   background-size: 32px 32px;
 }
 
@@ -127,19 +127,18 @@ body {
    ================================ */
 
 .card {
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(var(--border), 0.55);
-  border-radius: 1.35rem;
-  transition: all 0.25s ease;
-  box-shadow: 0 2px 12px rgba(179, 136, 255, 0.06), 0 1px 0 rgba(255,255,255,0.8) inset;
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(var(--border), 0.45);
+  border-radius: 1.25rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 8px 32px rgba(42, 32, 56, 0.05);
 }
 
 .card:hover {
-  border-color: rgba(var(--border-hover), 0.5);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-  transform: translateY(-2px);
+  border-color: rgba(var(--border-hover), 0.55);
+  box-shadow: 0 12px 40px rgba(42, 32, 56, 0.07);
 }
 
 /* 歌曲卡片 */
@@ -240,22 +239,24 @@ body {
 .section-title {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-weight: 800;
-  font-size: 1.25rem;
+  gap: 12px;
+  font-family: 'Noto Serif SC', 'M PLUS Rounded 1c', serif;
+  font-weight: 700;
+  font-size: 1.35rem;
   color: rgb(var(--foreground));
+  letter-spacing: 0.02em;
 }
 
 .section-title::before {
-  content: '✦';
-  font-size: 1rem;
-  color: rgb(var(--pink));
+  content: '';
+  width: 3px;
+  height: 1.05em;
+  border-radius: 2px;
+  background: linear-gradient(180deg, rgb(var(--pink)), rgb(var(--purple)));
 }
 
 .section-title::after {
-  content: '✦';
-  font-size: 1rem;
-  color: rgb(var(--cyan));
+  display: none;
 }
 
 /* ================================

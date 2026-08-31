@@ -4,7 +4,7 @@
 import type { PrismaClient } from '@prisma/client';
 import { chinaWeekRange } from '@/lib/time';
 import { SETTING_KEYS, getSetting, setSetting } from './settings';
-import { emptyAxes, meanAxes, parseSongStats, scoreBreakdown, type AxisVector } from './score/breakdown';
+import { emptyAxes, meanAxes, parseSongStats, type AxisVector } from './score/breakdown';
 
 export async function recomputeSiteStats(prisma: PrismaClient): Promise<void> {
   const songs = await prisma.song.findMany({
@@ -12,14 +12,14 @@ export async function recomputeSiteStats(prisma: PrismaClient): Promise<void> {
   });
 
   let totalPlays = 0;
-  const breakdowns: AxisVector[] = [];
+  const raws: AxisVector[] = [];
   for (const row of songs) {
     const stats = parseSongStats(row.statistics);
     totalPlays += stats.playCount;
-    breakdowns.push(scoreBreakdown(stats));
+    raws.push(stats);
   }
 
-  const historical = meanAxes(breakdowns);
+  const historical = meanAxes(raws);
   await setSetting(prisma, SETTING_KEYS.totalPlays, String(totalPlays));
   await setSetting(prisma, SETTING_KEYS.totalSongs, String(songs.length));
   await setSetting(prisma, SETTING_KEYS.radarHistorical, JSON.stringify(historical));
@@ -37,16 +37,14 @@ export async function recomputeSiteStats(prisma: PrismaClient): Promise<void> {
     },
   });
   const weekly = meanAxes(
-    weekRows.map((r) =>
-      scoreBreakdown({
-        playCount: r.playCount,
-        likes: r.likes,
-        coins: r.coins,
-        favorites: r.favorites,
-        shares: r.shares,
-        comments: r.comments,
-      }),
-    ),
+    weekRows.map((r) => ({
+      playCount: r.playCount,
+      likes: r.likes,
+      coins: r.coins,
+      favorites: r.favorites,
+      shares: r.shares,
+      comments: r.comments,
+    })),
   );
   await setSetting(prisma, SETTING_KEYS.radarWeekly, JSON.stringify(weekly));
 }

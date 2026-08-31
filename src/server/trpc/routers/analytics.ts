@@ -7,7 +7,8 @@ import { chinaCalendarDay, shiftChinaDays } from '@/lib/time';
 import { HOMEPAGE_CACHE_TTL_MS, cacheGet, cacheSet } from '../../cache/memory';
 import { getSiteStats } from '@/server/services/site-stats';
 import { SETTING_KEYS, getSetting } from '@/server/services/settings';
-import { BASELINE_FLAT, emptyAxes, normalizeRadar, parseSongStats, scoreBreakdown, type AxisVector } from '@/server/services/score/breakdown';
+import { BASELINE_FLAT, hasAxisValues, logProfile, normalizeRadar, parseSongStats, type AxisVector } from '@/server/services/score/breakdown';
+import { recomputeSiteStats } from '@/server/services/site-stats';
 
 function parseStats(s: string) {
   try { return JSON.parse(s); } catch { return {}; }
@@ -140,20 +141,34 @@ export const analyticsRouter = router({
         select: { statistics: true, score: true, dailyStats: { orderBy: { date: 'desc' }, take: 1 } },
       });
       if (!song) throw new Error('歌曲未找到');
-      const site = await getSiteStats(ctx.prisma);
-      const baselineVec: AxisVector =
-        input.baseline === 'weekly' && site.radarWeekly.playCount > 0
-          ? site.radarWeekly
-          : site.radarHistorical.playCount > 0
-            ? site.radarHistorical
-            : emptyAxes();
-      const breakdown = scoreBreakdown(parseSongStats(song.statistics));
-      const hasBaseline = Object.values(baselineVec).some((v) => v > 0);
+
+      const raw = parseSongStats(song.statistics);
+      let site = await getSiteStats(ctx.prisma);
+      if (!hasAxisValues(site.radarHistorical) && !hasAxisValues(site.radarWeekly)) {
+        await recomputeSiteStats(ctx.prisma);
+        site = await getSiteStats(ctx.prisma);
+      }
+
+      const weekly = site.radarWeekly;
+      const historical = site.radarHistorical;
+      const baselineRaw: AxisVector =
+        input.baseline === 'weekly' && hasAxisValues(weekly)
+          ? weekly
+          : hasAxisValues(historical)
+            ? historical
+            : hasAxisValues(weekly)
+              ? weekly
+              : raw;
+
+      const hasCatalog = hasAxisValues(baselineRaw) && baselineRaw !== raw;
+      const normalized = hasCatalog ? normalizeRadar(raw, baselineRaw) : logProfile(raw);
+
       return {
         score: song.score,
-        breakdown,
-        normalized: normalizeRadar(breakdown, hasBaseline ? baselineVec : breakdown),
-        baseline: hasBaseline ? BASELINE_FLAT : BASELINE_FLAT,
+        raw,
+        baselineRaw: hasCatalog ? baselineRaw : null,
+        normalized,
+        baseline: hasCatalog ? BASELINE_FLAT : null,
         baselineKind: input.baseline,
         latestSnapshotDate: song.dailyStats[0]?.date ?? null,
       };

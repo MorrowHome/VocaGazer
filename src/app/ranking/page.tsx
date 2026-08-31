@@ -125,8 +125,7 @@ export default function RankingPage() {
 
 
       <div className="max-w-5xl mx-auto px-4 md:px-8 py-8 relative z-10">
-        <h1 className="text-lg font-black tracking-wide text-gradient-flow mb-1">排行榜</h1>
-        <p className="text-xs text-kawaii-muted font-medium mb-4">周/月/年为自然周期快照；已结束的周期保留封榜数据。</p>
+        <h1 className="text-lg font-black tracking-wide text-gradient-flow mb-4">排行榜</h1>
         {/* 标签 */}
         <div className="flex gap-2 mb-4">
           {TABS.map((tab) => (
@@ -228,7 +227,7 @@ export default function RankingPage() {
         ) : !rankings || rankings.length === 0 ? (
           <div className="text-center py-20 space-y-4">
             <p className="text-6xl opacity-20 music-float text-kawaii-pink" aria-hidden="true">♪</p>
-            <p className="text-kawaii-muted font-medium">该周期排行将在采集后生成</p>
+            <p className="text-kawaii-muted font-medium">暂无</p>
           </div>
         ) : (
           <div className="space-y-2">

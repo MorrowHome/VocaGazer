@@ -35,7 +35,7 @@ export function SiteHeader() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 backdrop-blur-lg bg-white/55 border-b border-kawaii-border/40">
+      <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/70 border-b border-kawaii-border/30">
         <div className="max-w-7xl mx-auto px-4 md:px-8 h-14 flex items-center justify-between gap-3">
           <a href="/" className="flex items-center gap-2 shrink-0">
             <span className="text-lg text-kawaii-pink" aria-hidden="true">♪</span>

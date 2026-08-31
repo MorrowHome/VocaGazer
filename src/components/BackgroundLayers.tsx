@@ -3,7 +3,7 @@
  */
 
 function FloatingStars() {
-  const stars = Array.from({ length: 15 }, (_, i) => {
+  const stars = Array.from({ length: 7 }, (_, i) => {
     const symbols = ['✦', '✧', '⋆', '✶', '·'];
     return {
       id: i,
