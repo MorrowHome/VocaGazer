@@ -42,7 +42,7 @@ export function SiteHeader() {
           </a>
 
           <nav className="hidden lg:flex items-center gap-4 text-sm font-bold text-kawaii-muted overflow-x-auto">
-            {LINKS.map((link) => (
+            {LINKS.filter((link) => link.href !== '/search').map((link) => (
               <a
                 key={link.href}
                 href={link.href}
@@ -54,6 +54,15 @@ export function SiteHeader() {
               </a>
             ))}
           </nav>
+
+          <form action="/search" method="get" className="hidden md:block w-40 lg:w-48 xl:w-56">
+            <input
+              type="search"
+              name="q"
+              placeholder="搜歌或作者…"
+              className="w-full h-8 px-3 rounded-full bg-white/80 border border-kawaii-border/50 text-xs outline-none focus:border-kawaii-pink/40"
+            />
+          </form>
 
           <div className="flex items-center gap-3 shrink-0">
             {user?.role === 'admin' && (

@@ -8,7 +8,11 @@ import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';
 
 export const metadata: Metadata = {
-  title: 'VOCALOID Music Hub',
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://morrowhome.site'),
+  title: {
+    default: 'VOCALOID Music Hub',
+    template: '%s · VOCALOID Hub',
+  },
   description: '专注于 VOCALOID 原创曲目的数据收集、分析与展示平台',
 };
 

@@ -1,12 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
 import { formatCount, parseStats, timeAgo } from '@/lib/utils';
 
-export default function SearchPage() {
-  const [query, setQuery] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
+function SearchPageInner() {
+  const searchParams = useSearchParams();
+  const initial = searchParams.get('q')?.trim() ?? '';
+  const [query, setQuery] = useState(initial);
+  const [searchTerm, setSearchTerm] = useState(initial);
   const { data, isLoading } = trpc.songs.search.useQuery(
     { q: searchTerm, limit: 50 },
     { enabled: searchTerm.length > 0 },
@@ -14,13 +17,14 @@ export default function SearchPage() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    setSearchTerm(query.trim());
+    const next = query.trim();
+    setSearchTerm(next);
+    const url = next ? `/search?q=${encodeURIComponent(next)}` : '/search';
+    window.history.replaceState(null, '', url);
   };
 
   return (
     <main className="min-h-screen relative">
-
-
       <div className="max-w-4xl mx-auto px-4 md:px-8 py-8 relative z-10">
         <form onSubmit={handleSearch} className="mb-8">
           <div className="flex gap-3">
@@ -61,14 +65,12 @@ export default function SearchPage() {
               </div>
             ) : (
               <div className="space-y-2">
-                {data.songs.map((song: any) => {
+                {data.songs.map((song: { id: string; bvId: string; title: string; author: string; picUrl: string | null; statistics: string; publishTime: Date; score: number }) => {
                   const stats = parseStats(song.statistics);
                   return (
                     <a
                       key={song.id}
                       href={`/song/${song.bvId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
                       className="card flex items-center gap-4 p-4 hover:border-kawaii-pink/30 transition-all group"
                     >
                       <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-kawaii-surface ring-1 ring-kawaii-border/30">
@@ -109,5 +111,21 @@ export default function SearchPage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen relative">
+          <div className="max-w-4xl mx-auto px-4 py-8">
+            <div className="h-12 rounded-2xl bg-white/60 animate-pulse" />
+          </div>
+        </main>
+      }
+    >
+      <SearchPageInner />
+    </Suspense>
   );
 }
