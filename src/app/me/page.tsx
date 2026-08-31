@@ -99,7 +99,7 @@ export default function MePage() {
             <input
               type="password"
               autoComplete="current-password"
-              className="w-full px-4 py-2 rounded-xl bg-white/80 border border-kawaii-border/50 text-sm outline-none"
+              className="w-full px-4 py-2 rounded-xl bg-kawaii-void/70 border border-kawaii-border/50 text-sm outline-none"
               placeholder="当前密码"
               value={currentPassword}
               onChange={(e) => { setCurrentPassword(e.target.value); setPasswordErr(''); setPasswordMsg(''); }}
@@ -108,7 +108,7 @@ export default function MePage() {
             <input
               type="password"
               autoComplete="new-password"
-              className="w-full px-4 py-2 rounded-xl bg-white/80 border border-kawaii-border/50 text-sm outline-none"
+              className="w-full px-4 py-2 rounded-xl bg-kawaii-void/70 border border-kawaii-border/50 text-sm outline-none"
               placeholder="新密码（至少 6 位）"
               value={newPassword}
               minLength={6}
@@ -118,7 +118,7 @@ export default function MePage() {
             <input
               type="password"
               autoComplete="new-password"
-              className="w-full px-4 py-2 rounded-xl bg-white/80 border border-kawaii-border/50 text-sm outline-none"
+              className="w-full px-4 py-2 rounded-xl bg-kawaii-void/70 border border-kawaii-border/50 text-sm outline-none"
               placeholder="确认新密码"
               value={confirmPassword}
               minLength={6}
