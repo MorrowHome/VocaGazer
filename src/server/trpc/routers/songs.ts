@@ -56,6 +56,28 @@ export const songsRouter = router({
       return song;
     }),
 
+  getDailyHistory: publicProcedure
+    .input(z.object({ bvId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const song = await ctx.prisma.song.findUnique({
+        where: { bvId: input.bvId },
+        select: { id: true },
+      });
+      if (!song) throw new Error('歌曲未找到');
+      return ctx.prisma.songDailyStats.findMany({
+        where: { songId: song.id },
+        orderBy: { date: 'asc' },
+        select: {
+          date: true,
+          playCount: true,
+          likes: true,
+          coins: true,
+          favorites: true,
+          score: true,
+        },
+      });
+    }),
+
   getByBvIds: publicProcedure
     .input(z.array(z.string()).max(8))
     .query(async ({ ctx, input }) => {

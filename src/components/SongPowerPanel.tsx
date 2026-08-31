@@ -71,6 +71,8 @@ export function SongPowerPanel({
 }) {
   const [baseline, setBaseline] = useState<'weekly' | 'historical'>('weekly');
   const [chartMode, setChartMode] = useState<'plays' | 'rates'>('plays');
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const history = trpc.songs.getDailyHistory.useQuery({ bvId }, { enabled: historyOpen });
   const radar = trpc.analytics.getRadar.useQuery({ bvId, baseline });
   const series = fillDailyGaps(dailyStats);
   const present = series.filter((s) => !s.missing);
@@ -158,16 +160,18 @@ export function SongPowerPanel({
                 />
               ) : (
                 <>
-                  <LineChart
-                    data={series.map((d) => ({ date: d.date, value: d.playCount, missing: d.missing }))}
-                    height={180}
-                    color="#39C5BB"
-                    gradientId="totalGrad"
-                    maxValue={maxPlay}
-                    formatter={(v) => `${(v / 10000).toFixed(1)}万`}
-                    label="累计播放"
-                    gaps
-                  />
+                  <button type="button" className="w-full text-left" onClick={() => setHistoryOpen(true)}>
+                    <LineChart
+                      data={series.map((d) => ({ date: d.date, value: d.playCount, missing: d.missing }))}
+                      height={180}
+                      color="#39C5BB"
+                      gradientId="totalGrad"
+                      maxValue={maxPlay}
+                      formatter={(v) => `${(v / 10000).toFixed(1)}万`}
+                      label="累计播放 · 点开看全部"
+                      gaps
+                    />
+                  </button>
                   <div className="mt-4">
                     <StockDeltaChart
                       data={deltas}
@@ -182,6 +186,59 @@ export function SongPowerPanel({
           )}
         </div>
       </div>
+
+      {historyOpen && (
+        <div
+          className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
+          onClick={() => setHistoryOpen(false)}
+        >
+          <div
+            className="card !p-5 w-full max-w-2xl max-h-[85vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-black text-kawaii-text">全部播放历史</h3>
+              <button type="button" className="text-xs text-kawaii-muted hover:text-kawaii-pink" onClick={() => setHistoryOpen(false)}>
+                关闭
+              </button>
+            </div>
+            {!history.data ? (
+              <p className="text-sm text-kawaii-muted">加载中…</p>
+            ) : history.data.length < 2 ? (
+              <p className="text-sm text-kawaii-muted">还没有足够的日快照。</p>
+            ) : (
+              <>
+                <LineChart
+                  data={fillDailyGaps(history.data).map((d) => ({ date: d.date, value: d.playCount, missing: d.missing }))}
+                  height={220}
+                  color="#39C5BB"
+                  gradientId="historyGrad"
+                  maxValue={Math.max(...history.data.map((d) => d.playCount), 1)}
+                  formatter={(v) => (v >= 10000 ? `${(v / 10000).toFixed(1)}万` : v.toLocaleString())}
+                  label={`${history.data.length} 个快照`}
+                  gaps
+                />
+                <div className="mt-4 space-y-1 max-h-56 overflow-y-auto">
+                  {[...history.data].reverse().map((row, i, arr) => {
+                    const prev = arr[i + 1];
+                    const delta = prev ? row.playCount - prev.playCount : row.playCount;
+                    const key = typeof row.date === 'string' ? row.date.slice(0, 10) : row.date.toISOString().slice(0, 10);
+                    return (
+                      <div key={key} className="flex justify-between text-[11px] font-medium text-kawaii-muted">
+                        <span>{key}</span>
+                        <span className="tabular-nums text-kawaii-text">
+                          {row.playCount.toLocaleString()}
+                          <span className="text-kawaii-cyan ml-2">+{Math.max(0, delta).toLocaleString()}</span>
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
