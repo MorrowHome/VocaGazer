@@ -14,7 +14,7 @@ const RANGES: { key: Range; label: string }[] = [
 ];
 
 const CHART_COLORS = [
-  '#FF6B9D', '#39BEB9', '#B388FF', '#F7C94C', '#FFB08C',
+  '#FF8BB8', '#39C5BB', '#B8A0FF', '#E4C56A', '#FF9B7A',
   '#A8D14B', '#FF9EB5', '#7EC8E3', '#DCC8FF', '#80DEEA',
 ];
 
@@ -46,7 +46,7 @@ function Bar({ label, value, max, color, suffix }: { label: string; value: numbe
 // ─── 评分分布环形图 ───
 function ScoreDonut({ dist }: { dist: number[] }) {
   const labels = ['0-20', '20-40', '40-60', '60-80', '80-100'];
-  const colors = ['#FFB08C', '#F7C94C', '#A8D14B', '#39BEB9', '#B388FF'];
+  const colors = ['#FF9B7A', '#E4C56A', '#7DDBA3', '#39C5BB', '#B8A0FF'];
   const total = dist.reduce((a, b) => a + b, 0);
   if (total === 0) return <p className="text-kawaii-muted text-sm font-medium">暂无数据</p>;
 
@@ -89,7 +89,7 @@ function TableRow({ rank, song }: { rank: number; song: any }) {
       </div>
       <span className="text-xs text-kawaii-muted w-16 text-right font-bold">{formatCount(song.plays ?? 0)}</span>
       <span className="text-xs text-kawaii-muted w-12 text-right font-bold">{formatCount(song.likes ?? 0)}</span>
-      <span className="text-xs font-black w-14 text-right" style={{ color: song.score >= 60 ? '#39BEB9' : song.score >= 30 ? '#F7C94C' : '#FF6B9D' }}>
+      <span className="text-xs font-black w-14 text-right" style={{ color: song.score >= 60 ? '#39C5BB' : song.score >= 30 ? '#E4C56A' : '#FF8BB8' }}>
         {song.score.toFixed(1)}
       </span>
     </a>
@@ -120,7 +120,7 @@ export default function AnalyticsPage() {
               className={`px-5 py-2 rounded-full text-xs font-bold transition-all ${
                 range === r.key
                   ? 'bg-kawaii-pink text-white shadow-md'
-                  : 'bg-white/70 text-kawaii-muted border border-kawaii-border hover:border-kawaii-pink/30'
+                  : 'bg-kawaii-surface/80 text-kawaii-muted border border-kawaii-border hover:border-kawaii-pink/30'
               }`}
             >
               {r.label}
@@ -132,7 +132,7 @@ export default function AnalyticsPage() {
         <section>
           <h2 className="section-title text-kawaii-text mb-5">概览</h2>
           {isLoading ? (
-            <div className="grid grid-cols-4 gap-4">{[...Array(4)].map((_, i) => <div key={i} className="h-24 rounded-2xl bg-white/60 animate-pulse" />)}</div>
+            <div className="grid grid-cols-4 gap-4">{[...Array(4)].map((_, i) => <div key={i} className="h-24 rounded-2xl bg-kawaii-surface/50 animate-pulse" />)}</div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3">
               <StatCard label="歌曲总数" value={formatCount(o?.totalSongs ?? 0)} />
@@ -153,13 +153,13 @@ export default function AnalyticsPage() {
         <section>
           <h2 className="section-title text-kawaii-text mb-5">互动率</h2>
           {isLoading ? (
-            <div className="grid grid-cols-5 gap-4">{[...Array(5)].map((_, i) => <div key={i} className="h-20 rounded-2xl bg-white/60 animate-pulse" />)}</div>
+            <div className="grid grid-cols-5 gap-4">{[...Array(5)].map((_, i) => <div key={i} className="h-20 rounded-2xl bg-kawaii-surface/50 animate-pulse" />)}</div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              <EngCard label="点赞率" value={`${e?.likePlayRatio ?? 0}%`} color="#FF6B9D" />
-              <EngCard label="投币率" value={`${e?.coinPlayRatio ?? 0}%`} color="#F7C94C" />
+              <EngCard label="点赞率" value={`${e?.likePlayRatio ?? 0}%`} color="#FF8BB8" />
+              <EngCard label="投币率" value={`${e?.coinPlayRatio ?? 0}%`} color="#E4C56A" />
               <EngCard label="收藏率" value={`${e?.favPlayRatio ?? 0}%`} color="#B388FF" />
-              <EngCard label="分享率" value={`${e?.sharePlayRatio ?? 0}%`} color="#39BEB9" />
+              <EngCard label="分享率" value={`${e?.sharePlayRatio ?? 0}%`} color="#39C5BB" />
               <EngCard label="评论率" value={`${e?.commentPlayRatio ?? 0}%`} color="#FFB08C" />
             </div>
           )}
@@ -172,7 +172,7 @@ export default function AnalyticsPage() {
           <section>
             <h2 className="section-title text-kawaii-text mb-5">标签分布</h2>
             {isLoading ? (
-              <div className="space-y-2">{[...Array(8)].map((_, i) => <div key={i} className="h-5 rounded-full bg-white/60 animate-pulse" />)}</div>
+              <div className="space-y-2">{[...Array(8)].map((_, i) => <div key={i} className="h-5 rounded-full bg-kawaii-surface/50 animate-pulse" />)}</div>
             ) : !data?.topTags?.length ? <p className="text-kawaii-muted text-sm font-medium">暂无数据</p> : (
               <div className="space-y-2">{data.topTags.slice(0, 15).map((t, i) => (
                 <Bar key={t.name} label={t.name} value={t.count} max={maxTagCount} color={CHART_COLORS[i % CHART_COLORS.length]} />
@@ -183,7 +183,7 @@ export default function AnalyticsPage() {
           <section>
             <h2 className="section-title text-kawaii-text mb-5">热门 UP 主</h2>
             {isLoading ? (
-              <div className="space-y-2">{[...Array(8)].map((_, i) => <div key={i} className="h-5 rounded-full bg-white/60 animate-pulse" />)}</div>
+              <div className="space-y-2">{[...Array(8)].map((_, i) => <div key={i} className="h-5 rounded-full bg-kawaii-surface/50 animate-pulse" />)}</div>
             ) : !data?.topArtists?.length ? <p className="text-kawaii-muted text-sm font-medium">暂无数据</p> : (
               <div className="space-y-2">{data.topArtists.slice(0, 15).map((a, i) => (
                 <Bar key={a.name} label={a.name} value={a.totalPlays} max={maxArtistPlays} color={CHART_COLORS[i % CHART_COLORS.length]} />
@@ -198,7 +198,7 @@ export default function AnalyticsPage() {
         <section>
           <h2 className="section-title text-kawaii-text mb-5">高评分 UP 主（≥2首歌）</h2>
           {isLoading ? (
-            <div className="grid grid-cols-4 gap-4">{[...Array(4)].map((_, i) => <div key={i} className="h-20 rounded-2xl bg-white/60 animate-pulse" />)}</div>
+            <div className="grid grid-cols-4 gap-4">{[...Array(4)].map((_, i) => <div key={i} className="h-20 rounded-2xl bg-kawaii-surface/50 animate-pulse" />)}</div>
           ) : !data?.topRatedArtists?.length ? <p className="text-kawaii-muted text-sm font-medium">暂无数据</p> : (
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               {data.topRatedArtists.map((a, i) => (
@@ -227,7 +227,7 @@ export default function AnalyticsPage() {
               <h2 className="section-title text-kawaii-text">评分排行</h2>
             </div>
             {isLoading ? (
-              <div className="space-y-2">{[...Array(10)].map((_, i) => <div key={i} className="h-10 rounded-xl bg-white/60 animate-pulse" />)}</div>
+              <div className="space-y-2">{[...Array(10)].map((_, i) => <div key={i} className="h-10 rounded-xl bg-kawaii-surface/50 animate-pulse" />)}</div>
             ) : !data?.topSongs?.length ? <p className="text-kawaii-muted text-sm font-medium">暂无数据</p> : (
               <div className="card overflow-hidden">
                 <div className="flex items-center gap-3 px-3 py-2 border-b border-kawaii-border/50 text-[10px] text-kawaii-muted font-bold tracking-wider">
@@ -248,7 +248,7 @@ export default function AnalyticsPage() {
               <h2 className="section-title text-kawaii-text">播放排行</h2>
             </div>
             {isLoading ? (
-              <div className="space-y-2">{[...Array(10)].map((_, i) => <div key={i} className="h-10 rounded-xl bg-white/60 animate-pulse" />)}</div>
+              <div className="space-y-2">{[...Array(10)].map((_, i) => <div key={i} className="h-10 rounded-xl bg-kawaii-surface/50 animate-pulse" />)}</div>
             ) : !data?.mostPlayed?.length ? <p className="text-kawaii-muted text-sm font-medium">暂无数据</p> : (
               <div className="card overflow-hidden">
                 <div className="flex items-center gap-3 px-3 py-2 border-b border-kawaii-border/50 text-[10px] text-kawaii-muted font-bold tracking-wider">
@@ -274,7 +274,7 @@ export default function AnalyticsPage() {
               <h2 className="section-title text-kawaii-text">发布趋势</h2>
             </div>
             {isLoading ? (
-              <div className="h-40 rounded-2xl bg-white/60 animate-pulse" />
+              <div className="h-40 rounded-2xl bg-kawaii-surface/50 animate-pulse" />
             ) : !data?.songsByMonth?.length ? <p className="text-kawaii-muted text-sm font-medium">暂无数据</p> : (
               <div className="card p-5">
                 <Sparkline values={data.songsByMonth.map((m) => m.count)} color="#B388FF" className="w-full h-32 mb-3" />
@@ -307,7 +307,7 @@ export default function AnalyticsPage() {
               <h2 className="section-title text-kawaii-text">评分分布</h2>
             </div>
             {isLoading ? (
-              <div className="h-40 rounded-2xl bg-white/60 animate-pulse" />
+              <div className="h-40 rounded-2xl bg-kawaii-surface/50 animate-pulse" />
             ) : (
               <div className="card p-5">
                 <ScoreDonut dist={data?.scoreDistribution ?? [0, 0, 0, 0, 0]} />
@@ -351,11 +351,11 @@ function AiReportsSection() {
       <div className="flex items-center gap-3 mb-5 flex-wrap">
         <span aria-hidden="true" className="text-kawaii-purple text-lg">✦</span>
         <h2 className="section-title text-kawaii-text">AI 观察</h2>
-        <span className="text-[10px] text-kawaii-muted bg-white/70 px-2.5 py-1 rounded-full border border-kawaii-border/50 font-medium">
+        <span className="text-[10px] text-kawaii-muted bg-kawaii-surface/80 px-2.5 py-1 rounded-full border border-kawaii-border/50 font-medium">
           每日 20:00 更新
         </span>
         {config?.configured === false && (
-          <span className="text-[10px] text-kawaii-muted bg-white/70 px-2.5 py-1 rounded-full border border-kawaii-border/50">
+          <span className="text-[10px] text-kawaii-muted bg-kawaii-surface/80 px-2.5 py-1 rounded-full border border-kawaii-border/50">
             降级模式
           </span>
         )}
@@ -364,7 +364,7 @@ function AiReportsSection() {
       {isLoading ? (
         <div className="grid md:grid-cols-3 gap-4">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="card p-5 h-40 animate-pulse bg-white/60" />
+            <div key={i} className="card p-5 h-40 animate-pulse bg-kawaii-surface/50" />
           ))}
         </div>
       ) : (

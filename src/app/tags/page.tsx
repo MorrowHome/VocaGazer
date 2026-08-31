@@ -4,30 +4,30 @@ import { trpc } from '@/lib/trpc';
 import { formatCount } from '@/lib/utils';
 
 const TAG_COLORS: Record<string, string> = {
-  初音未来: '#39BEB9',
-  镜音铃: '#FFB08C',
-  镜音连: '#FFB08C',
-  巡音流歌: '#B388FF',
-  洛天依: '#FF6B9D',
-  言和: '#39BEB9',
-  乐正绫: '#FF6B9D',
-  乐正龙牙: '#39BEB9',
-  徵羽摩柯: '#A8D14B',
-  墨清弦: '#B388FF',
-  星尘: '#B388FF',
-  心华: '#B388FF',
-  赤羽: '#FF6B9D',
-  苍穹: '#39BEB9',
-  诗岸: '#A8D14B',
-  GUMI: '#B388FF',
-  VOCALOID: '#FF6B9D',
+  初音未来: '#39C5BB',
+  镜音铃: '#FF9B7A',
+  镜音连: '#FF9B7A',
+  巡音流歌: '#B8A0FF',
+  洛天依: '#FF8BB8',
+  言和: '#39C5BB',
+  乐正绫: '#FF8BB8',
+  乐正龙牙: '#39C5BB',
+  徵羽摩柯: '#7DDBA3',
+  墨清弦: '#B8A0FF',
+  星尘: '#B8A0FF',
+  心华: '#B8A0FF',
+  赤羽: '#FF8BB8',
+  苍穹: '#39C5BB',
+  诗岸: '#7DDBA3',
+  GUMI: '#B8A0FF',
+  VOCALOID: '#FF8BB8',
 };
 
 function getTagColor(tag: string): string {
   for (const [key, color] of Object.entries(TAG_COLORS)) {
     if (tag.includes(key)) return color;
   }
-  return '#FFB08C';
+  return '#FF9B7A';
 }
 
 export default function TagsPage() {
@@ -41,7 +41,7 @@ export default function TagsPage() {
         {isLoading ? (
           <div className="flex flex-wrap gap-3">
             {[...Array(20)].map((_, i) => (
-              <div key={i} className="h-10 w-24 rounded-full bg-white/60 animate-pulse" />
+              <div key={i} className="h-10 w-24 rounded-full bg-kawaii-surface/50 animate-pulse" />
             ))}
           </div>
         ) : (
@@ -50,7 +50,7 @@ export default function TagsPage() {
               <a
                 key={t.tag}
                 href={`/tag/${encodeURIComponent(t.tag)}`}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/80 border border-kawaii-border/40 hover:border-transparent hover:text-white transition-all text-sm font-bold shadow-sm"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-kawaii-void/70 border border-kawaii-border/40 hover:border-transparent hover:text-white transition-all text-sm font-bold shadow-sm"
                 style={{
                   borderColor: `${getTagColor(t.tag)}40`,
                   color: getTagColor(t.tag),

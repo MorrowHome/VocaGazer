@@ -24,16 +24,16 @@ function RecSongCard({ song, rank }: { song: any; rank?: number }) {
         ) : (
           <div className="w-full h-full flex items-center justify-center text-kawaii-muted text-4xl">♪</div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-white/80 via-transparent to-transparent" />
-        <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm text-xs font-bold text-kawaii-pink px-2.5 py-0.5 rounded-full border border-kawaii-border/50 shadow-sm">
+        <div className="absolute inset-0 bg-gradient-to-t from-kawaii-hero-void/90 via-transparent to-transparent" />
+        <div className="absolute top-2 left-2 bg-kawaii-hero-void/75 backdrop-blur-sm text-xs font-bold text-kawaii-pink px-2.5 py-0.5 rounded-full border border-kawaii-border/50 shadow-sm">
           ★ {song.score.toFixed(1)}
         </div>
         {rank && (
-          <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm text-xs font-bold text-kawaii-cyan px-2.5 py-0.5 rounded-full border border-kawaii-border/50 shadow-sm">
+          <div className="absolute top-2 right-2 bg-kawaii-hero-void/75 backdrop-blur-sm text-xs font-bold text-kawaii-cyan px-2.5 py-0.5 rounded-full border border-kawaii-border/50 shadow-sm">
             #{rank}
           </div>
         )}
-        <div className="absolute bottom-2 right-2 text-[10px] font-bold text-kawaii-muted bg-white/90 px-2 py-0.5 rounded-full border border-kawaii-border/50 shadow-sm">
+        <div className="absolute bottom-2 right-2 text-[10px] font-bold text-kawaii-muted bg-kawaii-hero-void/75 px-2 py-0.5 rounded-full border border-kawaii-border/50 shadow-sm">
           ▶ {formatCount(stats.playCount ?? 0)}
         </div>
       </div>
@@ -67,7 +67,7 @@ export default function RecommendPage() {
           </div>
           {isLoading ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {[...Array(8)].map((_, i) => <div key={i} className="rounded-xl bg-white/60 animate-pulse aspect-[4/5]" />)}
+              {[...Array(8)].map((_, i) => <div key={i} className="rounded-xl bg-kawaii-surface/50 animate-pulse aspect-[4/5]" />)}
             </div>
           ) : !data?.editorPicks?.length ? (
             <p className="text-kawaii-muted text-sm font-medium">暂无</p>
@@ -94,7 +94,7 @@ export default function RecommendPage() {
           </div>
           {isLoading ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {[...Array(8)].map((_, i) => <div key={i} className="rounded-xl bg-white/60 animate-pulse aspect-[4/5]" />)}
+              {[...Array(8)].map((_, i) => <div key={i} className="rounded-xl bg-kawaii-surface/50 animate-pulse aspect-[4/5]" />)}
             </div>
           ) : !data?.weeklyRising?.length ? (
             <p className="text-kawaii-muted text-sm font-medium">暂无</p>
@@ -116,7 +116,7 @@ export default function RecommendPage() {
           </div>
           {isLoading ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {[...Array(8)].map((_, i) => <div key={i} className="rounded-xl bg-white/60 animate-pulse aspect-[4/5]" />)}
+              {[...Array(8)].map((_, i) => <div key={i} className="rounded-xl bg-kawaii-surface/50 animate-pulse aspect-[4/5]" />)}
             </div>
           ) : !data?.todayNew?.length ? (
             <p className="text-kawaii-muted text-sm font-medium">今天还没有新曲入库</p>

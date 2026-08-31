@@ -53,7 +53,7 @@ export default function MePage() {
           </p>
           <form onSubmit={handleSave} className="flex gap-2">
             <input
-              className="flex-1 px-4 py-2 rounded-xl bg-white/80 border border-kawaii-border/50 text-sm outline-none"
+              className="flex-1 px-4 py-2 rounded-xl bg-kawaii-void/70 border border-kawaii-border/50 text-sm outline-none"
               placeholder={me?.username || '昵称'}
               value={username}
               onChange={(e) => { setUsername(e.target.value); setSaved(false); }}

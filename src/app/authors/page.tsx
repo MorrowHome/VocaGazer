@@ -14,7 +14,7 @@ export default function AuthorsPage() {
         {isLoading ? (
           <div className="space-y-2">
             {[...Array(12)].map((_, i) => (
-              <div key={i} className="h-14 rounded-xl bg-white/60 animate-pulse" />
+              <div key={i} className="h-14 rounded-xl bg-kawaii-surface/50 animate-pulse" />
             ))}
           </div>
         ) : (

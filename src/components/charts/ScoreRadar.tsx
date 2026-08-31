@@ -54,29 +54,29 @@ export function ScoreRadar({
           key={pct}
           points={polygon(Object.fromEntries(AXES.map((a) => [a, pct])) as Record<Axis, number>)}
           fill="none"
-          stroke="rgba(179,136,255,0.18)"
+          stroke="rgba(184,160,255,0.22)"
           strokeWidth="1"
         />
       ))}
       {AXES.map((_, i) => {
         const outer = point(i, 100);
         return (
-          <line key={i} x1={CX} y1={CY} x2={outer.x} y2={outer.y} stroke="rgba(179,136,255,0.16)" strokeWidth="1" />
+          <line key={i} x1={CX} y1={CY} x2={outer.x} y2={outer.y} stroke="rgba(184,160,255,0.18)" strokeWidth="1" />
         );
       })}
       {baseVec && (
         <polygon
           points={polygon(baseVec)}
-          fill="rgba(57,190,185,0.12)"
-          stroke="#39BEB9"
+          fill="rgba(57,197,187,0.14)"
+          stroke="#39C5BB"
           strokeWidth="1.5"
           strokeDasharray="4 3"
         />
       )}
-      <polygon points={polygon(songVec)} fill="rgba(255,107,157,0.28)" stroke="#FF6B9D" strokeWidth="2.2" />
+      <polygon points={polygon(songVec)} fill="rgba(255,139,184,0.28)" stroke="#FF8BB8" strokeWidth="2.2" />
       {AXES.map((axis, i) => {
         const dot = point(i, songVec[axis] ?? 0);
-        return <circle key={`d-${axis}`} cx={dot.x} cy={dot.y} r="3.5" fill="#FF6B9D" />;
+            return <circle key={`d-${axis}`} cx={dot.x} cy={dot.y} r="3.5" fill="#FF8BB8" />;
       })}
       {AXES.map((axis, i) => {
         const labelPt = point(i, 128, RADIUS);
@@ -89,13 +89,13 @@ export function ScoreRadar({
             y={labelPt.y}
             textAnchor="middle"
             dominantBaseline="middle"
-            fill="#4a4458"
+            fill="#C8B8E0"
             fontSize="11"
             fontWeight="700"
           >
             <tspan x={labelPt.x} dy="-0.55em">{LABELS[axis]}</tspan>
             {typeof count === 'number' && (
-              <tspan x={labelPt.x} dy="1.25em" fill="#FF6B9D" fontSize="10">
+              <tspan x={labelPt.x} dy="1.25em" fill="#FF8BB8" fontSize="10">
                 {formatCount(count)}
                 {typeof mean === 'number' && mean > 0 ? ` / ${formatCount(Math.round(mean))}` : ''}
               </tspan>

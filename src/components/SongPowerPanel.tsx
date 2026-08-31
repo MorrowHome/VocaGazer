@@ -80,7 +80,7 @@ export function SongPowerPanel({
               baselineRaw={radar.data.baselineRaw}
             />
           ) : (
-            <div className="h-48 rounded-2xl bg-white/60 animate-pulse" />
+            <div className="h-48 rounded-2xl bg-kawaii-surface/50 animate-pulse" />
           )}
         </div>
         <div>
@@ -97,7 +97,7 @@ export function SongPowerPanel({
               <LineChart
                 data={series.map((d) => ({ date: d.date, value: d.playCount, missing: d.missing }))}
                 height={180}
-                color="#39BEB9"
+                color="#39C5BB"
                 gradientId="totalGrad"
                 maxValue={maxPlay}
                 formatter={(v) => `${(v / 10000).toFixed(1)}万`}

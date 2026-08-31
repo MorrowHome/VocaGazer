@@ -13,7 +13,7 @@ function RankEntry({ song, rank }: { song: any; rank: number }) {
   return (
     <a href={`/song/${song.bvId}`} className="rank-item group">
       <span className={`rank-number ${rankClass}`}>{rank}</span>
-      <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 bg-white ring-1 ring-kawaii-border/50">
+      <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 bg-kawaii-surface ring-1 ring-white/10">
         {song.picUrl ? (
           <img
             {...coverImgProps(song.picUrl)}
@@ -58,9 +58,9 @@ function SongCard({ song }: { song: any }) {
         ) : (
           <div className="w-full h-full flex items-center justify-center text-kawaii-muted text-4xl">♪</div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-white/60 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-kawaii-hero-void/80 via-transparent to-transparent" />
         <div className="song-card-badge">★ {song.score.toFixed(1)}</div>
-        <div className="absolute bottom-2 right-2 text-[10px] text-kawaii-muted bg-white/80 px-2 py-0.5 rounded-full shadow-sm">
+        <div className="absolute bottom-2 right-2 text-[10px] text-white/80 bg-kawaii-hero-void/70 px-2 py-0.5 rounded-full">
           ▶ {formatCount(stats.playCount ?? 0)}
         </div>
       </div>
@@ -96,11 +96,11 @@ function MiniSongCard({ song, label }: { song: any; label: string }) {
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-kawaii-pink-pale text-kawaii-muted text-4xl">♪</div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-white/80 via-white/40 to-white/10" />
+        <div className="absolute inset-0 bg-gradient-to-t from-kawaii-hero-void/90 via-kawaii-hero-void/40 to-transparent" />
       </div>
       <div className="relative z-10 p-5 h-full flex flex-col justify-end min-h-[160px]">
-        <p className="text-[11px] text-kawaii-muted tracking-wider mb-1.5 font-medium">{label}</p>
-        <p className="text-lg font-black text-kawaii-text truncate group-hover:text-kawaii-pink transition-colors drop-shadow-sm">
+        <p className="text-[11px] text-kawaii-cyan tracking-[0.2em] mb-1.5 font-bold">{label}</p>
+        <p className="text-lg font-display font-bold text-white truncate group-hover:text-kawaii-pink transition-colors">
           {song.title}
         </p>
         <p className="text-sm text-kawaii-text/70 truncate mt-0.5 font-medium">{song.author}</p>
@@ -153,7 +153,7 @@ export default function HomePage() {
           {isLoading ? (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-28 rounded-2xl bg-white/60 animate-pulse" />
+                <div key={i} className="h-28 rounded-2xl bg-kawaii-surface/60 animate-pulse" />
               ))}
             </div>
           ) : (
@@ -208,16 +208,12 @@ export default function HomePage() {
             <div className="card">
               <div className="p-5">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-kawaii-cyan text-base" aria-hidden="true">☀</span>
-                    <h3 className="text-sm font-black text-kawaii-cyan tracking-wider uppercase">日榜</h3>
-                  </div>
-                  <span className="text-[10px] font-bold text-kawaii-muted bg-kawaii-surface px-2.5 py-1 rounded-full">DAILY</span>
+                  <h3 className="font-display text-lg font-bold text-kawaii-cyan tracking-[0.2em]">日榜</h3>
                 </div>
                 {isLoading ? (
                   <div className="space-y-3">
                     {[...Array(5)].map((_, i) => (
-                      <div key={i} className="h-14 rounded-xl bg-white/60 animate-pulse" />
+                      <div key={i} className="h-14 rounded-xl bg-kawaii-surface/60 animate-pulse" />
                     ))}
                   </div>
                 ) : dailyRanking.length === 0 ? (
@@ -236,16 +232,12 @@ export default function HomePage() {
             <div className="card">
               <div className="p-5">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-kawaii-pink text-base" aria-hidden="true">◈</span>
-                    <h3 className="text-sm font-black text-kawaii-pink tracking-wider uppercase">周榜</h3>
-                  </div>
-                  <span className="text-[10px] font-bold text-kawaii-muted bg-kawaii-surface px-2.5 py-1 rounded-full">WEEKLY</span>
+                  <h3 className="font-display text-lg font-bold text-kawaii-pink tracking-[0.2em]">周榜</h3>
                 </div>
                 {isLoading ? (
                   <div className="space-y-3">
                     {[...Array(5)].map((_, i) => (
-                      <div key={i} className="h-14 rounded-xl bg-white/60 animate-pulse" />
+                      <div key={i} className="h-14 rounded-xl bg-kawaii-surface/60 animate-pulse" />
                     ))}
                   </div>
                 ) : weeklyRanking.length === 0 ? (
@@ -273,7 +265,7 @@ export default function HomePage() {
           {isLoading ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {[...Array(8)].map((_, i) => (
-                <div key={i} className="rounded-xl bg-white/60 animate-pulse aspect-[4/5]" />
+                <div key={i} className="rounded-xl bg-kawaii-surface/60 animate-pulse aspect-[4/5]" />
               ))}
             </div>
           ) : latestSongs.length === 0 ? (
@@ -287,14 +279,8 @@ export default function HomePage() {
           )}
         </section>
 
-        {/* ─── 底部 ─── */}
-        <section className="text-center py-10">
-          <div className="flex justify-center gap-4 text-lg opacity-20" aria-hidden="true">
-            <span className="music-float">♫</span>
-            <span className="music-float-delay">♩</span>
-            <span className="music-float" style={{animationDelay: '0.5s'}}>♬</span>
-            <span className="music-float" style={{animationDelay: '1.5s'}}>♪</span>
-          </div>
+        <section className="text-center py-8" aria-hidden="true">
+          <span className="inline-block w-2.5 h-2.5 rounded-[80%_0_80%_0] bg-kawaii-pink/50 rotate-[28deg] music-float" />
         </section>
       </div>
     </main>
