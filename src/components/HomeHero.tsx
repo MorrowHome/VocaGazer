@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { coverImgProps, formatCount, parseStats } from '@/lib/utils';
 
@@ -24,7 +25,7 @@ function HeroCard({
   return (
     <Link
       href={href}
-      className={`group relative block overflow-hidden rounded-2xl ring-1 ring-white/15 hover:ring-kawaii-cyan/40 transition-all ${
+      className={`group relative block overflow-hidden rounded-2xl ring-1 ring-white/25 hover:ring-kawaii-pink/50 transition-all shadow-[inset_0_1px_0_rgba(255,255,255,0.28)] ${
         featured ? 'aspect-[21/10] min-h-[11rem]' : 'aspect-[16/10]'
       }`}
     >
@@ -35,11 +36,11 @@ function HeroCard({
           className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
         />
       ) : (
-        <div className="absolute inset-0 bg-gradient-to-br from-kawaii-pink/40 via-kawaii-purple/30 to-kawaii-cyan/40" />
+        <div className="absolute inset-0 bg-gradient-to-br from-kawaii-pink/40 via-kawaii-purple/30 to-kawaii-pink/20" />
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-kawaii-hero-void via-kawaii-hero-void/35 to-transparent" />
       <div className="relative z-10 h-full flex flex-col justify-end p-4 md:p-5">
-        <p className="text-[10px] font-bold tracking-[0.28em] uppercase text-kawaii-cyan/90">{kicker}</p>
+        <p className="text-[10px] font-bold tracking-[0.28em] uppercase text-kawaii-pink/90">{kicker}</p>
         <p className={`font-display font-bold text-white mt-1.5 line-clamp-2 leading-snug ${featured ? 'text-xl md:text-2xl' : 'text-sm md:text-base'}`}>
           {title}
         </p>
@@ -68,22 +69,22 @@ export function HomeHero({
   const bg = coverImgProps(heroImageUrl || weeklyHot?.picUrl || dailyHot?.picUrl);
   const risingStats = rising ? parseStats(rising.statistics) : null;
 
-  return (
-    <section className="relative min-h-[100svh] -mt-14 flex items-end overflow-hidden">
-      <div className="absolute inset-0">
-        {bg.src ? (
-          <img {...bg} alt="" className="w-full h-full object-cover scale-110 blur-[2px]" />
-        ) : (
-          <div className="w-full h-full bg-gradient-to-br from-kawaii-pink/30 via-kawaii-surface to-kawaii-cyan/25" />
-        )}
-        <div className="hero-dim absolute inset-0 bg-gradient-to-t from-kawaii-hero-void via-kawaii-hero-void/70 to-kawaii-hero-void/30" />
-        <div className="hero-dim absolute inset-0 bg-gradient-to-r from-kawaii-hero-void/80 via-transparent to-kawaii-hero-void/40" />
-      </div>
+  useEffect(() => {
+    if (!bg.src) return;
+    document.documentElement.dataset.scene = bg.src;
+    try {
+      sessionStorage.setItem('vg-scene', bg.src);
+    } catch {
+      /* ignore */
+    }
+  }, [bg.src]);
 
+  return (
+    <section className="relative min-h-[100svh] -mt-14 flex items-end">
       <div className="relative z-10 w-full max-w-7xl mx-auto px-4 md:px-8 pb-16 pt-28">
         <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-8 lg:gap-12 items-end">
           <div>
-            <p className="text-[11px] font-bold tracking-[0.42em] text-kawaii-cyan mb-5">VOCALOID HUB</p>
+            <p className="text-[11px] font-bold tracking-[0.42em] text-kawaii-pink mb-5">VOCALOID HUB</p>
             <h1 className="home-hero-title font-display text-[2.6rem] sm:text-5xl md:text-6xl font-bold leading-[1.15] text-white">
               今夜，
               <br />

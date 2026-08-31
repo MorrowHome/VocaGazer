@@ -57,7 +57,7 @@ export function SiteHeader() {
                 key={link.href}
                 href={link.href}
                 className={`hover:text-kawaii-pink transition-colors whitespace-nowrap ${
-                  isActive(pathname, link.href) ? 'text-kawaii-cyan' : ''
+                  isActive(pathname, link.href) ? 'text-kawaii-pink' : ''
                 }`}
               >
                 {link.label}
@@ -71,7 +71,7 @@ export function SiteHeader() {
                 type="search"
                 name="q"
                 placeholder="搜歌或作者…"
-                className="w-full h-8 px-3 rounded-full bg-kawaii-void/40 border border-kawaii-border/50 text-xs outline-none focus:border-kawaii-cyan/50"
+                className="w-full h-8 px-3 rounded-full bg-kawaii-void/40 border border-kawaii-border/50 text-xs outline-none focus:border-kawaii-pink/50"
               />
             </SparkleInput>
           </form>
@@ -90,7 +90,7 @@ export function SiteHeader() {
               <a
                 href="/admin"
                 className={`text-sm font-bold transition-colors ${
-                  isActive(pathname, '/admin') ? 'text-kawaii-cyan' : 'text-kawaii-muted hover:text-kawaii-pink'
+                  isActive(pathname, '/admin') ? 'text-kawaii-pink' : 'text-kawaii-muted hover:text-kawaii-pink'
                 }`}
               >
                 管理
@@ -128,7 +128,7 @@ export function SiteHeader() {
               key={link.href}
               href={link.href}
               className={`flex items-center justify-center text-xs font-bold ${
-                isActive(pathname, link.href) ? 'text-kawaii-cyan' : 'text-kawaii-muted'
+                isActive(pathname, link.href) ? 'text-kawaii-pink' : 'text-kawaii-muted'
               }`}
             >
               {link.label}

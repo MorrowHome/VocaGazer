@@ -1,32 +1,38 @@
 'use client';
 
 /**
- * Rain-on-glass overlay.
- * Drop field adapted from "Heartfelt" by Martijn Steinrucken (BigWings), 2017
+ * Background rain-on-glass.
+ * Drop field + fog/trails from "Heartfelt" by Martijn Steinrucken (BigWings),
  * CC BY-NC-SA 3.0 — https://www.shadertoy.com/view/ltffzl
- * (no heart story, no scene texture; fog + sliding drops + trails only)
+ *
+ * Uses textureLod like the original: drops refract the sky, trails wipe fog.
+ * No HAS_HEART story, no zoom pulse, no fade-to-black, no lightning.
  */
 
 import { useEffect, useRef } from 'react';
 import { usePrefersReducedMotion } from '@/components/motion/usePrefersReducedMotion';
 
-const VERT = `
-attribute vec2 a_pos;
+const VERT = `#version 300 es
+in vec2 a_pos;
 void main() {
   gl_Position = vec4(a_pos, 0.0, 1.0);
 }
 `;
 
-const FRAG = `
+const FRAG = `#version 300 es
 precision highp float;
 
+uniform sampler2D u_tex;
 uniform vec2 u_res;
 uniform float u_time;
 uniform float u_rain;
-uniform float u_light;
+
+out vec4 fragColor;
+
+#define S(a, b, t) smoothstep(a, b, t)
 
 vec3 N13(float p) {
-  vec3 p3 = fract(vec3(p) * vec3(0.1031, 0.11369, 0.13787));
+  vec3 p3 = fract(vec3(p) * vec3(.1031, .11369, .13787));
   p3 += dot(p3, p3.yzx + 19.19);
   return fract(vec3((p3.x + p3.y) * p3.z, (p3.x + p3.z) * p3.y, (p3.y + p3.z) * p3.x));
 }
@@ -36,14 +42,15 @@ float N(float t) {
 }
 
 float Saw(float b, float t) {
-  return smoothstep(0.0, b, t) * smoothstep(1.0, b, t);
+  return S(0., b, t) * S(1., b, t);
 }
 
 vec2 DropLayer2(vec2 uv, float t) {
   vec2 UV = uv;
+
   uv.y += t * 0.75;
-  vec2 a = vec2(6.0, 1.0);
-  vec2 grid = a * 2.0;
+  vec2 a = vec2(6., 1.);
+  vec2 grid = a * 2.;
   vec2 id = floor(uv * grid);
 
   float colShift = N(id.x);
@@ -51,94 +58,93 @@ vec2 DropLayer2(vec2 uv, float t) {
 
   id = floor(uv * grid);
   vec3 n = N13(id.x * 35.2 + id.y * 2376.1);
-  vec2 st = fract(uv * grid) - vec2(0.5, 0.0);
+  vec2 st = fract(uv * grid) - vec2(.5, 0);
 
-  float x = n.x - 0.5;
-  float y = UV.y * 20.0;
+  float x = n.x - .5;
+
+  float y = UV.y * 20.;
   float wiggle = sin(y + sin(y));
-  x += wiggle * (0.5 - abs(x)) * (n.z - 0.5);
-  x *= 0.7;
+  x += wiggle * (.5 - abs(x)) * (n.z - .5);
+  x *= .7;
   float ti = fract(t + n.z);
-  y = (Saw(0.85, ti) - 0.5) * 0.9 + 0.5;
+  y = (Saw(.85, ti) - .5) * .9 + .5;
   vec2 p = vec2(x, y);
 
   float d = length((st - p) * a.yx);
-  float mainDrop = smoothstep(0.4, 0.0, d);
 
-  float r = sqrt(smoothstep(1.0, y, st.y));
+  float mainDrop = S(.4, .0, d);
+
+  float r = sqrt(S(1., y, st.y));
   float cd = abs(st.x - x);
-  float trail = smoothstep(0.23 * r, 0.15 * r * r, cd);
-  float trailFront = smoothstep(-0.02, 0.02, st.y - y);
+  float trail = S(.23 * r, .15 * r * r, cd);
+  float trailFront = S(-.02, .02, st.y - y);
   trail *= trailFront * r * r;
 
-  float trail2 = smoothstep(0.2 * r, 0.0, cd);
-  y = fract(UV.y * 10.0) + (st.y - 0.5);
+  y = UV.y;
+  float trail2 = S(.2 * r, .0, cd);
+  float droplets = max(0., (sin(y * (1. - y) * 120.) - st.y)) * trail2 * trailFront * n.z;
+  y = fract(y * 10.) + (st.y - .5);
   float dd = length(st - vec2(x, y));
-  float droplets = smoothstep(0.3, 0.0, dd);
-  float m = mainDrop + droplets * r * trailFront * trail2;
+  droplets = S(.3, 0., dd);
+  float m = mainDrop + droplets * r * trailFront;
 
   return vec2(m, trail);
 }
 
 float StaticDrops(vec2 uv, float t) {
-  uv *= 40.0;
+  uv *= 40.;
+
   vec2 id = floor(uv);
-  uv = fract(uv) - 0.5;
+  uv = fract(uv) - .5;
   vec3 n = N13(id.x * 107.45 + id.y * 3543.654);
-  vec2 p = (n.xy - 0.5) * 0.7;
+  vec2 p = (n.xy - .5) * .7;
   float d = length(uv - p);
-  float fade = Saw(0.025, fract(t + n.z));
-  return smoothstep(0.3, 0.0, d) * fract(n.z * 10.0) * fade;
+
+  float fade = Saw(.025, fract(t + n.z));
+  float c = S(.3, 0., d) * fract(n.z * 10.) * fade;
+  return c;
 }
 
 vec2 Drops(vec2 uv, float t, float l0, float l1, float l2) {
   float s = StaticDrops(uv, t) * l0;
   vec2 m1 = DropLayer2(uv, t) * l1;
   vec2 m2 = DropLayer2(uv * 1.85, t) * l2;
+
   float c = s + m1.x + m2.x;
-  c = smoothstep(0.3, 1.0, c);
+  c = S(.3, 1., c);
+
   return vec2(c, max(m1.y * l0, m2.y * l1));
 }
 
 void main() {
-  vec2 frag = gl_FragCoord.xy;
-  vec2 uv = (frag - 0.5 * u_res) / u_res.y;
-  float T = u_time;
-  float t = T * 0.2;
+  vec2 fragCoord = gl_FragCoord.xy;
+  vec2 uv = (fragCoord - .5 * u_res) / u_res.y;
+  vec2 UV = fragCoord / u_res;
+
+  float t = u_time * .2;
   float rainAmount = u_rain;
 
-  float staticDrops = smoothstep(-0.5, 1.0, rainAmount) * 2.0;
-  float layer1 = smoothstep(0.25, 0.75, rainAmount);
-  float layer2 = smoothstep(0.0, 0.5, rainAmount);
+  float maxBlur = mix(1.1, 6.2, rainAmount);
+  float minBlur = mix(0.35, 2.1, rainAmount);
+
+  float staticDrops = S(-.5, 1., rainAmount) * 2.;
+  float layer1 = S(.25, .75, rainAmount);
+  float layer2 = S(.0, .5, rainAmount);
 
   vec2 c = Drops(uv, t, staticDrops, layer1, layer2);
-  vec2 e = vec2(0.001, 0.0);
+  vec2 e = vec2(.001, 0.);
   float cx = Drops(uv + e, t, staticDrops, layer1, layer2).x;
   float cy = Drops(uv + e.yx, t, staticDrops, layer1, layer2).x;
   vec2 n = vec2(cx - c.x, cy - c.x);
 
-  float drop = smoothstep(0.15, 1.0, c.x);
-  float trail = clamp(c.y, 0.0, 1.0);
+  float focus = mix(maxBlur - c.y, minBlur, S(.1, .2, c.x));
+  vec3 col = textureLod(u_tex, UV + n, focus).rgb;
 
-  vec3 N = normalize(vec3(n * 60.0, 0.12));
-  vec3 L = normalize(vec3(-0.25, 0.55, 0.8));
-  float spec = pow(max(0.0, dot(N, L)), 42.0);
-  float rim = pow(1.0 - max(0.0, N.z), 3.0) * drop;
-
-  float fog = mix(0.10, 0.018, trail);
-  fog *= mix(1.0, 0.55, u_light);
-
-  vec3 glass = mix(vec3(0.62, 0.82, 1.0), vec3(0.95, 0.97, 1.0), u_light);
-  vec3 col = glass * (fog * 0.9 + drop * 0.22 + spec * 1.8 + rim * 0.35);
-
-  float alpha = fog + drop * 0.16 + spec * 0.55 + trail * 0.04;
-  alpha = clamp(alpha, 0.0, 0.42);
-
-  gl_FragColor = vec4(col, alpha);
+  fragColor = vec4(col, 1.);
 }
 `;
 
-function compile(gl: WebGLRenderingContext, type: number, src: string) {
+function compile(gl: WebGL2RenderingContext, type: number, src: string) {
   const sh = gl.createShader(type);
   if (!sh) return null;
   gl.shaderSource(sh, src);
@@ -151,6 +157,148 @@ function compile(gl: WebGLRenderingContext, type: number, src: string) {
   return sh;
 }
 
+function rnd(seed: number) {
+  const x = Math.sin(seed * 127.1 + 311.7) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+function paintSky(ctx: CanvasRenderingContext2D, w: number, h: number, light: boolean) {
+  const base = ctx.createLinearGradient(0, 0, 0, h);
+  if (light) {
+    base.addColorStop(0, '#fff8fb');
+    base.addColorStop(0.46, '#f7eef6');
+    base.addColorStop(1, '#f3eaf4');
+  } else {
+    base.addColorStop(0, '#0c0a1c');
+    base.addColorStop(0.42, '#07060f');
+    base.addColorStop(1, '#0a0818');
+  }
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, w, h);
+
+  const bloom = (x: number, y: number, r: number, color: string) => {
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, color);
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+  };
+
+  if (light) {
+    bloom(w * 0.82, h * 0.02, w * 0.72, 'rgba(255,107,157,0.32)');
+    bloom(w * 0.08, h * 0.96, w * 0.58, 'rgba(184,160,255,0.2)');
+    bloom(w * 0.58, h * 0.78, w * 0.48, 'rgba(255,176,198,0.26)');
+    bloom(w * 0.5, h * 0.12, w * 0.62, 'rgba(255,214,226,0.45)');
+    bloom(w * 0.28, h * 0.38, w * 0.34, 'rgba(255,186,210,0.18)');
+  } else {
+    bloom(w * 0.84, h * 0.0, w * 0.78, 'rgba(255,107,157,0.55)');
+    bloom(w * 0.04, h * 1.0, w * 0.62, 'rgba(184,160,255,0.38)');
+    bloom(w * 0.52, h * 0.78, w * 0.5, 'rgba(255,107,157,0.28)');
+    bloom(w * 0.7, h * 0.22, w * 0.4, 'rgba(255,160,190,0.22)');
+    bloom(w * 0.3, h * 0.4, w * 0.32, 'rgba(184,160,255,0.16)');
+  }
+
+  ctx.globalCompositeOperation = 'lighter';
+  const lights = light ? 36 : 52;
+  for (let i = 0; i < lights; i++) {
+    const x = rnd(i + 1.7) * w;
+    const y = rnd(i + 9.3) * h;
+    const r = (light ? 18 : 14) + rnd(i + 21.1) * (light ? 70 : 90);
+    const pink = rnd(i + 4.2) > 0.45;
+    const a = (light ? 0.07 : 0.14) * (0.45 + rnd(i + 6.6) * 0.55);
+    const color = pink
+      ? `rgba(255, ${light ? 140 : 107}, ${light ? 180 : 157}, ${a})`
+      : `rgba(${light ? 196 : 184}, ${light ? 176 : 160}, 255, ${a * 0.85})`;
+    bloom(x, y, r, color);
+  }
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, w: number, h: number) {
+  const ir = img.width / img.height;
+  const cr = w / h;
+  let dw: number;
+  let dh: number;
+  let dx: number;
+  let dy: number;
+  if (ir > cr) {
+    dh = h;
+    dw = h * ir;
+    dx = (w - dw) / 2;
+    dy = 0;
+  } else {
+    dw = w;
+    dh = w / ir;
+    dx = 0;
+    dy = (h - dh) / 2;
+  }
+  ctx.fillStyle = '#07060f';
+  ctx.fillRect(0, 0, w, h);
+  ctx.drawImage(img, dx, dy, dw, dh);
+}
+
+function uploadCanvas(
+  gl: WebGL2RenderingContext,
+  tex: WebGLTexture,
+  source: HTMLCanvasElement,
+) {
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+  gl.generateMipmap(gl.TEXTURE_2D);
+}
+
+function uploadSky(
+  gl: WebGL2RenderingContext,
+  tex: WebGLTexture,
+  sky: HTMLCanvasElement,
+  light: boolean,
+) {
+  const ctx = sky.getContext('2d');
+  if (!ctx) return;
+  paintSky(ctx, sky.width, sky.height, light);
+  uploadCanvas(gl, tex, sky);
+}
+
+function readSceneUrl() {
+  const live = document.documentElement.dataset.scene;
+  if (live) return live;
+  try {
+    return sessionStorage.getItem('vg-scene') || '';
+  } catch {
+    return '';
+  }
+}
+
+function rainFromScroll() {
+  if (window.location.pathname !== '/') return 0.78;
+  const span = Math.max(160, window.innerHeight * 0.82);
+  const t = Math.min(1, Math.max(0, window.scrollY / span));
+  return 0.16 + t * t * 0.74;
+}
+
+function uploadSceneImage(
+  gl: WebGL2RenderingContext,
+  tex: WebGLTexture,
+  sky: HTMLCanvasElement,
+  src: string,
+  token: number,
+  current: { token: number },
+) {
+  const img = new Image();
+  img.onload = () => {
+    if (token !== current.token) return;
+    const ctx = sky.getContext('2d');
+    if (!ctx) return;
+    drawCover(ctx, img, sky.width, sky.height);
+    uploadCanvas(gl, tex, sky);
+  };
+  img.onerror = () => {
+    /* keep current texture */
+  };
+  img.src = `/api/cover-proxy?u=${encodeURIComponent(src)}`;
+}
+
 export function RainGlass() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const reduce = usePrefersReducedMotion();
@@ -158,12 +306,16 @@ export function RainGlass() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const gl = canvas.getContext('webgl', {
+    const gl = canvas.getContext('webgl2', {
       alpha: true,
-      premultipliedAlpha: false,
       antialias: false,
+      powerPreference: 'high-performance',
+      premultipliedAlpha: false,
     });
     if (!gl) return;
+
+    const renderer = gl.getParameter(gl.RENDERER) || '';
+    if (/SwiftShader|llvmpipe|Software/i.test(String(renderer))) return;
 
     const vs = compile(gl, gl.VERTEX_SHADER, VERT);
     const fs = compile(gl, gl.FRAGMENT_SHADER, FRAG);
@@ -187,47 +339,87 @@ export function RainGlass() {
     gl.enableVertexAttribArray(0);
     gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
 
+    const sky = document.createElement('canvas');
+    sky.width = 1920;
+    sky.height = 1080;
+    const tex = gl.createTexture();
+    if (!tex) return;
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    const aniso = gl.getExtension('EXT_texture_filter_anisotropic');
+    if (aniso) {
+      const max = gl.getParameter(aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
+      gl.texParameterf(gl.TEXTURE_2D, aniso.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(8, max));
+    }
+
+    const uTex = gl.getUniformLocation(prog, 'u_tex');
     const uRes = gl.getUniformLocation(prog, 'u_res');
     const uTime = gl.getUniformLocation(prog, 'u_time');
     const uRain = gl.getUniformLocation(prog, 'u_rain');
-    const uLight = gl.getUniformLocation(prog, 'u_light');
+    gl.uniform1i(uTex, 0);
 
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    let lastLight = document.documentElement.dataset.theme === 'light' ? 1 : 0;
+    let lastScene = readSceneUrl();
+    const loadGen = { token: 0 };
+    uploadSky(gl, tex, sky, lastLight === 1);
+    if (lastScene) {
+      loadGen.token += 1;
+      uploadSceneImage(gl, tex, sky, lastScene, loadGen.token, loadGen);
+    }
 
     let raf = 0;
     let running = true;
     const t0 = performance.now();
 
     const resize = () => {
-      const scale = 0.55;
-      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-      const w = Math.max(2, Math.floor(window.innerWidth * scale * dpr));
-      const h = Math.max(2, Math.floor(window.innerHeight * scale * dpr));
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const w = Math.max(2, Math.floor(window.innerWidth * dpr));
+      const h = Math.max(2, Math.floor(window.innerHeight * dpr));
       if (canvas.width !== w || canvas.height !== h) {
         canvas.width = w;
         canvas.height = h;
+        gl.viewport(0, 0, w, h);
       }
-      gl.viewport(0, 0, w, h);
     };
 
     resize();
     window.addEventListener('resize', resize);
 
-    const tick = () => {
+    const tick = (now: number) => {
       if (!running) return;
-      resize();
+      raf = requestAnimationFrame(tick);
+      if (document.hidden) return;
       const light = document.documentElement.dataset.theme === 'light' ? 1 : 0;
-      const time = reduce ? 12.4 : (performance.now() - t0) * 0.001;
+      const scene = readSceneUrl();
+      if (scene !== lastScene) {
+        lastScene = scene;
+        loadGen.token += 1;
+        if (scene) {
+          uploadSceneImage(gl, tex, sky, scene, loadGen.token, loadGen);
+        } else {
+          uploadSky(gl, tex, sky, light === 1);
+        }
+      } else if (!scene && light !== lastLight) {
+        lastLight = light;
+        uploadSky(gl, tex, sky, light === 1);
+      }
+      lastLight = light;
+      const time = reduce ? 12.4 : (now - t0) * 0.001;
       gl.uniform2f(uRes, canvas.width, canvas.height);
       gl.uniform1f(uTime, time);
-      gl.uniform1f(uRain, reduce ? 0.35 : 0.62);
-      gl.uniform1f(uLight, light);
+      gl.uniform1f(uRain, reduce ? 0.35 : rainFromScroll());
       gl.drawArrays(gl.TRIANGLES, 0, 3);
-      if (!reduce) raf = requestAnimationFrame(tick);
     };
 
-    tick();
+    if (reduce) {
+      tick(t0);
+    } else {
+      raf = requestAnimationFrame(tick);
+    }
 
     return () => {
       running = false;
@@ -237,6 +429,7 @@ export function RainGlass() {
       gl.deleteShader(vs);
       gl.deleteShader(fs);
       gl.deleteBuffer(buf);
+      gl.deleteTexture(tex);
     };
   }, [reduce]);
 

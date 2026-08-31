@@ -17,7 +17,7 @@ interface Petal {
   size: number;
 }
 
-const COLORS = ['#FF8BB8', '#FFC2D7', '#39C5BB', '#E4C56A', '#B8A0FF'];
+const COLORS = ['#FF6B9D', '#FFC2D7', '#B8A0FF', '#E4C56A', '#FF9B7A'];
 
 function burst(petals: Petal[], cx: number, cy: number, count: number) {
   const n = Math.min(count, 22);

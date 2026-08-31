@@ -35,13 +35,13 @@ export default function RootLayout({
           <TRPCProvider>
             <AuthProvider>
               <BackgroundLayers />
+              <RainGlass />
               <ClickFireworks />
               <SiteHeader />
-              <div className="pb-16 lg:pb-0 min-h-[calc(100vh-3.5rem)] flex flex-col">
+              <div className="relative z-10 pb-16 lg:pb-0 min-h-[calc(100vh-3.5rem)] flex flex-col">
                 <div className="flex-1">{children}</div>
                 <SiteFooter />
               </div>
-              <RainGlass />
             </AuthProvider>
           </TRPCProvider>
         </ThemeProvider>

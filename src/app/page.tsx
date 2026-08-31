@@ -33,7 +33,7 @@ function RankEntry({ song, rank }: { song: any; rank: number }) {
       </div>
       <div className="text-right shrink-0">
         <p className="text-xs text-kawaii-muted">{formatCount(stats.playCount ?? 0)}</p>
-        <p className="text-xs font-bold text-kawaii-cyan">{song.score.toFixed(1)}</p>
+        <p className="text-xs font-bold text-kawaii-pink">{song.score.toFixed(1)}</p>
       </div>
     </a>
   );
@@ -99,7 +99,7 @@ function MiniSongCard({ song, label }: { song: any; label: string }) {
         <div className="absolute inset-0 bg-gradient-to-t from-kawaii-hero-void/90 via-kawaii-hero-void/40 to-transparent" />
       </div>
       <div className="relative z-10 p-5 h-full flex flex-col justify-end min-h-[160px]">
-        <p className="text-[11px] text-kawaii-cyan tracking-[0.2em] mb-1.5 font-bold">{label}</p>
+        <p className="text-[11px] text-kawaii-pink tracking-[0.2em] mb-1.5 font-bold">{label}</p>
         <p className="text-lg font-display font-bold text-white truncate group-hover:text-kawaii-pink transition-colors">
           {song.title}
         </p>
@@ -199,7 +199,7 @@ export default function HomePage() {
         <section>
           <div className="flex items-center justify-between mb-5">
             <h2 className="section-title text-kawaii-text">排行榜</h2>
-            <a href="/ranking" className="btn btn-cyan !py-1.5 !px-4 text-xs">
+            <a href="/ranking" className="btn btn-pink !py-1.5 !px-4 text-xs">
               查看全部 →
             </a>
           </div>
@@ -208,7 +208,7 @@ export default function HomePage() {
             <div className="card">
               <div className="p-5">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-display text-lg font-bold text-kawaii-cyan tracking-[0.2em]">日榜</h3>
+                  <h3 className="font-display text-lg font-bold text-kawaii-pink tracking-[0.2em]">日榜</h3>
                 </div>
                 {isLoading ? (
                   <div className="space-y-3">
