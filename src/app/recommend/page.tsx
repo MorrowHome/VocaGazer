@@ -4,6 +4,57 @@ import { trpc } from '@/lib/trpc';
 import { formatCount, parseStats, timeAgo, coverImgProps } from '@/lib/utils';
 import { useAuth } from '@/components/AuthContext';
 
+function EditorPickBanner({ song, rank, featured }: { song: any; rank: number; featured?: boolean }) {
+  const stats = parseStats(song.statistics);
+  const img = coverImgProps(song.picUrl);
+  return (
+    <a
+      href={`/song/${song.bvId}`}
+      className={`group relative block overflow-hidden rounded-[1.75rem] ring-1 ring-white/20 hover:ring-kawaii-pink/45 transition-all min-h-[50svh] ${
+        featured ? 'lg:min-h-[70svh]' : ''
+      }`}
+    >
+      {img.src ? (
+        <img
+          {...img}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
+        />
+      ) : (
+        <div className="absolute inset-0 bg-gradient-to-br from-kawaii-pink/40 via-kawaii-purple/30 to-kawaii-cyan/20" />
+      )}
+      <div className="absolute inset-0 bg-gradient-to-t from-kawaii-hero-void via-kawaii-hero-void/55 to-kawaii-hero-void/15" />
+      <div className={`relative z-10 h-full flex flex-col justify-end p-6 md:p-10 lg:p-12 ${featured ? 'min-h-[50svh] lg:min-h-[70svh]' : 'min-h-[50svh]'}`}>
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <span className="text-[10px] font-bold tracking-[0.28em] uppercase text-kawaii-pink">编者推送</span>
+          <span className="text-xs font-black text-white/80 bg-white/10 px-2.5 py-0.5 rounded-full ring-1 ring-white/20">#{rank}</span>
+          <span className="text-xs font-black text-kawaii-pink bg-kawaii-hero-void/50 px-2.5 py-0.5 rounded-full ring-1 ring-kawaii-pink/30">
+            ★ {Number(song.score).toFixed(1)}
+          </span>
+        </div>
+        <h3 className="font-display font-bold text-white leading-tight line-clamp-3 text-2xl sm:text-3xl md:text-4xl lg:text-5xl drop-shadow-lg">
+          {song.title}
+        </h3>
+        <p className="mt-3 text-sm md:text-base text-white/75 font-medium">
+          {song.author}
+          <span className="opacity-40 mx-2">·</span>
+          {formatCount(stats.playCount ?? 0)} 播放
+          <span className="opacity-40 mx-2">·</span>
+          {timeAgo(song.publishTime)}
+        </p>
+        {song.editorNote && (
+          <p className="mt-5 max-w-2xl text-sm md:text-base text-white/88 leading-relaxed line-clamp-4 border-l-2 border-kawaii-pink/80 pl-4">
+            {song.editorNote}
+          </p>
+        )}
+        <p className="mt-6 text-xs font-bold tracking-[0.2em] uppercase text-white/50 group-hover:text-kawaii-pink transition-colors">
+          打开歌曲 →
+        </p>
+      </div>
+    </a>
+  );
+}
+
 // ─── 推荐歌曲卡片 ───
 function RecSongCard({ song, rank }: { song: any; rank?: number }) {
   const stats = parseStats(song.statistics);
@@ -66,20 +117,16 @@ export default function RecommendPage() {
             <h2 className="section-title text-kawaii-text">编者推送</h2>
           </div>
           {isLoading ? (
-            <div className="song-grid">
-              {[...Array(8)].map((_, i) => <div key={i} className="rounded-xl bg-kawaii-surface/50 animate-pulse aspect-[16/10]" />)}
+            <div className="space-y-5">
+              <div className="rounded-[1.75rem] bg-kawaii-surface/50 animate-pulse min-h-[50svh]" />
+              <div className="rounded-[1.75rem] bg-kawaii-surface/50 animate-pulse min-h-[50svh]" />
             </div>
           ) : !data?.editorPicks?.length ? (
             <p className="text-kawaii-muted text-sm font-medium">暂无</p>
           ) : (
-            <div className="song-grid">
+            <div className="space-y-5">
               {data.editorPicks.map((song: any, i: number) => (
-                <div key={song.id}>
-                  <RecSongCard song={song} rank={i + 1} />
-                  {song.editorNote && (
-                    <p className="text-[11px] text-kawaii-muted font-medium mt-1.5 px-1 line-clamp-2">{song.editorNote}</p>
-                  )}
-                </div>
+                <EditorPickBanner key={song.id} song={song} rank={i + 1} featured={i === 0} />
               ))}
             </div>
           )}
