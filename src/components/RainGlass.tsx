@@ -10,7 +10,10 @@
  */
 
 import { useEffect, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 import { usePrefersReducedMotion } from '@/components/motion/usePrefersReducedMotion';
+import { getRainTune, rainTargetFromScroll, RainTunePanel, setLiveRainAmount, spawnSecondsNow } from '@/components/RainTune';
+import { rainTextureSrc } from '@/lib/scene';
 
 const VERT = `#version 300 es
 in vec2 a_pos;
@@ -26,6 +29,7 @@ uniform sampler2D u_tex;
 uniform vec2 u_res;
 uniform float u_time;
 uniform float u_rain;
+uniform float u_spawn;
 
 out vec4 fragColor;
 
@@ -66,7 +70,7 @@ vec2 DropLayer2(vec2 uv, float t) {
   float wiggle = sin(y + sin(y));
   x += wiggle * (.5 - abs(x)) * (n.z - .5);
   x *= .7;
-  float ti = fract(t + n.z);
+  float ti = mix(t, fract(t + n.z), S(0.0, max(0.35, u_spawn), u_time));
   y = (Saw(.85, ti) - .5) * .9 + .5;
   vec2 p = vec2(x, y);
 
@@ -122,12 +126,12 @@ void main() {
   vec2 UV = fragCoord / u_res;
 
   float t = u_time * .2;
-  float rainAmount = u_rain;
+  float rainAmount = u_rain * S(0.0, max(0.4, u_spawn), u_time);
 
-  float maxBlur = mix(1.1, 6.2, rainAmount);
-  float minBlur = mix(0.35, 2.1, rainAmount);
+  float maxBlur = mix(0.0, 6.2, rainAmount);
+  float minBlur = mix(0.0, 2.1, rainAmount);
 
-  float staticDrops = S(-.5, 1., rainAmount) * 2.;
+  float staticDrops = S(-.5, 1., rainAmount) * 2. * rainAmount;
   float layer1 = S(.25, .75, rainAmount);
   float layer2 = S(.0, .5, rainAmount);
 
@@ -270,13 +274,6 @@ function readSceneUrl() {
   }
 }
 
-function rainFromScroll() {
-  if (window.location.pathname !== '/') return 0.78;
-  const span = Math.max(160, window.innerHeight * 0.82);
-  const t = Math.min(1, Math.max(0, window.scrollY / span));
-  return 0.16 + t * t * 0.74;
-}
-
 function uploadSceneImage(
   gl: WebGL2RenderingContext,
   tex: WebGLTexture,
@@ -296,12 +293,15 @@ function uploadSceneImage(
   img.onerror = () => {
     /* keep current texture */
   };
-  img.src = `/api/cover-proxy?u=${encodeURIComponent(src)}`;
+  img.src = rainTextureSrc(src);
 }
 
 export function RainGlass() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const reduce = usePrefersReducedMotion();
+  const pathname = usePathname();
+  const pathRef = useRef(pathname);
+  pathRef.current = pathname;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -360,6 +360,7 @@ export function RainGlass() {
     const uRes = gl.getUniformLocation(prog, 'u_res');
     const uTime = gl.getUniformLocation(prog, 'u_time');
     const uRain = gl.getUniformLocation(prog, 'u_rain');
+    const uSpawn = gl.getUniformLocation(prog, 'u_spawn');
     gl.uniform1i(uTex, 0);
 
     let lastLight = document.documentElement.dataset.theme === 'light' ? 1 : 0;
@@ -374,6 +375,11 @@ export function RainGlass() {
     let raf = 0;
     let running = true;
     const t0 = performance.now();
+    let lastTick = t0;
+    let rain = 0;
+    let rainAge = 0;
+    let lastPath = pathRef.current;
+    let clearing = false;
 
     const resize = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -408,10 +414,38 @@ export function RainGlass() {
         uploadSky(gl, tex, sky, light === 1);
       }
       lastLight = light;
-      const time = reduce ? 12.4 : (now - t0) * 0.001;
+      const dt = Math.min(0.05, (now - lastTick) / 1000);
+      lastTick = now;
+      const tune = getRainTune();
+      if (pathRef.current !== lastPath) {
+        lastPath = pathRef.current;
+        clearing = rain > 0.015;
+        if (!clearing) {
+          rain = 0;
+          rainAge = 0;
+        }
+      }
+      let target = reduce ? Math.min(0.28, rainTargetFromScroll()) : rainTargetFromScroll();
+      let follow = tune.followSeconds;
+      if (clearing) {
+        if (rain > 0.015) {
+          target = 0;
+          follow = 0.22;
+        } else {
+          rain = 0;
+          rainAge = 0;
+          clearing = false;
+          target = reduce ? Math.min(0.28, rainTargetFromScroll()) : rainTargetFromScroll();
+        }
+      }
+      rain += (target - rain) * (1 - Math.exp(-dt / follow));
+      if (target <= 0 && rain < 0.008) rainAge = 0;
+      else rainAge += dt;
+      setLiveRainAmount(rain);
       gl.uniform2f(uRes, canvas.width, canvas.height);
-      gl.uniform1f(uTime, time);
-      gl.uniform1f(uRain, reduce ? 0.35 : rainFromScroll());
+      gl.uniform1f(uTime, rainAge);
+      gl.uniform1f(uRain, rain);
+      gl.uniform1f(uSpawn, spawnSecondsNow());
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     };
 
@@ -434,8 +468,11 @@ export function RainGlass() {
   }, [reduce]);
 
   return (
-    <div className="rain-glass" aria-hidden="true">
-      <canvas ref={canvasRef} className="rain-glass-drops" />
-    </div>
+    <>
+      <div className="rain-glass" aria-hidden="true">
+        <canvas ref={canvasRef} className="rain-glass-drops" />
+      </div>
+      <RainTunePanel />
+    </>
   );
 }

@@ -81,7 +81,8 @@ export function HomeHero({
 
   return (
     <section className="relative min-h-[100svh] -mt-14 flex items-end">
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 md:px-8 pb-16 pt-28">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-[rgb(var(--background))]/55 to-transparent" />
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 md:px-8 pb-20 pt-28">
         <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-8 lg:gap-12 items-end">
           <div>
             <p className="text-[11px] font-bold tracking-[0.42em] text-kawaii-pink mb-5">VOCALOID HUB</p>

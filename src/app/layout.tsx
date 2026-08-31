@@ -5,6 +5,7 @@ import { AuthProvider } from '@/components/AuthContext';
 import { ThemeProvider } from '@/components/ThemeContext';
 import { BackgroundLayers } from '@/components/BackgroundLayers';
 import { RainGlass } from '@/components/RainGlass';
+import { SceneSync } from '@/components/SceneSync';
 import { ClickFireworks } from '@/components/ClickFireworks';
 import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';
@@ -19,6 +20,7 @@ export const metadata: Metadata = {
 };
 
 const THEME_BOOT = `(function(){try{var t=localStorage.getItem('vg-theme');if(t!=='light'&&t!=='dark'){t=window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'}document.documentElement.dataset.theme=t}catch(e){}})();`;
+const SCENE_BOOT = `(function(){try{var s=sessionStorage.getItem('vg-scene');document.documentElement.dataset.scene=s||'/bg-default.jpg'}catch(e){document.documentElement.dataset.scene='/bg-default.jpg'}})();`;
 
 export default function RootLayout({
   children,
@@ -29,12 +31,14 @@ export default function RootLayout({
     <html lang="zh-CN" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
+        <script dangerouslySetInnerHTML={{ __html: SCENE_BOOT }} />
       </head>
       <body className="antialiased font-sans">
         <ThemeProvider>
           <TRPCProvider>
             <AuthProvider>
               <BackgroundLayers />
+              <SceneSync />
               <RainGlass />
               <ClickFireworks />
               <SiteHeader />

@@ -7,6 +7,7 @@ import { chinaCalendarDay, shiftChinaDays } from '@/lib/time';
 import { HOMEPAGE_CACHE_TTL_MS, cacheGet, cacheSet } from '../../cache/memory';
 import { getSiteStats } from '@/server/services/site-stats';
 import { SETTING_KEYS, getSetting } from '@/server/services/settings';
+import { BUNDLED_DEFAULT_BG } from '@/lib/scene';
 import { BASELINE_FLAT, hasAxisValues, logProfile, normalizeRadar, parseSongStats, type AxisVector } from '@/server/services/score/breakdown';
 import { recomputeSiteStats } from '@/server/services/site-stats';
 
@@ -93,7 +94,7 @@ export const analyticsRouter = router({
     const weekStart = chinaCalendarDay(shiftChinaDays(new Date(), -7)).start;
     const site = await getSiteStats(ctx.prisma);
 
-    const [todaySongs, weekSongs, latestSongs, dailyRanking, weeklyRanking, risingSong, heroOverride] =
+    const [todaySongs, weekSongs, latestSongs, dailyRanking, weeklyRanking, risingSong, heroOverride, defaultBg] =
       await Promise.all([
         ctx.prisma.song.count({ where: { publishTime: { gte: todayStart } } }),
         ctx.prisma.song.count({ where: { publishTime: { gte: weekStart } } }),
@@ -102,6 +103,7 @@ export const analyticsRouter = router({
         rankingSongs(ctx.prisma, 'weekly', 10),
         findRisingSong(ctx.prisma),
         getSetting(ctx.prisma, SETTING_KEYS.heroImageUrl),
+        getSetting(ctx.prisma, SETTING_KEYS.defaultBgUrl),
       ]);
 
     const latestSong = latestSongs[0] ?? null;
@@ -119,7 +121,12 @@ export const analyticsRouter = router({
       weeklyHotSong,
       dailyHotSong,
       risingSong,
-      heroImageUrl: heroOverride || weeklyHotSong?.picUrl || dailyHotSong?.picUrl || null,
+      heroImageUrl:
+        heroOverride ||
+        weeklyHotSong?.picUrl ||
+        dailyHotSong?.picUrl ||
+        defaultBg ||
+        BUNDLED_DEFAULT_BG,
       latestSongs,
       dailyRanking,
       weeklyRanking,

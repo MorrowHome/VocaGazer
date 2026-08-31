@@ -147,7 +147,24 @@ export default function HomePage() {
         rising={risingSong}
       />
 
-      <div id="hub-main" className="max-w-7xl mx-auto px-4 md:px-8 py-8 space-y-14 relative z-10">
+      <div id="hub-main" className="max-w-7xl mx-auto px-4 md:px-8 pt-20 md:pt-28 pb-10 space-y-16 relative z-10 scroll-mt-16">
+        <section className="pb-4 md:pb-8">
+          <div className="flex items-end gap-4 md:gap-5">
+            <span className="font-display text-5xl md:text-6xl leading-none text-gradient-flow" aria-hidden="true">
+              歌
+            </span>
+            <div className="pb-1">
+              <p className="text-[11px] font-bold tracking-[0.42em] text-kawaii-pink">VOCALOID</p>
+              <h2 className="font-display text-2xl md:text-3xl font-bold tracking-[0.14em] text-kawaii-text mt-1">
+                Music Hub
+              </h2>
+            </div>
+          </div>
+          <p className="mt-5 max-w-lg text-sm text-kawaii-muted leading-relaxed">
+            B 站虚拟歌手原创曲的排行、数据和讨论。
+          </p>
+        </section>
+
         {/* ─── 顶部概览卡片：4列 ─── */}
         <section>
           {isLoading ? (
