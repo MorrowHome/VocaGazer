@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { ScoreRadar } from '@/components/charts/ScoreRadar';
 import { LineChart } from '@/components/charts/LineChart';
+import { StockDeltaChart } from '@/components/charts/StockDeltaChart';
 
 function fillDailyGaps(
   rows: Array<{ date: string | Date; playCount: number; score: number }>,
@@ -48,7 +49,6 @@ export function SongPowerPanel({
     const delta = !d.missing && prev && !prev.missing ? d.playCount - prev.playCount : 0;
     return { date: d.date, value: Math.max(0, delta), missing: d.missing || !prev || prev.missing };
   });
-  const maxDelta = Math.max(...deltas.filter((d) => !d.missing).map((d) => d.value), 1);
 
   return (
     <div className="card !p-6 space-y-6">
@@ -105,15 +105,11 @@ export function SongPowerPanel({
                 gaps
               />
               <div className="mt-4">
-                <LineChart
+                <StockDeltaChart
                   data={deltas}
-                  height={140}
-                  color="#B388FF"
-                  gradientId="deltaGrad"
-                  maxValue={maxDelta}
+                  height={148}
                   formatter={(v) => (v >= 10000 ? `${(v / 10000).toFixed(1)}万` : v.toLocaleString())}
                   label="单日增量"
-                  gaps
                 />
               </div>
             </>
