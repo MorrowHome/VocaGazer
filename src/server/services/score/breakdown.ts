@@ -8,6 +8,65 @@ export { AXIS_LABELS, SCORE_AXES, type ScoreAxis };
 
 export type AxisVector = Record<ScoreAxis, number>;
 
+export const RATE_AXES = ['likeRate', 'coinRate', 'favRate', 'shareRate', 'commentRate', 'coinLikeRate'] as const;
+export type RateAxis = (typeof RATE_AXES)[number];
+export type RateVector = Record<RateAxis, number>;
+
+export const RATE_LABELS: Record<RateAxis, string> = {
+  likeRate: '点赞率',
+  coinRate: '投币率',
+  favRate: '收藏率',
+  shareRate: '分享率',
+  commentRate: '评论率',
+  coinLikeRate: '投币/赞',
+};
+
+const ZERO_RATES: RateVector = {
+  likeRate: 0,
+  coinRate: 0,
+  favRate: 0,
+  shareRate: 0,
+  commentRate: 0,
+  coinLikeRate: 0,
+};
+
+export function emptyRates(): RateVector {
+  return { ...ZERO_RATES };
+}
+
+/** 计数转互动率：前五轴相对播放，投币/赞看点赞里有多少真投了币 */
+export function ratesFromAxes(v: AxisVector): RateVector {
+  const plays = Math.max(0, v.playCount);
+  const likes = Math.max(0, v.likes);
+  return {
+    likeRate: plays > 0 ? v.likes / plays : 0,
+    coinRate: plays > 0 ? v.coins / plays : 0,
+    favRate: plays > 0 ? v.favorites / plays : 0,
+    shareRate: plays > 0 ? v.shares / plays : 0,
+    commentRate: plays > 0 ? v.comments / plays : 0,
+    coinLikeRate: likes > 0 ? v.coins / likes : 0,
+  };
+}
+
+export function hasRateValues(v: RateVector): boolean {
+  return RATE_AXES.some((axis) => v[axis] > 0);
+}
+
+/** 按歌平均互动率，播放为 0 的不进均值 */
+export function meanRatesFromAxes(rows: AxisVector[]): RateVector {
+  const acc = emptyRates();
+  let n = 0;
+  for (const row of rows) {
+    if (row.playCount <= 0) continue;
+    const r = ratesFromAxes(row);
+    for (const axis of RATE_AXES) acc[axis] += r[axis];
+    n++;
+  }
+  if (n === 0) return acc;
+  for (const axis of RATE_AXES) acc[axis] /= n;
+  return acc;
+}
+
 const ZERO: AxisVector = {
   playCount: 0,
   likes: 0,
@@ -57,9 +116,13 @@ export function parseSongStats(statistics: string): AxisVector {
  * 每轴：图均 = 50；每翻一倍约 +15（2 倍→65，4 倍→80）。
  * 线性 50×比值会让热门曲六轴全顶到 100，看起来像没数据。
  */
-export function normalizeRadar(values: AxisVector, baseline: AxisVector): AxisVector {
-  const out = emptyAxes();
-  for (const axis of SCORE_AXES) {
+export function normalizeAgainstMean<K extends string>(
+  values: Record<K, number>,
+  baseline: Record<K, number>,
+  axes: readonly K[],
+): Record<K, number> {
+  const out = Object.fromEntries(axes.map((axis) => [axis, 0])) as Record<K, number>;
+  for (const axis of axes) {
     const mean = baseline[axis];
     const value = values[axis];
     if (!mean || mean <= 0) {
@@ -74,6 +137,10 @@ export function normalizeRadar(values: AxisVector, baseline: AxisVector): AxisVe
     out[axis] = Math.max(8, Math.min(160, 50 + 15 * Math.log2(ratio)));
   }
   return out;
+}
+
+export function normalizeRadar(values: AxisVector, baseline: AxisVector): AxisVector {
+  return normalizeAgainstMean(values, baseline, SCORE_AXES);
 }
 
 export function meanAxes(rows: AxisVector[]): AxisVector {
@@ -142,3 +209,29 @@ export const BASELINE_FLAT: AxisVector = {
   shares: 50,
   comments: 50,
 };
+
+export const BASELINE_FLAT_RATES: RateVector = {
+  likeRate: 50,
+  coinRate: 50,
+  favRate: 50,
+  shareRate: 50,
+  commentRate: 50,
+  coinLikeRate: 50,
+};
+
+/** 无图均时：互动率用放大后的 log，避免 0.04 这种小数挤成一条线 */
+export function logProfileRates(values: RateVector): RateVector {
+  const logs = emptyRates();
+  let max = 0;
+  for (const axis of RATE_AXES) {
+    logs[axis] = Math.log10(1 + Math.max(0, values[axis]) * 1000);
+    if (logs[axis] > max) max = logs[axis];
+  }
+  const out = emptyRates();
+  if (max <= 0) {
+    for (const axis of RATE_AXES) out[axis] = 50;
+    return out;
+  }
+  for (const axis of RATE_AXES) out[axis] = Math.min(100, (logs[axis] / max) * 100);
+  return out;
+}

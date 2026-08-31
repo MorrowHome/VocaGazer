@@ -88,9 +88,15 @@ export function SongPowerPanel({
       <div className="flex items-center gap-2 flex-wrap">
         <h2 className="text-xs font-bold text-kawaii-muted tracking-wider uppercase">相对图均</h2>
         <p className="text-[10px] text-kawaii-muted">
-          {baseline === 'weekly' ? '对照全站本周增量均值' : '对照全站累计均值'}
+          {chartMode === 'rates'
+            ? baseline === 'weekly'
+              ? '对照全站本周互动率均值'
+              : '对照全站累计互动率均值'
+            : baseline === 'weekly'
+              ? '对照全站本周增量均值'
+              : '对照全站累计均值'}
         </p>
-        <div className="ml-auto flex gap-1">
+        <div className="ml-auto flex gap-1 flex-wrap">
           {(['weekly', 'historical'] as const).map((k) => (
             <button
               key={k}
@@ -103,6 +109,18 @@ export function SongPowerPanel({
               {k === 'weekly' ? '本周增量' : '历史累计'}
             </button>
           ))}
+          {(['plays', 'rates'] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setChartMode(m)}
+              className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
+                chartMode === m ? 'bg-kawaii-cyan/80 text-kawaii-void' : 'bg-kawaii-surface text-kawaii-muted'
+              }`}
+            >
+              {m === 'plays' ? '播放' : '互动率'}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -110,10 +128,11 @@ export function SongPowerPanel({
         <div>
           {radar.data ? (
             <ScoreRadar
-              song={radar.data.normalized}
-              baseline={radar.data.baseline}
-              raw={radar.data.raw}
-              baselineRaw={radar.data.baselineRaw}
+              mode={chartMode === 'rates' ? 'rates' : 'counts'}
+              song={chartMode === 'rates' ? radar.data.rates.normalized : radar.data.normalized}
+              baseline={chartMode === 'rates' ? radar.data.rates.baseline : radar.data.baseline}
+              raw={chartMode === 'rates' ? radar.data.rates.raw : radar.data.raw}
+              baselineRaw={chartMode === 'rates' ? radar.data.rates.baselineRaw : radar.data.baselineRaw}
             />
           ) : (
             <div className="h-48 rounded-2xl bg-kawaii-surface/50 animate-pulse" />
@@ -131,20 +150,6 @@ export function SongPowerPanel({
                     ? ` · ${new Date(radar.data.latestSnapshotDate).toLocaleDateString('zh-CN')}`
                     : ''}
                   {baseline === 'weekly' && radar.data?.compareMode === 'lifetime' ? ' · 本周尚无增量，暂用累计' : ''}
-                </span>
-                <span className="ml-auto flex gap-1">
-                  {(['plays', 'rates'] as const).map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => setChartMode(m)}
-                      className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
-                        chartMode === m ? 'bg-kawaii-cyan/80 text-kawaii-void' : 'bg-kawaii-surface text-kawaii-muted'
-                      }`}
-                    >
-                      {m === 'plays' ? '播放' : '互动率'}
-                    </button>
-                  ))}
                 </span>
               </p>
               {chartMode === 'rates' ? (

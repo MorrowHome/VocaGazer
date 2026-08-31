@@ -18,6 +18,8 @@ export const SETTING_KEYS = {
   totalSongs: 'stats_total_songs',
   radarHistorical: 'stats_radar_historical_v2',
   radarWeekly: 'stats_radar_weekly_v3',
+  radarHistoricalRates: 'stats_radar_historical_rates_v1',
+  radarWeeklyRates: 'stats_radar_weekly_rates_v1',
   refreshCursor: 'refresh_cursor',
   refreshDay: 'refresh_day',
   heroImageUrl: 'hero_image_url',

@@ -7,7 +7,20 @@ import { chinaCalendarDay, chinaWeekRange, shiftChinaDays } from '@/lib/time';
 import { HOMEPAGE_CACHE_TTL_MS, cacheGet, cacheSet } from '../../cache/memory';
 import { getSiteStats, recomputeSiteStats, songWeekDelta } from '@/server/services/site-stats';
 import { getSceneInfo } from '@/server/services/scene';
-import { BASELINE_FLAT, hasAxisValues, logProfile, normalizeRadar, parseSongStats, type AxisVector } from '@/server/services/score/breakdown';
+import {
+  BASELINE_FLAT,
+  BASELINE_FLAT_RATES,
+  hasAxisValues,
+  hasRateValues,
+  logProfile,
+  logProfileRates,
+  normalizeAgainstMean,
+  normalizeRadar,
+  parseSongStats,
+  ratesFromAxes,
+  RATE_AXES,
+  type AxisVector,
+} from '@/server/services/score/breakdown';
 
 function parseStats(s: string) {
   try { return JSON.parse(s); } catch { return {}; }
@@ -152,7 +165,10 @@ export const analyticsRouter = router({
 
       const lifetime = parseSongStats(song.statistics);
       let site = await getSiteStats(ctx.prisma);
-      if (!hasAxisValues(site.radarHistorical) || (input.baseline === 'weekly' && !hasAxisValues(site.radarWeekly))) {
+      const needRates =
+        !hasRateValues(site.radarHistoricalRates)
+        || (input.baseline === 'weekly' && !hasRateValues(site.radarWeeklyRates));
+      if (!hasAxisValues(site.radarHistorical) || (input.baseline === 'weekly' && !hasAxisValues(site.radarWeekly)) || needRates) {
         await recomputeSiteStats(ctx.prisma);
         site = await getSiteStats(ctx.prisma);
       }
@@ -173,6 +189,17 @@ export const analyticsRouter = router({
 
       const hasCatalog = hasAxisValues(baselineRaw);
       const normalized = hasCatalog ? normalizeRadar(raw, baselineRaw) : logProfile(raw);
+
+      const rateRaw = ratesFromAxes(raw);
+      const rateBaselineRaw = useWeekly
+        ? site.radarWeeklyRates
+        : hasRateValues(site.radarHistoricalRates)
+          ? site.radarHistoricalRates
+          : site.radarWeeklyRates;
+      const hasRateCatalog = hasRateValues(rateBaselineRaw);
+      const rateNormalized = hasRateCatalog
+        ? normalizeAgainstMean(rateRaw, rateBaselineRaw, RATE_AXES)
+        : logProfileRates(rateRaw);
       const latest = song.dailyStats[song.dailyStats.length - 1];
 
       return {
@@ -181,6 +208,12 @@ export const analyticsRouter = router({
         baselineRaw: hasCatalog ? baselineRaw : null,
         normalized,
         baseline: hasCatalog ? BASELINE_FLAT : null,
+        rates: {
+          raw: rateRaw,
+          baselineRaw: hasRateCatalog ? rateBaselineRaw : null,
+          normalized: rateNormalized,
+          baseline: hasRateCatalog ? BASELINE_FLAT_RATES : null,
+        },
         baselineKind: useWeekly ? 'weekly' : 'historical',
         compareMode: useWeekly ? 'weekDelta' : 'lifetime',
         latestSnapshotDate: latest?.date ?? null,

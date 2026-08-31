@@ -6,12 +6,15 @@ import { chinaWeekRange, shiftChinaDays } from '@/lib/time';
 import { SETTING_KEYS, getSetting, setSetting } from './settings';
 import {
   emptyAxes,
+  emptyRates,
   meanAxes,
+  meanRatesFromAxes,
   parseSongStats,
   toAxisVector,
   axisDelta,
   hasAxisValues,
   type AxisVector,
+  type RateVector,
 } from './score/breakdown';
 
 export async function recomputeSiteStats(prisma: PrismaClient): Promise<void> {
@@ -49,7 +52,11 @@ export async function recomputeSiteStats(prisma: PrismaClient): Promise<void> {
     orderBy: { date: 'asc' },
   });
   const weekly = meanWeeklyDeltas(weekRows, week.snapDate);
+  const historicalRates = meanRatesFromAxes(raws);
+  const weeklyRates = meanWeeklyRates(weekRows, week.snapDate);
   await setSetting(prisma, SETTING_KEYS.radarWeekly, JSON.stringify(weekly));
+  await setSetting(prisma, SETTING_KEYS.radarHistoricalRates, JSON.stringify(historicalRates));
+  await setSetting(prisma, SETTING_KEYS.radarWeeklyRates, JSON.stringify(weeklyRates));
 }
 
 function parseAxes(raw: string | null): AxisVector {
@@ -62,23 +69,39 @@ function parseAxes(raw: string | null): AxisVector {
   }
 }
 
+function parseRates(raw: string | null): RateVector {
+  if (!raw) return emptyRates();
+  try {
+    const v = JSON.parse(raw) as RateVector;
+    return { ...emptyRates(), ...v };
+  } catch {
+    return emptyRates();
+  }
+}
+
 export async function getSiteStats(prisma: PrismaClient): Promise<{
   totalPlays: number;
   totalSongs: number;
   radarHistorical: AxisVector;
   radarWeekly: AxisVector;
+  radarHistoricalRates: RateVector;
+  radarWeeklyRates: RateVector;
 }> {
-  const [plays, songs, hist, week] = await Promise.all([
+  const [plays, songs, hist, week, histRates, weekRates] = await Promise.all([
     getSetting(prisma, SETTING_KEYS.totalPlays),
     getSetting(prisma, SETTING_KEYS.totalSongs),
     getSetting(prisma, SETTING_KEYS.radarHistorical),
     getSetting(prisma, SETTING_KEYS.radarWeekly),
+    getSetting(prisma, SETTING_KEYS.radarHistoricalRates),
+    getSetting(prisma, SETTING_KEYS.radarWeeklyRates),
   ]);
   return {
     totalPlays: Number(plays) || 0,
     totalSongs: Number(songs) || 0,
     radarHistorical: parseAxes(hist),
     radarWeekly: parseAxes(week),
+    radarHistoricalRates: parseRates(histRates),
+    radarWeeklyRates: parseRates(weekRates),
   };
 }
 
@@ -93,20 +116,34 @@ type SnapRow = {
   comments: number;
 };
 
-function meanWeeklyDeltas(rows: SnapRow[], weekStart: Date): AxisVector {
+function groupSnaps(rows: SnapRow[]): Map<string, SnapRow[]> {
   const bySong = new Map<string, SnapRow[]>();
   for (const row of rows) {
     const list = bySong.get(row.songId) || [];
     list.push(row);
     bySong.set(row.songId, list);
   }
+  return bySong;
+}
+
+function meanWeeklyDeltas(rows: SnapRow[], weekStart: Date): AxisVector {
   const deltas: AxisVector[] = [];
   const startMs = weekStart.getTime();
-  for (const snaps of Array.from(bySong.values())) {
+  for (const snaps of Array.from(groupSnaps(rows).values())) {
     const delta = weekDeltaFromSnaps(snaps, startMs);
     if (delta && hasAxisValues(delta)) deltas.push(delta);
   }
   return deltas.length ? meanAxes(deltas) : emptyAxes();
+}
+
+function meanWeeklyRates(rows: SnapRow[], weekStart: Date): RateVector {
+  const deltas: AxisVector[] = [];
+  const startMs = weekStart.getTime();
+  for (const snaps of Array.from(groupSnaps(rows).values())) {
+    const delta = weekDeltaFromSnaps(snaps, startMs);
+    if (delta) deltas.push(delta);
+  }
+  return meanRatesFromAxes(deltas);
 }
 
 function weekDeltaFromSnaps(snaps: SnapRow[], weekStartMs: number): AxisVector | null {
