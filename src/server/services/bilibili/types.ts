@@ -6,6 +6,11 @@ export interface BiliSearchVideo {
   pubdate: number;
   description: string;
   tag?: string;
+  tags?: string[];
+  duration?: number;
+  tid?: number;
+  tname?: string;
+  copyright?: number;
 }
 
 /** Bilibili 评论 */
@@ -38,6 +43,9 @@ export interface BiliVideoDetail {
   duration: number;
   pic: string;
   tags: string[];
+  copyright?: number;
+  tid?: number;
+  tname?: string;
   statistics: {
     view: number;
     like: number;

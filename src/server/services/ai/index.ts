@@ -154,6 +154,11 @@ export function isAiConfigured(): boolean {
   return !!API_KEY;
 }
 
+/** 给灰区判定等短任务用的原始补全 */
+export async function completePrompt(prompt: string): Promise<string> {
+  return callAi(prompt);
+}
+
 export function detectAnomalies(
   songs: { title: string; author: string; score: number; plays: number; likes: number }[],
 ): { title: string; author: string; reason: string }[] {

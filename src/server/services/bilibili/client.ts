@@ -18,16 +18,80 @@ const client = axios.create({
   },
 });
 
-/**
- * 从一条 API 响应中提取视频列表
- */
+export function stripHtml(s: string): string {
+  return String(s || '')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .trim();
+}
+
+export function parseDuration(raw: unknown): number {
+  if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+  if (typeof raw !== 'string') return 0;
+  const t = raw.trim();
+  const clock = t.match(/^(\d+):(\d+)(?::(\d+))?$/);
+  if (clock) {
+    if (clock[3]) return Number(clock[1]) * 3600 + Number(clock[2]) * 60 + Number(clock[3]);
+    return Number(clock[1]) * 60 + Number(clock[2]);
+  }
+  const n = Number(t);
+  return Number.isFinite(n) ? n : 0;
+}
+
+export function splitTagString(raw: unknown): string[] {
+  if (Array.isArray(raw)) {
+    return raw.map((t) => stripHtml(String(t))).filter(Boolean);
+  }
+  if (typeof raw !== 'string' || !raw.trim()) return [];
+  return stripHtml(raw)
+    .split(/[,，、]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function mapSearchHit(v: any, keyword: string): BiliSearchVideo {
+  const tags = splitTagString(v.tag);
+  return {
+    bvid: v.bvid,
+    title: stripHtml(v.title || ''),
+    author: v.author || v.owner?.name || '',
+    pubdate: v.pubdate || v.ctime || 0,
+    description: stripHtml(v.description || v.desc || ''),
+    tag: keyword,
+    tags,
+    duration: parseDuration(v.duration),
+    tid: Number(v.typeid || v.tid || 0) || undefined,
+    tname: v.typename || v.tname || undefined,
+    copyright: Number(v.copyright || 0) || undefined,
+  };
+}
+
+function mapArchive(a: any, keyword: string): BiliSearchVideo {
+  return {
+    bvid: a.bvid,
+    title: stripHtml(a.title || ''),
+    author: a.owner?.name || '',
+    pubdate: a.pubdate || 0,
+    description: stripHtml(a.desc || ''),
+    tag: keyword,
+    tags: [],
+    duration: parseDuration(a.duration),
+    tid: Number(a.tid || 0) || undefined,
+    tname: a.tname || undefined,
+    copyright: Number(a.copyright || 0) || undefined,
+  };
+}
+
 function extractVideos(data: any): any[] {
   if (data.result?.video) {
-    // /x/web-interface/search/all — result.video[]
     return data.result.video;
   }
   if (Array.isArray(data.result)) {
-    // /x/web-interface/search/all/v2 — result[] (array of mixed types)
     return data.result.filter((item: any) => item.bvid);
   }
   if (data.videos) {
@@ -36,9 +100,6 @@ function extractVideos(data: any): any[] {
   return [];
 }
 
-/**
- * 按关键词搜索单页视频
- */
 async function searchPage(
   keyword: string,
   page: number = 1,
@@ -59,14 +120,7 @@ async function searchPage(
       const videos = extractVideos(res.data.data);
       if (videos.length === 0) continue;
 
-      return videos.map((v: any) => ({
-        bvid: v.bvid,
-        title: v.title,
-        author: v.author,
-        pubdate: v.pubdate,
-        description: v.description || '',
-        tag: keyword,
-      }));
+      return videos.map((v: any) => mapSearchHit(v, keyword));
     } catch {
       continue;
     }
@@ -75,10 +129,6 @@ async function searchPage(
   return [];
 }
 
-/**
- * 按关键词搜索视频（多页）
- * 获取第 1 页和第 2 页的结果，提高召回率
- */
 export async function searchByKeyword(
   keyword: string,
   maxPages: number = 2,
@@ -94,16 +144,53 @@ export async function searchByKeyword(
         allVideos.push(v);
       }
     }
-    if (videos.length < 20) break; // 不足一页说明没有更多了
+    if (videos.length < 20) break;
     await delay(300);
   }
 
   return allVideos;
 }
 
-/**
- * 获取视频详情（播放量、点赞等统计数据）
- */
+export async function listVocaloidPartition(
+  pages: number = 2,
+): Promise<BiliSearchVideo[]> {
+  const allVideos: BiliSearchVideo[] = [];
+  const seen = new Set<string>();
+
+  for (let pn = 1; pn <= pages; pn++) {
+    try {
+      const res = await client.get('/x/web-interface/newlist', {
+        params: { rid: 193, ps: 50, pn },
+      });
+      if (res.data.code !== 0) break;
+      const archives = res.data.data?.archives || [];
+      for (const a of archives) {
+        if (!a?.bvid || seen.has(a.bvid)) continue;
+        seen.add(a.bvid);
+        allVideos.push(mapArchive(a, 'VOCALOID分区'));
+      }
+      if (archives.length < 50) break;
+    } catch {
+      break;
+    }
+    await delay(300);
+  }
+
+  return allVideos;
+}
+
+async function getArchiveTags(aid: number): Promise<string[]> {
+  try {
+    const res = await client.get('/x/tag/archive/tags', { params: { aid } });
+    if (res.data.code !== 0) return [];
+    const list = res.data.data;
+    if (!Array.isArray(list)) return [];
+    return list.map((t: any) => t.tag_name).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
 export async function getVideoDetail(bvid: string): Promise<BiliVideoDetail | null> {
   try {
     const res = await client.get('/x/web-interface/view', {
@@ -113,17 +200,25 @@ export async function getVideoDetail(bvid: string): Promise<BiliVideoDetail | nu
     if (res.data.code !== 0) return null;
 
     const d = res.data.data;
+    let tags = (d.tags || []).map((t: any) => t.tag_name).filter(Boolean);
+    if (tags.length === 0 && d.aid) {
+      tags = await getArchiveTags(d.aid);
+    }
+
     return {
       aid: d.aid,
       bvid: d.bvid,
-      title: d.title,
+      title: stripHtml(d.title || ''),
       author: d.owner?.name || '',
       authorAvatar: d.owner?.face || '',
       pubdate: d.pubdate,
       description: d.desc || '',
       duration: d.duration || 0,
       pic: d.pic || '',
-      tags: (d.tags || []).map((t: any) => t.tag_name),
+      tags,
+      copyright: Number(d.copyright || 0) || undefined,
+      tid: Number(d.tid || 0) || undefined,
+      tname: d.tname || undefined,
       statistics: {
         view: d.stat?.view || 0,
         like: d.stat?.like || 0,
@@ -138,15 +233,9 @@ export async function getVideoDetail(bvid: string): Promise<BiliVideoDetail | nu
   }
 }
 
-/**
- * 延时工具函数
- */
 export const delay = (ms: number) =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
-/**
- * 获取视频热评（按点赞数排序取前 N 条）
- */
 export async function getVideoComments(
   aid: number,
   limit: number = 3,
