@@ -28,7 +28,7 @@ CRON_SECRET="至少16位随机串"
 
 Prisma 会把相对路径解析到 **`/opt/vocaloid-hub/prisma/prisma/dev.db`**（现网 4000+ 首歌那份）。不要改成别的路径，否则会连到空库。`ANTHROPIC_*` 可选，不配则用模板晚报。
 
-找回密码：登录页「忘记密码」会发邮件。VPS `.env` 可加 `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS`（QQ 邮箱用授权码、`smtp.qq.com:465`）。没配 SMTP 时，重置链接会打在 `pm2 logs voca-hub` 里。
+找回密码：登录页「忘记密码」会发邮件。VPS `.env` 可加 `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS`（QQ 邮箱用授权码、`smtp.qq.com:465`）。`SMTP_USER` 必须是完整邮箱（如 `123456789@qq.com`），不要只填 QQ 号；`SMTP_FROM` 也必须是这同一个邮箱。没配 SMTP 时，重置链接会打在 `pm2 logs voca-hub` 里。用户登录后也可在「我的主页」直接改密码。
 
 采集口：`curl -H "x-cron-secret: $CRON_SECRET" https://morrowhome.site/api/crawl/trigger?type=ranking`
 

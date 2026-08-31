@@ -20,10 +20,25 @@ export function isMailConfigured(): boolean {
   return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
 }
 
+/** QQ SMTP 要求 From 与登录邮箱一致，否则常被拒信 */
+export function resolveSmtpFrom(smtpUser: string, smtpFrom?: string): string {
+  const user = smtpUser.trim();
+  const from = (smtpFrom || user).trim();
+  if (!user.includes('@') || from.includes(user)) return from || user;
+  const nameMatch = from.match(/^"?([^"<]+)"?\s*</);
+  const name = nameMatch?.[1]?.trim() || 'VOCALOID Hub';
+  return `${name} <${user}>`;
+}
+
 export async function sendPasswordResetEmail(to: string, resetUrl: string): Promise<{ delivered: boolean }> {
   if (!isMailConfigured()) {
     console.log('[mail] SMTP 未配置，密码重置链接（1 小时内有效）:', resetUrl);
     return { delivered: false };
+  }
+
+  const smtpUser = process.env.SMTP_USER || '';
+  if (smtpUser && !smtpUser.includes('@')) {
+    console.warn('[mail] SMTP_USER 应填完整邮箱（如 123456789@qq.com），不要只填 QQ 号');
   }
 
   const { default: nodemailer } = await import('nodemailer');
@@ -39,7 +54,7 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string): Prom
   });
 
   await transporter.sendMail({
-    from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    from: resolveSmtpFrom(smtpUser, process.env.SMTP_FROM),
     to,
     subject: 'VOCALOID Hub 重置密码',
     text: `你好，\n\n请在 1 小时内打开下面的链接设置新密码：\n${resetUrl}\n\n如果不是你本人操作，忽略这封信即可。`,

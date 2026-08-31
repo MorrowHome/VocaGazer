@@ -235,4 +235,35 @@ export const usersRouter = router({
 
       return user;
     }),
+
+  changePassword: protectedProcedure
+    .input(
+      z.object({
+        currentPassword: z.string().min(1).max(100),
+        newPassword: z.string().min(6).max(100),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (input.currentPassword === input.newPassword) {
+        throw new Error('新密码不能与当前密码相同');
+      }
+
+      const user = await ctx.prisma.user.findUnique({ where: { id: ctx.user.id } });
+      if (!user) {
+        throw new Error('用户未找到');
+      }
+
+      const valid = await bcrypt.compare(input.currentPassword, user.passwordHash);
+      if (!valid) {
+        throw new Error('当前密码不正确');
+      }
+
+      const passwordHash = await bcrypt.hash(input.newPassword, 10);
+      await ctx.prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash },
+      });
+
+      return { ok: true };
+    }),
 });

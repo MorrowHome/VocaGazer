@@ -39,7 +39,7 @@ export default function ForgotPasswordPage() {
 
           {done ? (
             <p className="text-sm text-kawaii-text/80 font-medium leading-relaxed text-center">
-              如果该邮箱已注册，请到收件箱打开重置链接（1 小时内有效）。没看到的话检查垃圾箱。
+              如果该邮箱已注册，请到收件箱打开重置链接（1 小时内有效）。QQ 邮箱请查「垃圾箱」和「订阅邮件」。
             </p>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">

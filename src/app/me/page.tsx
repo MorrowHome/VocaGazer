@@ -13,8 +13,14 @@ export default function MePage() {
   const update = trpc.users.updateProfile.useMutation({
     onSuccess: () => refresh(),
   });
+  const changePassword = trpc.users.changePassword.useMutation();
   const [username, setUsername] = useState('');
   const [saved, setSaved] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordMsg, setPasswordMsg] = useState('');
+  const [passwordErr, setPasswordErr] = useState('');
 
   if (authLoading) {
     return (
@@ -42,6 +48,28 @@ export default function MePage() {
     update.mutate({ username: name }, { onSuccess: () => setSaved(true) });
   };
 
+  const handleChangePassword = (e: FormEvent) => {
+    e.preventDefault();
+    setPasswordErr('');
+    setPasswordMsg('');
+    if (newPassword !== confirmPassword) {
+      setPasswordErr('两次输入的新密码不一致');
+      return;
+    }
+    changePassword.mutate(
+      { currentPassword, newPassword },
+      {
+        onSuccess: () => {
+          setCurrentPassword('');
+          setNewPassword('');
+          setConfirmPassword('');
+          setPasswordMsg('密码已更新');
+        },
+        onError: (err) => setPasswordErr(err.message || '修改失败'),
+      },
+    );
+  };
+
   return (
     <main className="min-h-screen relative">
       <div className="max-w-3xl mx-auto px-4 md:px-8 py-8 space-y-8 relative z-10">
@@ -63,6 +91,46 @@ export default function MePage() {
             </button>
           </form>
           {saved && <p className="text-xs text-kawaii-cyan">已更新</p>}
+        </section>
+
+        <section className="card !p-6 space-y-4">
+          <h2 className="text-sm font-black text-kawaii-text">修改密码</h2>
+          <form onSubmit={handleChangePassword} className="space-y-3">
+            <input
+              type="password"
+              autoComplete="current-password"
+              className="w-full px-4 py-2 rounded-xl bg-white/80 border border-kawaii-border/50 text-sm outline-none"
+              placeholder="当前密码"
+              value={currentPassword}
+              onChange={(e) => { setCurrentPassword(e.target.value); setPasswordErr(''); setPasswordMsg(''); }}
+              required
+            />
+            <input
+              type="password"
+              autoComplete="new-password"
+              className="w-full px-4 py-2 rounded-xl bg-white/80 border border-kawaii-border/50 text-sm outline-none"
+              placeholder="新密码（至少 6 位）"
+              value={newPassword}
+              minLength={6}
+              onChange={(e) => { setNewPassword(e.target.value); setPasswordErr(''); setPasswordMsg(''); }}
+              required
+            />
+            <input
+              type="password"
+              autoComplete="new-password"
+              className="w-full px-4 py-2 rounded-xl bg-white/80 border border-kawaii-border/50 text-sm outline-none"
+              placeholder="确认新密码"
+              value={confirmPassword}
+              minLength={6}
+              onChange={(e) => { setConfirmPassword(e.target.value); setPasswordErr(''); setPasswordMsg(''); }}
+              required
+            />
+            <button type="submit" className="btn btn-pink !py-2 !px-4 text-xs" disabled={changePassword.isLoading}>
+              {changePassword.isLoading ? '保存中…' : '更新密码'}
+            </button>
+          </form>
+          {passwordMsg && <p className="text-xs text-kawaii-cyan">{passwordMsg}</p>}
+          {passwordErr && <p className="text-xs text-kawaii-pink">{passwordErr}</p>}
         </section>
 
         <section className="space-y-3">
