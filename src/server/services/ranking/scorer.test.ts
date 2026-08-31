@@ -23,5 +23,45 @@ test('播放量权重为 0.15', () => {
     shares: 0,
     comments: 0,
   });
-  assert.equal(score, 150);
+  assert.equal(score, 60);
+});
+
+test('高播低赞会被削减', () => {
+  const pushed = calculateScore({
+    playCount: 20000,
+    likes: 200,
+    coins: 40,
+    favorites: 60,
+    shares: 20,
+    comments: 30,
+  });
+  const organic = calculateScore({
+    playCount: 20000,
+    likes: 2400,
+    coins: 600,
+    favorites: 900,
+    shares: 20,
+    comments: 30,
+  });
+  assert.ok(organic > pushed * 1.5);
+});
+
+test('评论明显高于点赞时刷评分量打折', () => {
+  const farmed = calculateScore({
+    playCount: 2000,
+    likes: 200,
+    coins: 80,
+    favorites: 100,
+    shares: 20,
+    comments: 400,
+  });
+  const normal = calculateScore({
+    playCount: 2000,
+    likes: 200,
+    coins: 80,
+    favorites: 100,
+    shares: 20,
+    comments: 40,
+  });
+  assert.ok(farmed < normal + 400 * 0.05);
 });

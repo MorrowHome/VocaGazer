@@ -92,6 +92,8 @@ export async function generateRanking(
 }
 
 export async function generateLiveRankings(refDate?: Date): Promise<Record<Period, number>> {
+  const { recalculateAllScores } = await import('./scorer');
+  await recalculateAllScores(getPrisma());
   const results: Record<Period, number> = { daily: 0, weekly: 0, monthly: 0, yearly: 0, alltime: 0 };
   for (const period of PERIODS) {
     results[period] = await generateRanking(period, { refDate, isFinal: false });
