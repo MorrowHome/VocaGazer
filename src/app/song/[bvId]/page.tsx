@@ -137,38 +137,40 @@ export default function SongDetailPage() {
   return (
     <main className="min-h-screen relative">
       <div className="max-w-3xl mx-auto px-4 md:px-8 py-8 space-y-8 relative z-10">
-        <div className="relative overflow-hidden rounded-[1.75rem] min-h-[22rem] md:min-h-[28rem] ring-1 ring-kawaii-border/40">
-          {img.src ? (
-            <img
-              {...img}
-              alt=""
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-          ) : (
-            <div className="absolute inset-0 bg-gradient-to-br from-kawaii-pink/30 via-kawaii-purple/25 to-kawaii-cyan/30" />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#1a1424] via-[#1a1424]/50 to-[#1a1424]/20" />
-          <div className="relative z-10 min-h-[22rem] md:min-h-[28rem] p-6 md:p-10 flex flex-col justify-end text-white">
+        <div className="relative overflow-hidden rounded-[1.75rem] ring-1 ring-kawaii-border/40">
+          <div className="relative aspect-[16/10] sm:aspect-[16/9]">
+            {img.src ? (
+              <img
+                {...img}
+                alt=""
+                className="absolute inset-0 h-full w-full object-cover object-center"
+              />
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-br from-kawaii-pink/30 via-kawaii-purple/25 to-kawaii-cyan/30" />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#1a1424] via-[#1a1424]/35 to-transparent md:from-[#1a1424] md:via-[#1a1424]/50 md:to-[#1a1424]/20" />
+          </div>
+          <div className="relative z-10 px-5 py-5 text-kawaii-text bg-[rgb(var(--surface))]/88 md:absolute md:inset-0 md:flex md:flex-col md:justify-end md:bg-transparent md:p-10 md:text-white">
             {tags.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-4">
                 {tags.slice(0, 8).map((tag) => (
                   <a
                     key={tag}
                     href={`/tag/${encodeURIComponent(tag)}`}
-                    className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-white/15 text-white/85 ring-1 ring-white/20 hover:bg-white/25"
+                    className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-kawaii-surface text-kawaii-text/85 ring-1 ring-kawaii-border/40 hover:bg-kawaii-surface-hover md:bg-white/15 md:text-white/85 md:ring-white/20 md:hover:bg-white/25"
                   >
                     #{tag}
                   </a>
                 ))}
               </div>
             )}
-            <h1 className="font-display text-2xl md:text-4xl font-bold leading-tight drop-shadow-lg">
+            <h1 className="font-display text-2xl md:text-4xl font-bold leading-tight drop-shadow-lg line-clamp-3">
               {song.title}
             </h1>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-white/75 font-medium mt-3">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-kawaii-muted md:text-white/75 font-medium mt-3">
               <a
                 href={`/author/${encodeURIComponent(song.author)}`}
-                className="text-white font-bold hover:text-kawaii-pink-light"
+                className="text-kawaii-text font-bold hover:text-kawaii-pink md:text-white md:hover:text-kawaii-pink-light"
               >
                 {song.author}
               </a>
@@ -204,7 +206,7 @@ export default function SongDetailPage() {
               )}
               <a
                 href={`/forum/new?song=${encodeURIComponent(song.bvId)}`}
-                className="btn btn-ghost !bg-white/15 !text-white !border-white/25 inline-flex items-center gap-2"
+                className="btn btn-ghost inline-flex items-center gap-2 md:!bg-white/15 md:!text-white md:!border-white/25"
               >
                 去论坛讨论
               </a>

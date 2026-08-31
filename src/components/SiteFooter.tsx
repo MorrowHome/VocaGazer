@@ -1,7 +1,7 @@
 export function SiteFooter() {
   return (
     <footer className="border-t border-kawaii-border/40 mt-4">
-      <div className="max-w-7xl mx-auto px-4 md:px-8 py-10 flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between text-xs text-kawaii-muted font-medium">
+      <div className="site-shell py-10 flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between text-xs text-kawaii-muted font-medium">
         <p className="font-display text-sm tracking-widest text-kawaii-text/70">VOCALOID Music Hub</p>
         <nav className="flex flex-wrap gap-4">
           <a href="/ranking" className="hover:text-kawaii-pink">排行榜</a>

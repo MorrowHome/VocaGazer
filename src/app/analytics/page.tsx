@@ -110,7 +110,7 @@ export default function AnalyticsPage() {
     <main className="min-h-screen relative">
 
 
-      <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 space-y-10 relative z-10">
+      <div className="site-shell py-8 space-y-10 relative z-10">
         {/* ── 时间范围选择器 ── */}
         <div className="flex gap-2 flex-wrap">
           {RANGES.map((r) => (

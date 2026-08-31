@@ -44,9 +44,9 @@ function RankCard({ song, rank, entryScore }: { song: any; rank: number; entrySc
           )}
         </div>
 
-        <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 bg-kawaii-surface ring-1 ring-kawaii-border/50">
+        <div className="w-[4.5rem] aspect-[16/10] rounded-xl overflow-hidden shrink-0 bg-kawaii-surface ring-1 ring-kawaii-border/50">
           {img.src ? (
-            <img {...img} alt="" className="w-full h-full object-cover" loading="lazy" />
+            <img {...img} alt="" className="h-full w-full object-cover object-center" loading="lazy" />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-kawaii-muted text-xl">♪</div>
           )}

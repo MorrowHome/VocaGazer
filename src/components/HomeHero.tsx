@@ -26,14 +26,14 @@ function HeroCard({
     <Link
       href={href}
       className={`group relative block overflow-hidden rounded-2xl ring-1 ring-white/25 hover:ring-kawaii-pink/50 transition-all shadow-[inset_0_1px_0_rgba(255,255,255,0.28)] ${
-        featured ? 'aspect-[21/10] min-h-[11rem]' : 'aspect-[16/10]'
+        featured ? 'aspect-[16/10] lg:aspect-[21/10]' : 'aspect-[16/10]'
       }`}
     >
       {img.src ? (
         <img
           {...img}
           alt=""
-          className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
         />
       ) : (
         <div className="absolute inset-0 bg-gradient-to-br from-kawaii-pink/40 via-kawaii-purple/30 to-kawaii-pink/20" />
@@ -82,7 +82,7 @@ export function HomeHero({
   return (
     <section className="relative min-h-[100svh] -mt-14 flex items-end">
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-[rgb(var(--background))]/55 to-transparent" />
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 md:px-8 pb-20 pt-28">
+      <div className="site-shell relative z-10 pb-20 pt-28">
         <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-8 lg:gap-12 items-end">
           <div>
             <p className="text-[11px] font-bold tracking-[0.42em] text-kawaii-pink mb-5">VOCALOID HUB</p>

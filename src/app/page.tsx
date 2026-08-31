@@ -47,12 +47,12 @@ function SongCard({ song }: { song: any }) {
 
   return (
     <a href={`/song/${song.bvId}`} className="song-card group">
-      <div className="relative aspect-[16/9] bg-kawaii-pink-pale overflow-hidden rounded-t-xl">
+      <div className="relative aspect-[16/10] bg-kawaii-pink-pale overflow-hidden rounded-t-xl">
         {img.src ? (
           <img
             {...img}
             alt={song.title}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
             loading="lazy"
           />
         ) : (
@@ -84,13 +84,13 @@ function MiniSongCard({ song, label }: { song: any; label: string }) {
   const stats = parseStats(song.statistics);
   const img = coverImgProps(song.picUrl);
   return (
-    <div className="relative h-full group cursor-pointer overflow-hidden rounded-2xl">
+    <div className="relative aspect-[5/4] sm:aspect-[16/10] group cursor-pointer overflow-hidden rounded-2xl">
       <div className="absolute inset-0 overflow-hidden">
         {img.src ? (
           <img
             {...img}
             alt=""
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
             loading="lazy"
           />
         ) : (
@@ -98,9 +98,9 @@ function MiniSongCard({ song, label }: { song: any; label: string }) {
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-kawaii-hero-void/90 via-kawaii-hero-void/40 to-transparent" />
       </div>
-      <div className="relative z-10 p-5 h-full flex flex-col justify-end min-h-[160px]">
+      <div className="relative z-10 p-3.5 md:p-5 h-full flex flex-col justify-end">
         <p className="text-[11px] text-kawaii-pink tracking-[0.2em] mb-1.5 font-bold">{label}</p>
-        <p className="text-lg font-display font-bold text-white truncate group-hover:text-kawaii-pink transition-colors">
+        <p className="text-base md:text-lg font-display font-bold text-white truncate group-hover:text-kawaii-pink transition-colors">
           {song.title}
         </p>
         <p className="text-sm text-kawaii-text/70 truncate mt-0.5 font-medium">{song.author}</p>
@@ -147,7 +147,7 @@ export default function HomePage() {
         rising={risingSong}
       />
 
-      <div id="hub-main" className="max-w-7xl mx-auto px-4 md:px-8 pt-20 md:pt-28 pb-10 space-y-16 relative z-10 scroll-mt-16">
+      <div id="hub-main" className="site-shell pt-20 md:pt-28 pb-10 space-y-16 relative z-10 scroll-mt-16">
         <section className="pb-4 md:pb-8">
           <div className="flex items-end gap-4 md:gap-5">
             <span className="font-display text-5xl md:text-6xl leading-none text-gradient-flow" aria-hidden="true">
@@ -280,15 +280,15 @@ export default function HomePage() {
             <span className="text-lg music-float opacity-40" aria-hidden="true">♪</span>
           </div>
           {isLoading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="song-grid">
               {[...Array(8)].map((_, i) => (
-                <div key={i} className="rounded-xl bg-kawaii-surface/60 animate-pulse aspect-[4/5]" />
+                <div key={i} className="rounded-xl bg-kawaii-surface/60 animate-pulse aspect-[16/10]" />
               ))}
             </div>
           ) : latestSongs.length === 0 ? (
             <p className="text-kawaii-muted font-medium">暂无</p>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            <div className="song-grid">
               {latestSongs.map((song: any) => (
                 <SongCard key={song.id} song={song} />
               ))}

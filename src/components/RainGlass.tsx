@@ -120,10 +120,17 @@ vec2 Drops(vec2 uv, float t, float l0, float l1, float l2) {
   return vec2(c, max(m1.y * l0, m2.y * l1));
 }
 
+vec2 coverUv(vec2 frag, vec2 res) {
+  const vec2 tex = vec2(16.0, 9.0);
+  float scale = max(res.x / tex.x, res.y / tex.y);
+  vec2 sized = tex * scale;
+  return (frag + 0.5 * (sized - res)) / sized;
+}
+
 void main() {
   vec2 fragCoord = gl_FragCoord.xy;
   vec2 uv = (fragCoord - .5 * u_res) / u_res.y;
-  vec2 UV = fragCoord / u_res;
+  vec2 UV = coverUv(fragCoord, u_res);
 
   float t = u_time * .2;
   float rainAmount = u_rain * S(0.0, max(0.4, u_spawn), u_time);
