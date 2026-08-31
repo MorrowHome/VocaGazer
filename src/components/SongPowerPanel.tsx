@@ -222,7 +222,7 @@ export function SongPowerPanel({
                   {[...history.data].reverse().map((row, i, arr) => {
                     const prev = arr[i + 1];
                     const delta = prev ? row.playCount - prev.playCount : row.playCount;
-                    const key = typeof row.date === 'string' ? row.date.slice(0, 10) : row.date.toISOString().slice(0, 10);
+                    const key = new Date(row.date).toISOString().slice(0, 10);
                     return (
                       <div key={key} className="flex justify-between text-[11px] font-medium text-kawaii-muted">
                         <span>{key}</span>

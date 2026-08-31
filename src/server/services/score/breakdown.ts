@@ -71,7 +71,7 @@ export function normalizeRadar(values: AxisVector, baseline: AxisVector): AxisVe
       out[axis] = 8;
       continue;
     }
-    out[axis] = Math.max(8, Math.min(100, 50 + 15 * Math.log2(ratio)));
+    out[axis] = Math.max(8, Math.min(160, 50 + 15 * Math.log2(ratio)));
   }
   return out;
 }

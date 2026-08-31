@@ -14,14 +14,14 @@ const LABELS: Record<Axis, string> = {
   comments: '评论',
 };
 
-const SIZE = 320;
+const SIZE = 360;
 const CX = SIZE / 2;
 const CY = SIZE / 2;
-const RADIUS = 92;
+const RADIUS = 86;
 
 function point(axisIndex: number, value: number, radius = RADIUS) {
   const angle = (Math.PI * 2 * axisIndex) / AXES.length - Math.PI / 2;
-  const r = (Math.max(0, Math.min(100, value)) / 100) * radius;
+  const r = (Math.max(0, value) / 100) * radius;
   return { x: CX + Math.cos(angle) * r, y: CY + Math.sin(angle) * r };
 }
 
@@ -48,7 +48,7 @@ export function ScoreRadar({
   const baseVec = baseline as Record<Axis, number> | null;
 
   return (
-    <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="w-full max-w-[320px] h-auto mx-auto" role="img" aria-label="六维数据雷达">
+    <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="w-full max-w-[360px] h-auto mx-auto overflow-visible" role="img" aria-label="六维数据雷达">
       {rings.map((pct) => (
         <polygon
           key={pct}
@@ -79,7 +79,7 @@ export function ScoreRadar({
             return <circle key={`d-${axis}`} cx={dot.x} cy={dot.y} r="3.5" fill="#FF8BB8" />;
       })}
       {AXES.map((axis, i) => {
-        const labelPt = point(i, 128, RADIUS);
+        const labelPt = point(i, 172, RADIUS);
         const count = raw?.[axis];
         const mean = baselineRaw?.[axis];
         return (

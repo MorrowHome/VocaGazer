@@ -31,6 +31,14 @@ test('两倍图均为 65，不是顶满 100', () => {
   assert.equal(Math.round(n.likes), 65);
 });
 
+test('远高于图均时雷达可以越出 100', () => {
+  const base = { playCount: 10, likes: 10, coins: 10, favorites: 10, shares: 10, comments: 10 };
+  const v = { playCount: 160, likes: 160, coins: 160, favorites: 160, shares: 160, comments: 160 };
+  const n = normalizeRadar(v, base);
+  assert.ok(n.likes > 100);
+  assert.ok(n.likes <= 160);
+});
+
 test('相对图均倍数不同时形状会拉开', () => {
   const base = { playCount: 100, likes: 100, coins: 100, favorites: 100, shares: 100, comments: 100 };
   const v = { playCount: 200, likes: 800, coins: 100, favorites: 100, shares: 100, comments: 50 };
