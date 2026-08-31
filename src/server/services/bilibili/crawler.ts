@@ -36,7 +36,7 @@ const TAGS = [
   '永夜minus', 'Minus', '艾可',
 
   // 日语VOCALOID
-  '初音未来', '初音未来原创',
+  '初音ミク', '初音未来', '初音未来原创',
   '镜音铃', '镜音连', '巡音流歌',
   'MEIKO', 'KAITO',
   'GUMI', 'flower', '重音テト',
@@ -239,7 +239,11 @@ export function judgeOriginality(
   let score = 0;
 
   // 正信号：标题提到 V 家角色
-  score += 20;
+  score += 25;
+
+  if (/《.+》/.test(title)) {
+    score += 10;
+  }
 
   // 正信号：时长在合理范围（60-480s 是典型歌长）
   if (duration && duration >= 60 && duration <= 480) {
@@ -263,10 +267,11 @@ export function judgeOriginality(
     }
   }
 
-  // 负信号：描述没有音乐相关词
-  const hasAnyMusicSignal = STRONG_ORIGINAL.some((k) => combined.includes(k.toLowerCase()))
+  // 负信号：描述没有音乐相关词（标题已有角色名则不算缺）
+  const hasAnyMusicSignal = mentionsChar
+    || STRONG_ORIGINAL.some((k) => combined.includes(k.toLowerCase()))
     || DESC_ORIGINAL_SIGNALS.some((s) => combined.includes(s))
-    || combined.includes('VOCALOID')
+    || combined.includes('vocaloid')
     || combined.includes('歌');
   if (!hasAnyMusicSignal) {
     score -= 30;
@@ -524,6 +529,102 @@ export async function runCrawl(
   });
 
   return { totalVideos, originalCount: originalVideos.length, savedCount, errors };
+}
+
+export async function ingestBv(
+  rawBv: string,
+  options: { force?: boolean } = {},
+): Promise<{ bvId: string; title: string; created: boolean }> {
+  const prisma = getPrisma();
+  const bvId = rawBv.trim().match(/BV[0-9A-Za-z]+/i)?.[0];
+  if (!bvId) throw new Error('无效的 BV 号');
+
+  const detail = await getVideoDetail(bvId);
+  if (!detail) throw new Error('B 站找不到这个视频');
+
+  if (!options.force) {
+    const judgment = judgeOriginality(detail.title, detail.description, detail.duration);
+    if (!judgment.isOriginal) {
+      throw new Error(`未通过原创判定：${judgment.reason}`);
+    }
+  }
+
+  const existing = await prisma.song.findUnique({ where: { bvId: detail.bvid }, select: { id: true } });
+  const songData: SongData = {
+    bvId: detail.bvid,
+    title: detail.title,
+    author: detail.author,
+    authorAvatar: detail.authorAvatar,
+    publishTime: new Date(detail.pubdate * 1000),
+    description: detail.description,
+    duration: detail.duration,
+    picUrl: detail.pic,
+    tags: detail.tags,
+    statistics: {
+      playCount: detail.statistics.view,
+      likes: detail.statistics.like,
+      coins: detail.statistics.coin,
+      favorites: detail.statistics.favorite,
+      shares: detail.statistics.share,
+      comments: detail.statistics.reply,
+    },
+  };
+  const score = calculateScore(songData.statistics);
+  const song = await prisma.song.upsert({
+    where: { bvId: songData.bvId },
+    update: {
+      title: songData.title,
+      statistics: JSON.stringify(songData.statistics),
+      tags: JSON.stringify(songData.tags),
+      description: songData.description,
+      score,
+      picUrl: songData.picUrl,
+      authorAvatar: songData.authorAvatar || undefined,
+    },
+    create: {
+      bvId: songData.bvId,
+      title: songData.title,
+      author: songData.author,
+      authorAvatar: songData.authorAvatar,
+      publishTime: songData.publishTime,
+      description: songData.description,
+      duration: songData.duration,
+      picUrl: songData.picUrl,
+      tags: JSON.stringify(songData.tags),
+      statistics: JSON.stringify(songData.statistics),
+      score,
+    },
+  });
+  await checkSongMilestones(song.id, songData.statistics.playCount);
+  const today = chinaDateKey();
+  await prisma.songDailyStats.upsert({
+    where: { songId_date: { songId: song.id, date: today } },
+    update: {
+      playCount: songData.statistics.playCount,
+      likes: songData.statistics.likes,
+      coins: songData.statistics.coins,
+      favorites: songData.statistics.favorites,
+      shares: songData.statistics.shares,
+      comments: songData.statistics.comments,
+      score,
+    },
+    create: {
+      songId: song.id,
+      date: today,
+      playCount: songData.statistics.playCount,
+      likes: songData.statistics.likes,
+      coins: songData.statistics.coins,
+      favorites: songData.statistics.favorites,
+      shares: songData.statistics.shares,
+      comments: songData.statistics.comments,
+      score,
+    },
+  });
+  const category = detectCategory(songData.title, songData.description || '');
+  if (song.category !== category) {
+    await prisma.song.update({ where: { id: song.id }, data: { category } });
+  }
+  return { bvId: song.bvId, title: song.title, created: !existing };
 }
 
 /**

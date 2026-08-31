@@ -12,7 +12,7 @@ async function runCrawlTask() {
   const locked = await withJobLock('crawl', async () => {
     const { runCrawl } = await import('./bilibili/crawler');
     const result = await runCrawl({
-      withinHours: 48,
+      withinHours: 72,
       requestDelay: 800,
       verbose: false,
     });

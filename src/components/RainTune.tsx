@@ -13,11 +13,11 @@ export type RainTune = {
 };
 
 export const RAIN_TUNE_DEFAULTS: RainTune = {
-  followSeconds: 0.2,
-  spawnSeconds: 3.7,
-  otherSpawnSeconds: 12,
+  followSeconds: 0.5,
+  spawnSeconds: 0.5,
+  otherSpawnSeconds: 10,
   homeStart: 0.05,
-  homeSpan: 1.3,
+  homeSpan: 1.1,
   homeMax: 1,
   otherPages: 1,
 };

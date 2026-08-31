@@ -23,6 +23,8 @@ export default function AdminPage() {
   const ai = trpc.crawl.generateAi.useMutation({
     onSuccess: () => utils.ai.getLatestBundle.invalidate(),
   });
+  const ingest = trpc.crawl.ingest.useMutation();
+  const [ingestBv, setIngestBv] = useState('');
   const pin = trpc.posts.pin.useMutation({
     onSuccess: () => utils.posts.getLatest.invalidate(),
   });
@@ -108,6 +110,30 @@ export default function AdminPage() {
             <p className="text-xs text-kawaii-muted">排行：日 {ranks.data.daily} / 周 {ranks.data.weekly} / 总 {ranks.data.alltime}</p>
           )}
           {ai.data && <p className="text-xs text-kawaii-muted">AI 报告已写入（管理台会覆盖当日旧稿，定时任务仍去重）</p>}
+          <form
+            className="flex gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!ingestBv.trim()) return;
+              ingest.mutate({ bvId: ingestBv.trim() });
+            }}
+          >
+            <input
+              value={ingestBv}
+              onChange={(e) => setIngestBv(e.target.value)}
+              placeholder="按 BV 号补入库内漏掉的歌"
+              className="flex-1 text-xs"
+            />
+            <button type="submit" className="btn btn-ghost !py-1.5 !px-4 text-xs" disabled={ingest.isLoading}>
+              {ingest.isLoading ? '入库中…' : '补录歌曲'}
+            </button>
+          </form>
+          {ingest.data && (
+            <p className="text-xs text-kawaii-cyan">
+              {ingest.data.created ? '已入库' : '已更新'}：{ingest.data.title}
+            </p>
+          )}
+          {ingest.error && <p className="text-xs text-kawaii-pink">{ingest.error.message}</p>}
           {(trigger.error || ranks.error || ai.error) && (
             <p className="text-xs text-kawaii-pink">{trigger.error?.message || ranks.error?.message || ai.error?.message}</p>
           )}

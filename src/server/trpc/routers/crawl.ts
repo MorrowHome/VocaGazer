@@ -114,6 +114,15 @@ export const crawlRouter = router({
       return { ok: true };
     }),
 
+  ingest: adminProcedure
+    .input(z.object({ bvId: z.string().min(3).max(80) }))
+    .mutation(async ({ input }) => {
+      const { ingestBv } = await import('@/server/services/bilibili/crawler');
+      const result = await ingestBv(input.bvId, { force: true });
+      cacheInvalidate();
+      return result;
+    }),
+
   status: adminProcedure.query(async ({ ctx }) => {
     const settings = await ctx.prisma.setting.findMany({
       where: {
