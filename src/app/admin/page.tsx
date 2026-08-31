@@ -1,12 +1,17 @@
 'use client';
 
+import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/components/AuthContext';
+import { coverImgProps } from '@/lib/utils';
 
 export default function AdminPage() {
   const { user, isLoading: authLoading } = useAuth();
   const utils = trpc.useUtils();
-  const status = trpc.crawl.status.useQuery(undefined, { enabled: user?.role === 'admin' });
+  const status = trpc.crawl.status.useQuery(undefined, {
+    enabled: user?.role === 'admin',
+    refetchInterval: 3000,
+  });
   const posts = trpc.posts.getLatest.useQuery(
     { page: 1, limit: 15, sort: 'latest' },
     { enabled: user?.role === 'admin' },
@@ -40,6 +45,13 @@ export default function AdminPage() {
     );
   }
 
+  const crawlBusy =
+    trigger.isLoading ||
+    status.data?.currentJob === 'crawl' ||
+    status.data?.crawlJob?.status === 'queued' ||
+    status.data?.crawlJob?.status === 'running';
+  const crawlJob = status.data?.crawlJob;
+
   return (
     <main className="min-h-screen relative">
       <div className="max-w-3xl mx-auto px-4 md:px-8 py-8 space-y-8 relative z-10">
@@ -49,15 +61,16 @@ export default function AdminPage() {
           <h2 className="text-sm font-black text-kawaii-text">采集与排行</h2>
           <p className="text-xs text-kawaii-muted font-medium">
             上次采集：{status.data?.last_crawl_time || '未知'} · 开关：{status.data?.crawl_enabled ?? '—'}
+            {status.data?.currentJob ? ` · 正在运行 ${status.data.currentJob}` : ''}
           </p>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
               className="btn btn-pink !py-1.5 !px-4 text-xs"
-              disabled={trigger.isLoading}
+              disabled={crawlBusy}
               onClick={() => trigger.mutate({ withinHours: 72 })}
             >
-              {trigger.isLoading ? '采集中…' : '触发采集'}
+              {crawlBusy ? '采集中…' : '触发采集'}
             </button>
             <button
               type="button"
@@ -76,8 +89,20 @@ export default function AdminPage() {
               {ai.isLoading ? '生成中…' : '生成 AI 报告'}
             </button>
           </div>
-          {trigger.data && !trigger.data.skipped && (
-            <p className="text-xs text-kawaii-muted">采集完成：入库 {trigger.data.savedCount} 首</p>
+          {crawlJob?.status === 'queued' && (
+            <p className="text-xs text-kawaii-muted">采集已在后台排队，搜标签会跑几分钟，请留在此页等待结果。</p>
+          )}
+          {crawlJob?.status === 'running' && (
+            <p className="text-xs text-kawaii-muted">正在采集（后台执行，不会被页面超时打断）…</p>
+          )}
+          {crawlJob?.status === 'ok' && (
+            <p className="text-xs text-kawaii-muted">采集完成：入库 {crawlJob.savedCount ?? 0} 首</p>
+          )}
+          {crawlJob?.status === 'skipped' && (
+            <p className="text-xs text-kawaii-muted">采集已跳过（开关关闭）</p>
+          )}
+          {crawlJob?.status === 'error' && (
+            <p className="text-xs text-kawaii-pink">采集失败：{crawlJob.message || '未知错误'}</p>
           )}
           {ranks.data && (
             <p className="text-xs text-kawaii-muted">排行：日 {ranks.data.daily} / 周 {ranks.data.weekly} / 总 {ranks.data.alltime}</p>
@@ -163,20 +188,91 @@ function EditorPicksAdmin() {
 }
 
 function HeroImageAdmin() {
-  const setHero = trpc.picks.setHeroImage.useMutation();
+  const utils = trpc.useUtils();
+  const scene = trpc.picks.scene.useQuery();
+  const setScene = trpc.picks.setHeroScene.useMutation({
+    onSuccess: (next) => {
+      utils.picks.scene.setData(undefined, next);
+      utils.analytics.getHomepage.invalidate();
+    },
+  });
+  const [q, setQ] = useState('');
+  const [url, setUrl] = useState('');
+  const search = trpc.songs.search.useQuery(
+    { q: q.trim(), limit: 8 },
+    { enabled: q.trim().length >= 2 },
+  );
+
+  const sourceLabel =
+    scene.data?.source === 'song'
+      ? `指定歌曲：${scene.data.songTitle || scene.data.songBvId}`
+      : scene.data?.source === 'url'
+        ? '指定图片 URL'
+        : scene.data?.source === 'weekly'
+          ? `周榜第一：${scene.data.weeklyTitle || '暂无'}`
+          : '默认底图';
+  const preview = coverImgProps(scene.data?.activeUrl);
+
   return (
-    <form
-      className="flex gap-2"
-      onSubmit={(e) => {
-        e.preventDefault();
-        const url = (e.currentTarget.elements.namedItem('url') as HTMLInputElement).value.trim();
-        setHero.mutate({ url });
-      }}
-    >
-      <input name="url" placeholder="封面图 URL，留空则用周榜第一封面" className="flex-1 text-xs" />
-      <button type="submit" className="btn btn-ghost !py-1.5 !px-4 text-xs" disabled={setHero.isLoading}>
-        保存
-      </button>
-    </form>
+    <div className="space-y-3">
+      <p className="text-xs text-kawaii-muted font-medium">当前：{sourceLabel}</p>
+      {preview.src ? (
+        <img {...preview} alt="" className="w-full h-28 object-cover rounded-xl ring-1 ring-kawaii-border/40" />
+      ) : null}
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          className="btn btn-ghost !py-1.5 !px-4 text-xs"
+          disabled={setScene.isLoading}
+          onClick={() => setScene.mutate({ mode: 'weekly' })}
+        >
+          使用周榜封面
+        </button>
+      </div>
+      <div className="space-y-2">
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="搜库内歌曲（BV 号或标题）"
+          className="w-full text-xs"
+        />
+        {search.data?.songs?.length ? (
+          <div className="space-y-1">
+            {search.data.songs.map((song) => (
+              <button
+                key={song.bvId}
+                type="button"
+                className="w-full text-left text-xs px-3 py-2 rounded-xl bg-kawaii-void/50 hover:bg-kawaii-void/80 truncate"
+                onClick={() => {
+                  setScene.mutate({ mode: 'song', q: song.bvId });
+                  setQ('');
+                }}
+              >
+                {song.title} · {song.author}
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </div>
+      <form
+        className="flex gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!url.trim()) return;
+          setScene.mutate({ mode: 'url', url: url.trim() });
+        }}
+      >
+        <input
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="或直接填封面图 URL"
+          className="flex-1 text-xs"
+        />
+        <button type="submit" className="btn btn-ghost !py-1.5 !px-4 text-xs" disabled={setScene.isLoading}>
+          保存 URL
+        </button>
+      </form>
+      {setScene.error && <p className="text-xs text-kawaii-pink">{setScene.error.message}</p>}
+    </div>
   );
 }

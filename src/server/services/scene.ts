@@ -8,8 +8,12 @@ export type SceneInfo = {
   weeklyUrl: string | null;
   weeklyTitle: string | null;
   weeklyBvId: string | null;
+  songBvId: string | null;
+  songTitle: string | null;
+  songUrl: string | null;
   defaultUrl: string;
   activeUrl: string;
+  source: 'song' | 'url' | 'weekly' | 'default';
 };
 
 async function weeklyTopCover(prisma: PrismaClient) {
@@ -42,21 +46,49 @@ async function weeklyTopCover(prisma: PrismaClient) {
 }
 
 export async function getSceneInfo(prisma: PrismaClient): Promise<SceneInfo> {
-  const [overrideRaw, defaultRaw, weekly] = await Promise.all([
+  const [overrideRaw, defaultRaw, weekly, songBvRaw] = await Promise.all([
     getSetting(prisma, SETTING_KEYS.heroImageUrl),
     getSetting(prisma, SETTING_KEYS.defaultBgUrl),
     weeklyTopCover(prisma),
+    getSetting(prisma, SETTING_KEYS.heroSongBvId),
   ]);
   const overrideUrl = normalizePicUrl(overrideRaw?.trim() || null);
   const defaultUrl = normalizePicUrl(defaultRaw?.trim() || null) || BUNDLED_DEFAULT_BG;
   const weeklyUrl = weekly?.picUrl ?? null;
+  const songBvId = songBvRaw?.trim() || null;
+  let songTitle: string | null = null;
+  let songUrl: string | null = null;
+  if (songBvId) {
+    const song = await prisma.song.findUnique({
+      where: { bvId: songBvId },
+      select: { title: true, picUrl: true },
+    });
+    if (song) {
+      songTitle = song.title;
+      songUrl = normalizePicUrl(song.picUrl);
+    }
+  }
+
+  const source: SceneInfo['source'] = songUrl
+    ? 'song'
+    : overrideUrl
+      ? 'url'
+      : weeklyUrl
+        ? 'weekly'
+        : 'default';
+  const activeUrl = songUrl || overrideUrl || weeklyUrl || defaultUrl;
+
   return {
     overrideUrl,
     weeklyUrl,
     weeklyTitle: weekly?.title ?? null,
     weeklyBvId: weekly?.bvId ?? null,
+    songBvId: songUrl ? songBvId : null,
+    songTitle,
+    songUrl,
     defaultUrl,
-    activeUrl: overrideUrl || weeklyUrl || defaultUrl,
+    activeUrl,
+    source,
   };
 }
 

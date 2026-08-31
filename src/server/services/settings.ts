@@ -21,5 +21,7 @@ export const SETTING_KEYS = {
   refreshCursor: 'refresh_cursor',
   refreshDay: 'refresh_day',
   heroImageUrl: 'hero_image_url',
+  heroSongBvId: 'hero_song_bv_id',
   defaultBgUrl: 'default_bg_url',
+  crawlJob: 'crawl_job',
 } as const;

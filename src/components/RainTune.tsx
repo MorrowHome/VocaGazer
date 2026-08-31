@@ -125,8 +125,6 @@ export function RainTunePanel() {
     return () => cancelAnimationFrame(raf);
   }, [open]);
 
-  if (process.env.NODE_ENV !== 'development') return null;
-
   const patch = (key: keyof RainTune, value: number) => {
     const next = { ...tune, [key]: value };
     setTune(next);

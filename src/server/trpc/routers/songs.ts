@@ -163,6 +163,7 @@ export const songsRouter = router({
             OR: [
               { title: { contains: q } },
               { author: { contains: q } },
+              { bvId: { contains: q } },
             ],
           },
           ...(author ? [{ author: { contains: author } }] : []),

@@ -2,6 +2,26 @@ import { z } from 'zod';
 import { router, publicProcedure, adminProcedure } from '../trpc';
 import { cacheInvalidate } from '../../cache/memory';
 import { getSceneInfo, parseBgUrl } from '@/server/services/scene';
+import { SETTING_KEYS, setSetting } from '@/server/services/settings';
+
+async function findLibrarySong(prisma: { song: { findUnique: Function; findFirst: Function } }, q: string) {
+  const raw = q.trim();
+  const bv = raw.match(/BV[0-9A-Za-z]+/i)?.[0];
+  if (bv) {
+    const byId = await prisma.song.findUnique({
+      where: { bvId: bv },
+      select: { bvId: true, title: true, picUrl: true },
+    });
+    if (byId) return byId;
+  }
+  return prisma.song.findFirst({
+    where: {
+      OR: [{ bvId: raw }, { title: { contains: raw } }],
+    },
+    orderBy: { score: 'desc' },
+    select: { bvId: true, title: true, picUrl: true },
+  });
+}
 
 export const picksRouter = router({
   list: publicProcedure.query(async ({ ctx }) => {
@@ -75,15 +95,39 @@ export const picksRouter = router({
     return getSceneInfo(ctx.prisma);
   }),
 
+  setHeroScene: adminProcedure
+    .input(
+      z.discriminatedUnion('mode', [
+        z.object({ mode: z.literal('weekly') }),
+        z.object({ mode: z.literal('song'), q: z.string().min(2).max(120) }),
+        z.object({ mode: z.literal('url'), url: z.string().min(1).max(500) }),
+      ]),
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (input.mode === 'weekly') {
+        await setSetting(ctx.prisma, SETTING_KEYS.heroImageUrl, '');
+        await setSetting(ctx.prisma, SETTING_KEYS.heroSongBvId, '');
+      } else if (input.mode === 'song') {
+        const song = await findLibrarySong(ctx.prisma, input.q);
+        if (!song) throw new Error('库里找不到这首歌，试试 BV 号或更完整的标题');
+        await setSetting(ctx.prisma, SETTING_KEYS.heroSongBvId, song.bvId);
+        await setSetting(ctx.prisma, SETTING_KEYS.heroImageUrl, '');
+      } else {
+        const url = parseBgUrl(input.url);
+        if (!url) throw new Error('请填写图片地址');
+        await setSetting(ctx.prisma, SETTING_KEYS.heroImageUrl, url);
+        await setSetting(ctx.prisma, SETTING_KEYS.heroSongBvId, '');
+      }
+      cacheInvalidate('homepage:');
+      return getSceneInfo(ctx.prisma);
+    }),
+
   setHeroImage: adminProcedure
     .input(z.object({ url: z.string().max(500) }))
     .mutation(async ({ ctx, input }) => {
       const url = parseBgUrl(input.url);
-      await ctx.prisma.setting.upsert({
-        where: { key: 'hero_image_url' },
-        update: { value: url },
-        create: { key: 'hero_image_url', value: url },
-      });
+      await setSetting(ctx.prisma, SETTING_KEYS.heroImageUrl, url);
+      await setSetting(ctx.prisma, SETTING_KEYS.heroSongBvId, '');
       cacheInvalidate('homepage:');
       return { ok: true };
     }),
