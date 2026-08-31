@@ -140,6 +140,11 @@ export default function AdminPage() {
         </section>
 
         <section className="card !p-6 space-y-3">
+          <h2 className="text-sm font-black text-kawaii-text">AI 接口</h2>
+          <AiKeyAdmin />
+        </section>
+
+        <section className="card !p-6 space-y-3">
           <h2 className="text-sm font-black text-kawaii-text">编者推送</h2>
           <EditorPicksAdmin />
         </section>
@@ -167,6 +172,81 @@ export default function AdminPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+function AiKeyAdmin() {
+  const utils = trpc.useUtils();
+  const cfg = trpc.ai.getAdminConfig.useQuery();
+  const save = trpc.ai.setAdminConfig.useMutation({
+    onSuccess: (next) => {
+      utils.ai.getAdminConfig.setData(undefined, next);
+      utils.ai.getConfig.invalidate();
+    },
+  });
+  const [apiKey, setApiKey] = useState('');
+  const [baseUrl, setBaseUrl] = useState('');
+  const [model, setModel] = useState('');
+
+  const ready = cfg.data;
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-kawaii-muted font-medium">
+        {ready?.configured
+          ? `已配置${ready.fromAdmin ? '（管理台）' : '（环境变量）'}：${ready.maskedKey}`
+          : '尚未配置。晚报和灰区入库都需要 Key。'}
+      </p>
+      <form
+        className="space-y-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          save.mutate({
+            apiKey: apiKey.trim() || undefined,
+            baseUrl: baseUrl.trim() || ready?.baseUrl,
+            model: model.trim() || ready?.model,
+          });
+          setApiKey('');
+        }}
+      >
+        <input
+          type="password"
+          autoComplete="off"
+          value={apiKey}
+          onChange={(e) => setApiKey(e.target.value)}
+          placeholder={ready?.maskedKey ? '留空则保留现有 Key' : 'API Key'}
+          className="w-full text-xs"
+        />
+        <input
+          value={baseUrl}
+          onChange={(e) => setBaseUrl(e.target.value)}
+          placeholder={ready?.baseUrl || 'https://api.deepseek.com/anthropic'}
+          className="w-full text-xs"
+        />
+        <input
+          value={model}
+          onChange={(e) => setModel(e.target.value)}
+          placeholder={ready?.model || 'deepseek-v4-flash'}
+          className="w-full text-xs"
+        />
+        <div className="flex gap-2">
+          <button type="submit" className="btn btn-pink !py-1.5 !px-4 text-xs" disabled={save.isLoading}>
+            {save.isLoading ? '保存中…' : '保存'}
+          </button>
+          {ready?.fromAdmin && (
+            <button
+              type="button"
+              className="btn btn-ghost !py-1.5 !px-4 text-xs"
+              disabled={save.isLoading}
+              onClick={() => save.mutate({ clearKey: true })}
+            >
+              清除管理台 Key
+            </button>
+          )}
+        </div>
+      </form>
+      {save.error && <p className="text-xs text-kawaii-pink">{save.error.message}</p>}
+      {save.data && <p className="text-xs text-kawaii-cyan">已保存</p>}
+    </div>
   );
 }
 

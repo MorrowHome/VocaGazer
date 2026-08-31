@@ -272,7 +272,7 @@ export async function runCrawl(
 
   if (grayItems.length) {
     const { isAiConfigured, completePrompt } = await import('../ai');
-    const callModel = isAiConfigured() ? completePrompt : undefined;
+    const callModel = (await isAiConfigured()) ? completePrompt : undefined;
     if (!callModel) bump(filterStats, '灰区无模型');
     for (let i = 0; i < grayItems.length; i += 10) {
       const chunk = grayItems.slice(i, i + 10);
@@ -344,7 +344,7 @@ export async function ingestBv(
           duration: detail.duration,
           reason: judgment.reason,
         }],
-        isAiConfigured() ? completePrompt : undefined,
+        (await isAiConfigured()) ? completePrompt : undefined,
       );
       if (!verdict?.accept) {
         throw new Error(`未通过原创判定：${verdict?.reason || judgment.reason}`);

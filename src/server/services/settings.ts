@@ -24,4 +24,7 @@ export const SETTING_KEYS = {
   heroSongBvId: 'hero_song_bv_id',
   defaultBgUrl: 'default_bg_url',
   crawlJob: 'crawl_job',
+  aiApiKey: 'ai_api_key',
+  aiBaseUrl: 'ai_base_url',
+  aiModel: 'ai_model',
 } as const;

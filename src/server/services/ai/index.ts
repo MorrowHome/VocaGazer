@@ -4,9 +4,31 @@
  * 未配置 API key 时自动使用降级方案
  */
 
-const API_KEY = process.env.ANTHROPIC_API_KEY;
-const BASE_URL = process.env.ANTHROPIC_BASE_URL || 'https://api.deepseek.com/anthropic';
-const AI_MODEL = process.env.AI_MODEL || 'deepseek-v4-flash';
+import { SETTING_KEYS, getSetting } from '../settings';
+
+const DEFAULT_BASE_URL = 'https://api.deepseek.com/anthropic';
+const DEFAULT_MODEL = 'deepseek-v4-flash';
+
+export async function resolveAiConfig() {
+  const { prisma } = await import('@/lib/prisma');
+  const [keyRow, baseRow, modelRow] = await Promise.all([
+    getSetting(prisma, SETTING_KEYS.aiApiKey),
+    getSetting(prisma, SETTING_KEYS.aiBaseUrl),
+    getSetting(prisma, SETTING_KEYS.aiModel),
+  ]);
+  return {
+    apiKey: keyRow || process.env.ANTHROPIC_API_KEY || '',
+    baseUrl: baseRow || process.env.ANTHROPIC_BASE_URL || DEFAULT_BASE_URL,
+    model: modelRow || process.env.AI_MODEL || DEFAULT_MODEL,
+    fromAdmin: Boolean(keyRow),
+  };
+}
+
+export function maskApiKey(key: string) {
+  if (!key) return '';
+  if (key.length <= 8) return '********';
+  return `${key.slice(0, 3)}····${key.slice(-4)}`;
+}
 
 export type ReportType = 'daily_summary' | 'trend_analysis' | 'anomaly_detection';
 
@@ -112,19 +134,20 @@ function getReportTitle(type: ReportType): string {
 }
 
 async function callAi(prompt: string): Promise<string> {
-  if (!API_KEY) {
-    console.log('[AI] 未配置 ANTHROPIC_API_KEY，使用降级方案');
+  const cfg = await resolveAiConfig();
+  if (!cfg.apiKey) {
+    console.log('[AI] 未配置 API Key，使用降级方案');
     throw new Error('NO_API_KEY');
   }
 
   const { default: Anthropic } = await import('@anthropic-ai/sdk');
   const client = new Anthropic({
-    apiKey: API_KEY,
-    baseURL: BASE_URL,
+    apiKey: cfg.apiKey,
+    baseURL: cfg.baseUrl,
   });
 
   const response = await client.messages.create({
-    model: AI_MODEL,
+    model: cfg.model,
     max_tokens: 800,
     messages: [{ role: 'user', content: prompt }],
   });
@@ -150,8 +173,9 @@ export async function generateReport(input: ReportInput): Promise<{ title: strin
   }
 }
 
-export function isAiConfigured(): boolean {
-  return !!API_KEY;
+export async function isAiConfigured(): Promise<boolean> {
+  const cfg = await resolveAiConfig();
+  return !!cfg.apiKey;
 }
 
 /** 给灰区判定等短任务用的原始补全 */
