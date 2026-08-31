@@ -2,9 +2,17 @@
  * 站点聚合统计：只在采集/刷新后写入 Setting，读路径不再扫全表。
  */
 import type { PrismaClient } from '@prisma/client';
-import { chinaWeekRange } from '@/lib/time';
+import { chinaWeekRange, shiftChinaDays } from '@/lib/time';
 import { SETTING_KEYS, getSetting, setSetting } from './settings';
-import { emptyAxes, meanAxes, parseSongStats, type AxisVector } from './score/breakdown';
+import {
+  emptyAxes,
+  meanAxes,
+  parseSongStats,
+  toAxisVector,
+  axisDelta,
+  hasAxisValues,
+  type AxisVector,
+} from './score/breakdown';
 
 export async function recomputeSiteStats(prisma: PrismaClient): Promise<void> {
   const songs = await prisma.song.findMany({
@@ -25,9 +33,12 @@ export async function recomputeSiteStats(prisma: PrismaClient): Promise<void> {
   await setSetting(prisma, SETTING_KEYS.radarHistorical, JSON.stringify(historical));
 
   const week = chinaWeekRange();
+  const lookback = shiftChinaDays(week.snapDate, -14);
   const weekRows = await prisma.songDailyStats.findMany({
-    where: { date: { gte: week.snapDate, lt: week.end } },
+    where: { date: { gte: lookback, lt: week.end } },
     select: {
+      songId: true,
+      date: true,
       playCount: true,
       likes: true,
       coins: true,
@@ -35,17 +46,9 @@ export async function recomputeSiteStats(prisma: PrismaClient): Promise<void> {
       shares: true,
       comments: true,
     },
+    orderBy: { date: 'asc' },
   });
-  const weekly = meanAxes(
-    weekRows.map((r) => ({
-      playCount: r.playCount,
-      likes: r.likes,
-      coins: r.coins,
-      favorites: r.favorites,
-      shares: r.shares,
-      comments: r.comments,
-    })),
-  );
+  const weekly = meanWeeklyDeltas(weekRows, week.snapDate);
   await setSetting(prisma, SETTING_KEYS.radarWeekly, JSON.stringify(weekly));
 }
 
@@ -77,4 +80,58 @@ export async function getSiteStats(prisma: PrismaClient): Promise<{
     radarHistorical: parseAxes(hist),
     radarWeekly: parseAxes(week),
   };
+}
+
+type SnapRow = {
+  songId: string;
+  date: Date;
+  playCount: number;
+  likes: number;
+  coins: number;
+  favorites: number;
+  shares: number;
+  comments: number;
+};
+
+function meanWeeklyDeltas(rows: SnapRow[], weekStart: Date): AxisVector {
+  const bySong = new Map<string, SnapRow[]>();
+  for (const row of rows) {
+    const list = bySong.get(row.songId) || [];
+    list.push(row);
+    bySong.set(row.songId, list);
+  }
+  const deltas: AxisVector[] = [];
+  const startMs = weekStart.getTime();
+  for (const snaps of Array.from(bySong.values())) {
+    const delta = weekDeltaFromSnaps(snaps, startMs);
+    if (delta && hasAxisValues(delta)) deltas.push(delta);
+  }
+  return deltas.length ? meanAxes(deltas) : emptyAxes();
+}
+
+function weekDeltaFromSnaps(snaps: SnapRow[], weekStartMs: number): AxisVector | null {
+  const before = [...snaps].reverse().find((s) => s.date.getTime() < weekStartMs);
+  const inWeek = snaps.filter((s) => s.date.getTime() >= weekStartMs);
+  if (inWeek.length === 0) return null;
+  const last = inWeek[inWeek.length - 1];
+  const prev = before ?? (inWeek.length > 1 ? inWeek[0] : null);
+  return axisDelta(toAxisVector(last), prev ? toAxisVector(prev) : null);
+}
+
+export function songWeekDelta(
+  snaps: Array<{
+    date: Date;
+    playCount: number;
+    likes: number;
+    coins: number;
+    favorites: number;
+    shares: number;
+    comments: number;
+  }>,
+  weekStart: Date,
+): AxisVector | null {
+  return weekDeltaFromSnaps(
+    snaps.map((s) => ({ ...s, songId: '_' })),
+    weekStart.getTime(),
+  );
 }

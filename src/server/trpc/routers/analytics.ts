@@ -3,12 +3,11 @@
  */
 import { z } from 'zod';
 import { router, publicProcedure } from '../trpc';
-import { chinaCalendarDay, shiftChinaDays } from '@/lib/time';
+import { chinaCalendarDay, chinaWeekRange, shiftChinaDays } from '@/lib/time';
 import { HOMEPAGE_CACHE_TTL_MS, cacheGet, cacheSet } from '../../cache/memory';
-import { getSiteStats } from '@/server/services/site-stats';
+import { getSiteStats, recomputeSiteStats, songWeekDelta } from '@/server/services/site-stats';
 import { getSceneInfo } from '@/server/services/scene';
 import { BASELINE_FLAT, hasAxisValues, logProfile, normalizeRadar, parseSongStats, type AxisVector } from '@/server/services/score/breakdown';
-import { recomputeSiteStats } from '@/server/services/site-stats';
 
 function parseStats(s: string) {
   try { return JSON.parse(s); } catch { return {}; }
@@ -136,32 +135,45 @@ export const analyticsRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
+      const week = chinaWeekRange();
+      const lookback = shiftChinaDays(week.snapDate, -14);
       const song = await ctx.prisma.song.findUnique({
         where: { bvId: input.bvId },
-        select: { statistics: true, score: true, dailyStats: { orderBy: { date: 'desc' }, take: 1 } },
+        select: {
+          statistics: true,
+          score: true,
+          dailyStats: {
+            where: { date: { gte: lookback, lt: week.end } },
+            orderBy: { date: 'asc' },
+          },
+        },
       });
       if (!song) throw new Error('歌曲未找到');
 
-      const raw = parseSongStats(song.statistics);
+      const lifetime = parseSongStats(song.statistics);
       let site = await getSiteStats(ctx.prisma);
-      if (!hasAxisValues(site.radarHistorical) && !hasAxisValues(site.radarWeekly)) {
+      if (!hasAxisValues(site.radarHistorical) || (input.baseline === 'weekly' && !hasAxisValues(site.radarWeekly))) {
         await recomputeSiteStats(ctx.prisma);
         site = await getSiteStats(ctx.prisma);
       }
 
-      const weekly = site.radarWeekly;
+      const weeklyMean = site.radarWeekly;
       const historical = site.radarHistorical;
-      const baselineRaw: AxisVector =
-        input.baseline === 'weekly' && hasAxisValues(weekly)
-          ? weekly
-          : hasAxisValues(historical)
-            ? historical
-            : hasAxisValues(weekly)
-              ? weekly
-              : raw;
+      const weekDelta = songWeekDelta(song.dailyStats, week.snapDate);
+      const useWeekly = input.baseline === 'weekly' && hasAxisValues(weeklyMean) && weekDelta && hasAxisValues(weekDelta);
 
-      const hasCatalog = hasAxisValues(baselineRaw) && baselineRaw !== raw;
+      const raw = useWeekly ? weekDelta! : lifetime;
+      const baselineRaw: AxisVector = useWeekly
+        ? weeklyMean
+        : hasAxisValues(historical)
+          ? historical
+          : hasAxisValues(weeklyMean)
+            ? weeklyMean
+            : raw;
+
+      const hasCatalog = hasAxisValues(baselineRaw);
       const normalized = hasCatalog ? normalizeRadar(raw, baselineRaw) : logProfile(raw);
+      const latest = song.dailyStats[song.dailyStats.length - 1];
 
       return {
         score: song.score,
@@ -169,8 +181,9 @@ export const analyticsRouter = router({
         baselineRaw: hasCatalog ? baselineRaw : null,
         normalized,
         baseline: hasCatalog ? BASELINE_FLAT : null,
-        baselineKind: input.baseline,
-        latestSnapshotDate: song.dailyStats[0]?.date ?? null,
+        baselineKind: useWeekly ? 'weekly' : 'historical',
+        compareMode: useWeekly ? 'weekDelta' : 'lifetime',
+        latestSnapshotDate: latest?.date ?? null,
       };
     }),
 

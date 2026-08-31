@@ -17,7 +17,7 @@ export const SETTING_KEYS = {
   totalPlays: 'stats_total_plays',
   totalSongs: 'stats_total_songs',
   radarHistorical: 'stats_radar_historical_v2',
-  radarWeekly: 'stats_radar_weekly_v2',
+  radarWeekly: 'stats_radar_weekly_v3',
   refreshCursor: 'refresh_cursor',
   refreshDay: 'refresh_day',
   heroImageUrl: 'hero_image_url',

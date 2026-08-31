@@ -120,7 +120,7 @@ export function StockDeltaChart({
           );
         })}
         <path d={line.trim()} fill="none" stroke="rgba(243,236,255,0.55)" strokeWidth="1.4" />
-        {hoverPt && (
+        {hover !== null && hoverPt && (
           <>
             <line
               x1={mapX(hover)}

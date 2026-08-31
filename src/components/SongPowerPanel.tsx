@@ -54,6 +54,9 @@ export function SongPowerPanel({
     <div className="card !p-6 space-y-6">
       <div className="flex items-center gap-2 flex-wrap">
         <h2 className="text-xs font-bold text-kawaii-muted tracking-wider uppercase">相对图均</h2>
+        <p className="text-[10px] text-kawaii-muted">
+          {baseline === 'weekly' ? '对照全站本周增量均值' : '对照全站累计均值'}
+        </p>
         <div className="ml-auto flex gap-1">
           {(['weekly', 'historical'] as const).map((k) => (
             <button
@@ -64,7 +67,7 @@ export function SongPowerPanel({
                 baseline === k ? 'bg-kawaii-pink text-white' : 'bg-kawaii-surface text-kawaii-muted'
               }`}
             >
-              {k === 'weekly' ? '本周均' : '历史均'}
+              {k === 'weekly' ? '本周增量' : '历史累计'}
             </button>
           ))}
         </div>
@@ -93,6 +96,7 @@ export function SongPowerPanel({
                 {radar.data?.latestSnapshotDate
                   ? ` · ${new Date(radar.data.latestSnapshotDate).toLocaleDateString('zh-CN')}`
                   : ''}
+                {baseline === 'weekly' && radar.data?.compareMode === 'lifetime' ? ' · 本周尚无增量，暂用累计' : ''}
               </p>
               <LineChart
                 data={series.map((d) => ({ date: d.date, value: d.playCount, missing: d.missing }))}

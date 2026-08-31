@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { logProfile, meanAxes, normalizeRadar, scoreBreakdown } from './breakdown';
+import { axisDelta, logProfile, meanAxes, normalizeRadar, scoreBreakdown } from './breakdown';
 
 test('等量六维时加权分量等于权重×值', () => {
   const b = scoreBreakdown({
@@ -60,3 +60,13 @@ test('logProfile 让播放远高于评论时形状拉开', () => {
   assert.ok(p.playCount > 80);
   assert.ok(p.comments < p.likes);
 });
+
+test('axisDelta 用本周累计减上周快照得到增量', () => {
+  const d = axisDelta(
+    { playCount: 120, likes: 40, coins: 10, favorites: 8, shares: 2, comments: 5 },
+    { playCount: 100, likes: 30, coins: 8, favorites: 6, shares: 1, comments: 4 },
+  );
+  assert.equal(d.playCount, 20);
+  assert.equal(d.likes, 10);
+});
+

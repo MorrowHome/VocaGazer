@@ -90,6 +90,33 @@ export function hasAxisValues(v: AxisVector): boolean {
   return SCORE_AXES.some((axis) => v[axis] > 0);
 }
 
+export function axisDelta(latest: AxisVector, previous: AxisVector | null | undefined): AxisVector {
+  if (!previous) return { ...latest };
+  const out = emptyAxes();
+  for (const axis of SCORE_AXES) {
+    out[axis] = Math.max(0, (latest[axis] || 0) - (previous[axis] || 0));
+  }
+  return out;
+}
+
+export function toAxisVector(row: {
+  playCount: number;
+  likes: number;
+  coins: number;
+  favorites: number;
+  shares: number;
+  comments: number;
+}): AxisVector {
+  return {
+    playCount: row.playCount || 0,
+    likes: row.likes || 0,
+    coins: row.coins || 0,
+    favorites: row.favorites || 0,
+    shares: row.shares || 0,
+    comments: row.comments || 0,
+  };
+}
+
 /** 无图均时：用 log 轮廓让播放/评论的相对强弱仍能看出来 */
 export function logProfile(values: AxisVector): AxisVector {
   const logs = emptyAxes();
