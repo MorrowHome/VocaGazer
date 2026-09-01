@@ -136,7 +136,7 @@ test('flower 普通英文不误匹配', () => {
   assert.equal(r.decision, 'reject');
 });
 
-test('VOCALOID 分区自制且时长像歌则通过', () => {
+test('VOCALOID 分区自制但无曲名无作曲时进灰区，不直接入库', () => {
   const r = judgeOriginality({
     title: '夜色回廊',
     description: '',
@@ -144,6 +144,39 @@ test('VOCALOID 分区自制且时长像歌则通过', () => {
     tname: 'VOCALOID',
     copyright: 1,
     duration: 210,
+  });
+  assert.equal(r.decision, 'gray');
+});
+
+test('标签 VOCALOID 不能当成作曲信息', () => {
+  const r = judgeOriginality({
+    title: '突破次元，超梦初音！19周年！【bilibilionly同人扶持计划】',
+    description: '',
+    tags: ['VOCALOID', '初音未来', 'bilibilionly同人扶持计划'],
+    tid: 193,
+    copyright: 1,
+    duration: 180,
+  });
+  assert.equal(r.decision, 'reject');
+  assert.match(r.reason, /周年|生贺|应援/);
+});
+
+test('COS 宅舞翻跳已有名曲不入库', () => {
+  const r = judgeOriginality({
+    title: '这个视频，送给被生命厌恶着的我们。| 被生命所厌恶。(命に嫌われている。)【bilibilionly同人扶持计划】',
+    description: '',
+    tags: ['VOCALOID', '初音未来', '舞蹈', 'COS'],
+    tid: 20,
+    copyright: 1,
+    duration: 240,
+  });
+  assert.equal(r.decision, 'reject');
+});
+
+test('有曲名的周年纪念曲仍可过', () => {
+  const r = judgeOriginality({
+    title: '【初音未来17周年】《New Connection》',
+    description: '作曲：甲 作词：乙 调教：丙',
   });
   assert.equal(r.decision, 'accept');
 });

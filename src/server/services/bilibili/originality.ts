@@ -10,13 +10,24 @@ export const REJECT_TIDS: Record<number, string> = {
   59: '演奏',
   244: '音乐教学',
   243: '乐评盘点',
+  20: '宅舞',
+  129: '舞蹈',
+  154: '街舞',
+  156: '舞蹈教程',
+  198: '明星舞蹈',
+  199: '中国舞',
+  200: '舞蹈综合',
+  255: '国风舞蹈',
 };
 
 const HARD_EXCLUDE = [
   '入驻B站', '入驻b站', '入驻 b站',
   '大家好', '自我介绍', '个人介绍',
   '翻调', '翻配', '翻唱', '翻填', '翻作', '翻跳',
-  'remaster', 'カバー', '歌ってみた',
+  'remaster', 'カバー', '歌ってみた', '踊ってみた',
+  '跳舞', '宅舞', '编舞', '振付',
+  'cosplay', '角色扮演', 'COS正片', '【COS】', '「COS」',
+  '这个视频，送给', '这个视频,送给',
   'RVC', 'rvc', 'so-vits', 'sovits', 'GPT-SoVITS', 'gpt-sovits',
   'AI翻唱', 'ai翻唱', 'AI 翻唱',
   '歌切', '切片',
@@ -50,8 +61,11 @@ const HARD_EXCLUDE = [
 ].sort((a, b) => b.length - a.length);
 
 const HARD_EXCLUDE_ANYWHERE = [
-  'RVC', 'so-vits', 'sovits', 'GPT-SoVITS', 'AI翻唱', '歌ってみた',
+  'RVC', 'so-vits', 'sovits', 'GPT-SoVITS', 'AI翻唱', '歌ってみた', '踊ってみた',
+  'cosplay', '翻跳', '宅舞',
 ];
+
+const EVENT_TITLE = ['周年', '生贺', '生日快乐', '応援', '应援', '纪念活动', '征稿'];
 
 const NON_SONG_MEDIA = ['MMD', 'mmd', '手书', '教程', '教学'];
 
@@ -73,15 +87,24 @@ const SOFT_EXCLUDE = [
   '动画', '动漫',
 ];
 
-const CREDIT_SIGNALS = [
-  '作曲', '编曲', '作词', '调声', '调教',
-  'producer', 'produced by',
-  'music by', 'lyrics by',
-  'vo:', 'vo：', 'vo。', 'vo.',
-  '音楽', '作詞', '編曲', 'vocal', 'feat',
+const CREDIT_RES = [
+  /作曲/,
+  /编曲/,
+  /作词/,
+  /作詞/,
+  /调声/,
+  /调教/,
+  /編曲/,
+  /produced\s+by/i,
+  /\bproducer\b/i,
+  /music\s+by/i,
+  /lyrics\s+by/i,
+  /音楽\s*[:：]/,
+  /(?:^|[\s【\[(（])vo(?:cal)?\s*[:：.]/i,
+  /(?:^|[\s【\[(（])feat\.?\s/i,
 ];
 
-const ORIGINAL_WORDS = ['原创曲', 'VOCALOID原曲', '术力口原曲', '自制曲', '本家', '原创'];
+const ORIGINAL_WORDS = ['原创曲', 'VOCALOID原曲', '术力口原曲', '自制曲', '本家', '原创', 'オリジナル'];
 
 const KNOWN_NON_MUSIC = ['斗破苍穹', '苍穹的法芙娜', '艾可瑞'];
 
@@ -146,12 +169,29 @@ function blobOf(input: OriginalityInput): string {
 }
 
 function hasCredits(text: string): boolean {
-  const t = text.toLowerCase();
-  return CREDIT_SIGNALS.some((s) => t.includes(s.toLowerCase()));
+  return CREDIT_RES.some((re) => re.test(text));
 }
 
 function hasOriginalWord(text: string): boolean {
   return ORIGINAL_WORDS.some((w) => text.includes(w));
+}
+
+function hasSongEvidence(title: string, desc: string, tags: string[]): boolean {
+  return hasCredits(`${title}\n${desc}`) || hasOriginalWord(title) || hasOriginalWord(tags.join(' ')) || /《.+》/.test(title);
+}
+
+function hasPerformanceSignal(title: string, tags: string[]): string | null {
+  const titleLow = title.toLowerCase();
+  const titleHits = ['舞蹈', '宅舞', '翻跳', '编舞', '街舞', 'cosplay', '角色扮演', '踊ってみた', '【cos】', '「cos」', '[cos]'];
+  for (const kw of titleHits) {
+    if (titleLow.includes(kw.toLowerCase())) return kw;
+  }
+  const tagHits = ['舞蹈', '宅舞', '翻跳', '编舞', '街舞', 'cos', 'cosplay', '角色扮演', '踊ってみた'];
+  for (const tag of tags) {
+    const t = tag.trim().toLowerCase();
+    if (tagHits.includes(t)) return tag;
+  }
+  return null;
 }
 
 function nonSongWithoutCredits(title: string, desc: string): boolean {
@@ -197,6 +237,15 @@ export function judgeOriginality(input: OriginalityInput): OriginalityJudgment {
     return reject(`分区为${REJECT_TIDS[input.tid]}`, -90);
   }
 
+  const performance = hasPerformanceSignal(title, tags);
+  if (performance) {
+    return reject(`表演/COS: "${performance}"`, -90);
+  }
+
+  if (EVENT_TITLE.some((kw) => title.includes(kw)) && !hasSongEvidence(title, desc, tags)) {
+    return reject('周年/生贺/应援且无原创曲证据', -80);
+  }
+
   if (nonSongWithoutCredits(title, desc)) {
     return reject('MMD/手书/教程且无作曲调教', -70);
   }
@@ -227,7 +276,7 @@ export function judgeOriginality(input: OriginalityInput): OriginalityJudgment {
   const virtualWeak = Boolean(voice?.ambiguous && !virtualStrong);
   const virtual = virtualStrong || virtualWeak;
 
-  const credits = hasCredits(combined);
+  const credits = hasCredits(`${title}\n${desc}`);
   const originalWord = hasOriginalWord(title) || hasOriginalWord(tags.join(' '));
   const bookTitle = /《.+》/.test(title);
   const copyrightOriginal = input.copyright === 1;
@@ -237,24 +286,20 @@ export function judgeOriginality(input: OriginalityInput): OriginalityJudgment {
 
   let originalScore = 0;
   if (credits) originalScore += 30;
-  if (originalWord) originalScore += 20;
-  if (bookTitle) originalScore += 10;
-  if (copyrightOriginal) originalScore += 20;
-  if (durationOk) originalScore += 10;
-  if (originalMusicPart && virtualStrong) originalScore += 15;
-  if (partitionVocaloid && copyrightOriginal) originalScore += 15;
+  if (originalWord) originalScore += 25;
+  if (bookTitle) originalScore += 15;
+  if (copyrightOriginal) originalScore += 10;
+  if (durationOk) originalScore += 5;
+  if (originalMusicPart && virtualStrong) originalScore += 10;
+  if (partitionVocaloid && copyrightOriginal) originalScore += 10;
 
   for (const kw of SOFT_EXCLUDE) {
     if (titleLow.includes(kw.toLowerCase())) originalScore -= 15;
   }
 
-  const originalStrong = credits || (originalWord && virtualStrong) || (partitionVocaloid && copyrightOriginal);
-  const originalMedium =
-    (bookTitle && virtualStrong) ||
-    (copyrightOriginal && virtualStrong && durationOk) ||
-    (originalWord && virtualWeak && credits) ||
-    originalScore >= 40;
-  const original = originalStrong || originalMedium || originalScore >= 25;
+  const originalStrong = credits || (originalWord && virtualStrong);
+  const originalMedium = (bookTitle && virtualStrong) || originalScore >= 55;
+  const original = originalStrong || originalMedium;
 
   if (!virtual) {
     if (originalWord || credits) {
@@ -298,7 +343,7 @@ UP: ${it.author || '未知'}
   return `你是 VOCALOID Hub 的入库审核。只收录「虚拟歌姬原创曲」。
 
 收录：VOCALOID / 中文虚拟歌手 / Synthesizer V / UTAU / CeVIO / DiffSinger 的本家原创歌（含本家 PV）。
-排除：真人原创、翻唱/歌ってみた、RVC/so-vits/AI 变声、教程、MMD/手书且没有作曲、搬运转载、演奏、盘点合集。
+排除：真人原创、翻唱/歌ってみた/踊ってみた、COS/宅舞/编舞、周年应援活动、RVC/so-vits/AI 变声、教程、MMD/手书且没有作曲、搬运转载、演奏、盘点合集。bilibilionly同人扶持计划只是活动角标，不能当成原创曲证据。
 
 对下面每条输出 JSON 数组，元素形如 {"bvId":"BVxx","accept":true或false,"reason":"一句中文"}。不要 markdown，不要其它文字。
 
