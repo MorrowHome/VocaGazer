@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { router, publicProcedure, adminProcedure } from '../trpc';
 import { addIngestBlock } from '@/server/services/settings';
 import { cacheInvalidate } from '../../cache/memory';
+import { generateLiveRankings } from '@/server/services/ranking/generator';
 
 export const songsRouter = router({
   // 获取最新歌曲列表
@@ -362,6 +363,7 @@ export const songsRouter = router({
       if (!song) throw new Error('歌曲未找到');
       await addIngestBlock(ctx.prisma, song.bvId);
       await ctx.prisma.song.delete({ where: { id: song.id } });
+      await generateLiveRankings(undefined, { rescore: false });
       cacheInvalidate();
       return { bvId: song.bvId, title: song.title };
     }),
