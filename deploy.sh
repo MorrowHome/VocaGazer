@@ -12,6 +12,12 @@ export TZ="${TZ:-Asia/Shanghai}"
 
 cd "$PROJECT_DIR"
 
+exec 9>/tmp/vocaloid-hub-deploy.lock
+if ! flock -w 1200 9; then
+  echo "✗ 等部署锁超时"
+  exit 1
+fi
+
 echo "▶ 项目目录: $PROJECT_DIR"
 
 if [ ! -d .git ]; then

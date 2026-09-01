@@ -5,12 +5,16 @@ on:
     branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
           cache: npm
@@ -33,8 +37,4 @@ jobs:
           command_timeout: 30m
           script: |
             set -euo pipefail
-            cd /opt/vocaloid-hub
-            git stash push -m "cd-pre" -- package-lock.json >/dev/null 2>&1 || true
-            git fetch origin main
-            git checkout -B main origin/main
             bash /opt/vocaloid-hub/deploy.sh
