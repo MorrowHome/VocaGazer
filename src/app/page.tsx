@@ -3,6 +3,7 @@
 import { trpc } from '@/lib/trpc';
 import { formatCount, parseStats, timeAgo, coverImgProps } from '@/lib/utils';
 import { HomeHero } from '@/components/HomeHero';
+import { AdminDeleteSongButton } from '@/components/AdminDeleteSongButton';
 
 // ─── 排行榜条目 ───
 
@@ -46,7 +47,8 @@ function SongCard({ song }: { song: any }) {
   const img = coverImgProps(song.picUrl);
 
   return (
-    <a href={`/song/${song.bvId}`} className="song-card group">
+    <div className="relative">
+      <a href={`/song/${song.bvId}`} className="song-card group">
       <div className="relative aspect-[16/10] bg-kawaii-pink-pale overflow-hidden rounded-t-xl">
         {img.src ? (
           <img
@@ -74,7 +76,9 @@ function SongCard({ song }: { song: any }) {
           <span>{timeAgo(song.publishTime)}</span>
         </div>
       </div>
-    </a>
+      </a>
+      <AdminDeleteSongButton bvId={song.bvId} title={song.title} variant="overlay" />
+    </div>
   );
 }
 

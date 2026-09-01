@@ -6,6 +6,7 @@ import { formatCount, parseStats, coverImgProps } from '@/lib/utils';
 import { useAuth } from '@/components/AuthContext';
 import { useState } from 'react';
 import { Sparkline } from '@/components/charts/Sparkline';
+import { AdminDeleteSongButton } from '@/components/AdminDeleteSongButton';
 
 const STAT_COLORS: Record<string, { label: string; color: string }> = {
   playCount:   { label: '播放', color: '#39C5BB' },
@@ -216,6 +217,13 @@ export default function SongDetailPage() {
               >
                 去论坛讨论
               </a>
+              <AdminDeleteSongButton
+                bvId={song.bvId}
+                title={song.title}
+                onDeleted={() => {
+                  window.location.href = '/';
+                }}
+              />
             </div>
           </div>
         </div>

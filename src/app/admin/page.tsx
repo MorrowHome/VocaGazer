@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/components/AuthContext';
 import { coverImgProps } from '@/lib/utils';
+import { AdminDeleteSongButton } from '@/components/AdminDeleteSongButton';
 
 export default function AdminPage() {
   const { user, isLoading: authLoading } = useAuth();
@@ -145,6 +146,14 @@ export default function AdminPage() {
         </section>
 
         <section className="card !p-6 space-y-3">
+          <h2 className="text-sm font-black text-kawaii-text">删掉不合格的歌</h2>
+          <p className="text-xs text-kawaii-muted font-medium">
+            按标题或 BV 搜索后删除。卡片和歌曲页上管理员也会看到删除键。删掉后采集不会再收同一条。
+          </p>
+          <SongRemoveAdmin />
+        </section>
+
+        <section className="card !p-6 space-y-3">
           <h2 className="text-sm font-black text-kawaii-text">编者推送</h2>
           <EditorPicksAdmin />
         </section>
@@ -172,6 +181,40 @@ export default function AdminPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+function SongRemoveAdmin() {
+  const [q, setQ] = useState('');
+  const search = trpc.songs.search.useQuery(
+    { q: q.trim(), limit: 12 },
+    { enabled: q.trim().length >= 2 },
+  );
+
+  return (
+    <div className="space-y-2">
+      <input
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="搜标题、作者或 BV 号"
+        className="w-full text-xs"
+      />
+      {search.data?.songs?.length ? (
+        <div className="space-y-1">
+          {search.data.songs.map((song) => (
+            <div key={song.bvId} className="flex items-center gap-2 text-xs px-2 py-1.5 rounded-xl bg-kawaii-void/40">
+              <a href={`/song/${song.bvId}`} className="flex-1 truncate font-bold text-kawaii-text hover:text-kawaii-pink">
+                {song.title}
+              </a>
+              <span className="text-kawaii-muted shrink-0">{song.bvId}</span>
+              <AdminDeleteSongButton bvId={song.bvId} title={song.title} variant="row" />
+            </div>
+          ))}
+        </div>
+      ) : q.trim().length >= 2 && !search.isLoading ? (
+        <p className="text-xs text-kawaii-muted">没搜到</p>
+      ) : null}
+    </div>
   );
 }
 

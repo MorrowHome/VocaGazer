@@ -2,7 +2,9 @@
  * 歌曲 tRPC 路由
  */
 import { z } from 'zod';
-import { router, publicProcedure } from '../trpc';
+import { router, publicProcedure, adminProcedure } from '../trpc';
+import { addIngestBlock } from '@/server/services/settings';
+import { cacheInvalidate } from '../../cache/memory';
 
 export const songsRouter = router({
   // 获取最新歌曲列表
@@ -347,5 +349,20 @@ export const songsRouter = router({
       });
 
       return { sameAuthor, similar: similar.slice(0, input.limit) };
+    }),
+
+  remove: adminProcedure
+    .input(z.object({ bvId: z.string().min(3) }))
+    .mutation(async ({ ctx, input }) => {
+      const bvId = input.bvId.trim().match(/BV[0-9A-Za-z]+/i)?.[0] || input.bvId.trim();
+      const song = await ctx.prisma.song.findUnique({
+        where: { bvId },
+        select: { id: true, bvId: true, title: true },
+      });
+      if (!song) throw new Error('歌曲未找到');
+      await addIngestBlock(ctx.prisma, song.bvId);
+      await ctx.prisma.song.delete({ where: { id: song.id } });
+      cacheInvalidate();
+      return { bvId: song.bvId, title: song.title };
     }),
 });

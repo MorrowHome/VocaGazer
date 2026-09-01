@@ -29,4 +29,28 @@ export const SETTING_KEYS = {
   aiApiKey: 'ai_api_key',
   aiBaseUrl: 'ai_base_url',
   aiModel: 'ai_model',
+  ingestBlocklist: 'ingest_blocklist',
 } as const;
+
+export async function getIngestBlocklist(prisma: PrismaClient): Promise<string[]> {
+  const raw = await getSetting(prisma, SETTING_KEYS.ingestBlocklist);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed) ? parsed.map((id) => String(id)).filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function addIngestBlock(prisma: PrismaClient, bvId: string): Promise<void> {
+  const list = await getIngestBlocklist(prisma);
+  if (list.includes(bvId)) return;
+  list.push(bvId);
+  await setSetting(prisma, SETTING_KEYS.ingestBlocklist, JSON.stringify(list));
+}
+
+export async function removeIngestBlock(prisma: PrismaClient, bvId: string): Promise<void> {
+  const next = (await getIngestBlocklist(prisma)).filter((id) => id !== bvId);
+  await setSetting(prisma, SETTING_KEYS.ingestBlocklist, JSON.stringify(next));
+}

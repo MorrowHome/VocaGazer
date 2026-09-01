@@ -7,7 +7,7 @@ import { calculateScore } from '../ranking/scorer';
 import { checkSongMilestones } from '../milestone';
 import type { BiliSearchVideo, BiliVideoDetail, SongData } from './types';
 import { chinaDateKey } from '../../../lib/time';
-import { SETTING_KEYS, getSetting, setSetting } from '../settings';
+import { SETTING_KEYS, getSetting, setSetting, getIngestBlocklist, removeIngestBlock } from '../settings';
 import { SEARCH_KEYWORDS } from './voices';
 import {
   judgeGrayBatch,
@@ -183,6 +183,7 @@ export async function runCrawl(
   }
 
   const since = Date.now() / 1000 - withinHours * 3600;
+  const blocked = new Set(await getIngestBlocklist(prisma));
   const videoMap = new Map<string, BiliSearchVideo & { matchedTags: string[] }>();
 
   const mergeHit = (v: BiliSearchVideo) => {
@@ -243,6 +244,12 @@ export async function runCrawl(
         await delay(requestDelay);
         continue;
       }
+      if (blocked.has(detail.bvid)) {
+        bump(filterStats, '管理员已删');
+        if (verbose) log(`  黑名单跳过: ${detail.title.substring(0, 40)}`);
+        await delay(requestDelay);
+        continue;
+      }
       if (judgment.decision === 'accept') {
         await persistSong(detail);
         savedCount++;
@@ -286,6 +293,10 @@ export async function runCrawl(
         }
         const detail = byBv.get(ver.bvId);
         if (!detail) continue;
+        if (blocked.has(detail.bvid)) {
+          bump(filterStats, '管理员已删');
+          continue;
+        }
         try {
           await persistSong(detail);
           savedCount++;
@@ -322,6 +333,13 @@ export async function ingestBv(
   const prisma = getPrisma();
   const bvId = rawBv.trim().match(/BV[0-9A-Za-z]+/i)?.[0];
   if (!bvId) throw new Error('无效的 BV 号');
+
+  if (options.force) {
+    await removeIngestBlock(prisma, bvId);
+  } else {
+    const blocked = await getIngestBlocklist(prisma);
+    if (blocked.includes(bvId)) throw new Error('这首歌已被管理员删除，补录请用强制入库');
+  }
 
   const detail = await getVideoDetail(bvId);
   if (!detail) throw new Error('B 站找不到这个视频');

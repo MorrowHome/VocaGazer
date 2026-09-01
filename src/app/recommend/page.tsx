@@ -3,11 +3,13 @@
 import { trpc } from '@/lib/trpc';
 import { formatCount, parseStats, timeAgo, coverImgProps } from '@/lib/utils';
 import { useAuth } from '@/components/AuthContext';
+import { AdminDeleteSongButton } from '@/components/AdminDeleteSongButton';
 
 function EditorPickBanner({ song, rank, featured }: { song: any; rank: number; featured?: boolean }) {
   const stats = parseStats(song.statistics);
   const img = coverImgProps(song.picUrl);
   return (
+    <div className="relative">
     <a
       href={`/song/${song.bvId}`}
       className={`group relative block overflow-hidden rounded-[1.75rem] ring-1 ring-white/20 hover:ring-kawaii-pink/45 transition-all min-h-[50svh] ${
@@ -52,6 +54,8 @@ function EditorPickBanner({ song, rank, featured }: { song: any; rank: number; f
         </p>
       </div>
     </a>
+    <AdminDeleteSongButton bvId={song.bvId} title={song.title} variant="overlay" />
+    </div>
   );
 }
 
@@ -60,6 +64,7 @@ function RecSongCard({ song, rank }: { song: any; rank?: number }) {
   const stats = parseStats(song.statistics);
   const img = coverImgProps(song.picUrl);
   return (
+    <div className="relative">
     <a
       href={`/song/${song.bvId}`}
       className="card overflow-hidden group hover:border-kawaii-pink/20 transition-all"
@@ -99,6 +104,8 @@ function RecSongCard({ song, rank }: { song: any; rank?: number }) {
         </div>
       </div>
     </a>
+    <AdminDeleteSongButton bvId={song.bvId} title={song.title} variant="overlay" />
+    </div>
   );
 }
 

@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc';
 import { formatCount, parseStats, timeAgo, coverImgProps } from '@/lib/utils';
 import { SparkleInput } from '@/components/motion/SparkleInput';
+import { AdminDeleteSongButton } from '@/components/AdminDeleteSongButton';
 
 function SearchPageInner() {
   const searchParams = useSearchParams();
@@ -71,8 +72,8 @@ function SearchPageInner() {
                 {data.songs.map((song: { id: string; bvId: string; title: string; author: string; picUrl: string | null; statistics: string; publishTime: Date; score: number }) => {
                   const stats = parseStats(song.statistics);
                   return (
+                    <div key={song.id} className="relative">
                     <a
-                      key={song.id}
                       href={`/song/${song.bvId}`}
                       className="card flex items-center gap-4 p-4 hover:border-kawaii-pink/30 transition-all group"
                     >
@@ -99,6 +100,10 @@ function SearchPageInner() {
                         <p className="text-xs font-bold text-gradient-flow">{song.score.toFixed(1)}</p>
                       </div>
                     </a>
+                    <div className="absolute top-2 right-2">
+                      <AdminDeleteSongButton bvId={song.bvId} title={song.title} variant="row" />
+                    </div>
+                    </div>
                   );
                 })}
               </div>

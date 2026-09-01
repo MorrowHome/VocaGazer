@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { formatCount, parseStats, coverImgProps } from '@/lib/utils';
+import { AdminDeleteSongButton } from '@/components/AdminDeleteSongButton';
 
 const TABS = [
   { key: 'daily', label: '日榜' },
@@ -92,6 +93,7 @@ function RankCard({ song, rank, entryScore }: { song: any; rank: number; entrySc
         </svg>
         B站
       </a>
+      <AdminDeleteSongButton bvId={song.bvId} title={song.title} variant="overlay" className="!right-16 !top-3" />
     </div>
   );
 }
